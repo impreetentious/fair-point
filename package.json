@@ -1,13 +1,14 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "engines": {
     "node": "20.18.x"
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
