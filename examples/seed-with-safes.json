@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "Seed with SAFEs",
+  "pre": {
+    "classes": [{ "id": "common", "name": "Common", "kind": "COMMON", "shares": 9000000, "holder": "FOUNDER" }],
+    "grants": [{ "id": "g1", "options": 1000000, "strike": 0.1, "holder": "OTHER" }],
+    "poolAvailable": 0,
+    "promisedOptions": 0
+  },
+  "safes": [
+    { "id": "safe1", "name": "SAFE 1", "amount": 500000, "kind": "POST_MONEY", "valuationCap": 5000000, "holder": "OTHER" },
+    { "id": "safe2", "name": "SAFE 2", "amount": 250000, "kind": "POST_MONEY", "valuationCap": 10000000, "holder": "OTHER" }
+  ],
+  "terms": { "preMoney": 8000000, "investment": 2000000, "poolTargetPost": 0.1, "prefMultiple": 1, "participation": "NONE", "seniority": "PARI" },
+  "founderBeliefs": { "p0": 0.5, "p50": 40000000, "p90": 400000000 },
+  "investorBeliefs": { "p0": 0.5, "p50": 40000000, "p90": 400000000 },
+  "sharedBeliefs": true,
+  "disagreement": { "dF": 3000000, "dI": 3000000 },
+  "space": {
+    "preMoneyRange": [4000000, 16000000], "preMoneySteps": 9,
+    "pinnedInvestment": 2000000,
+    "pools": [0.1, 0.125, 0.15, 0.175, 0.2],
+    "multiples": [1, 1.5, 2, 3], "participations": ["NONE", "CAP2", "CAP3", "FULL"], "seniority": "PARI"
+  },
+  "risk": null
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "Series B stacked + down round",
+  "pre": {
+    "classes": [
+      { "id": "common", "name": "Common", "kind": "COMMON", "shares": 8000000, "holder": "FOUNDER" },
+      { "id": "series-a", "name": "Series A", "kind": "PREFERRED", "shares": 2000000, "holder": "OTHER", "invested": 4000000, "originalIssuePrice": 2, "prefMultiple": 1, "participation": "NONE", "seniorityTier": 2, "conversionRatio": 1, "antiDilution": "BWA" }
+    ],
+    "grants": [], "poolAvailable": 0, "promisedOptions": 0
+  },
+  "safes": [],
+  "terms": { "preMoney": 18000000, "investment": 6000000, "poolTargetPost": 0.125, "prefMultiple": 1, "participation": "NONE", "seniority": "SENIOR" },
+  "founderBeliefs": { "p0": 0.25, "p50": 150000000, "p90": 900000000 },
+  "investorBeliefs": { "p0": 0.25, "p50": 150000000, "p90": 900000000 },
+  "sharedBeliefs": true,
+  "disagreement": { "dF": 8000000, "dI": 4000000 },
+  "space": {
+    "preMoneyRange": [9000000, 36000000], "preMoneySteps": 9,
+    "pinnedInvestment": 6000000,
+    "pools": [0.1, 0.125, 0.15, 0.175, 0.2],
+    "multiples": [1, 1.5, 2, 3], "participations": ["NONE", "CAP2", "CAP3", "FULL"], "seniority": "SENIOR"
+  },
+  "risk": null
+}
