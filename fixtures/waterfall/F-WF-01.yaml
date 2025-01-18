@@ -1,0 +1,18 @@
+id: F-WF-01
+kind: waterfall
+description: 1x non-participating holder takes preference below conversion parity.
+derivation: |
+  Preference = 1x $2,000,000. At E=$5,000,000 conversion would pay $1,000,000,
+  so Series A takes its preference and common receives the $3,000,000 residual.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: series-a, name: Series A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: NONE }
+    grants: []
+    poolAvailable: 0
+  exitValue: 5000000
+expect:
+  payouts: { series-a: 2000000, common: 3000000 }
+  breakpoints: [2000000, 10000000]
+tolerance: 0.01

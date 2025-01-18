@@ -1,0 +1,16 @@
+id: F-WF-03
+kind: waterfall
+description: Zero exit pays no holder.
+derivation: |
+  With E=0, no preference or residual can be paid.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2, holder: INVESTOR, invested: 2, prefMultiple: 1, participation: NONE }
+    grants: []
+    poolAvailable: 0
+  exitValue: 0
+expect:
+  payouts: { common: 0, a: 0 }
+tolerance: 0.01

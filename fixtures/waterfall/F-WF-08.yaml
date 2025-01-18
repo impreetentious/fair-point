@@ -1,0 +1,17 @@
+id: F-WF-08
+kind: waterfall
+description: A capped participant binds exactly at its total-return cap.
+derivation: |
+  A has a 3x cap of $6M. At E=$22M it has $2M + 20% of $20M = $6M.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 3 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 22000000
+expect:
+  payouts: { common: 16000000, a: 6000000 }
+  breakpoints: [22000000]
+tolerance: 0.01

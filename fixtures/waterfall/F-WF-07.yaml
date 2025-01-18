@@ -1,0 +1,16 @@
+id: F-WF-07
+kind: waterfall
+description: Full participation receives preference plus residual pro rata.
+derivation: |
+  A receives $2M preference, then 20% of the $8M residual, for $3.6M total.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: FULL }
+    grants: []
+    poolAvailable: 0
+  exitValue: 10000000
+expect:
+  payouts: { common: 6400000, a: 3600000 }
+tolerance: 0.01

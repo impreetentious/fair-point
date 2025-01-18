@@ -1,0 +1,17 @@
+id: F-WF-06
+kind: waterfall
+description: Stacked tiers pay senior preference before junior preference.
+derivation: |
+  Tier 1 receives its $2M claim first; the remaining $0.5M goes to tier 2.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8, holder: FOUNDER }
+      - { id: senior, name: Senior, kind: PREFERRED, shares: 1, holder: INVESTOR, invested: 2, prefMultiple: 1, participation: NONE, seniorityTier: 1 }
+      - { id: junior, name: Junior, kind: PREFERRED, shares: 1, holder: OTHER, invested: 1, prefMultiple: 1, participation: NONE, seniorityTier: 2 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 2.5
+expect:
+  payouts: { common: 0, senior: 2, junior: 0.5 }
+tolerance: 0.01

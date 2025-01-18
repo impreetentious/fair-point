@@ -1,0 +1,19 @@
+id: F-WF-02
+kind: waterfall
+description: Locked 1x capped-participation worked regime example.
+derivation: |
+  Preference is $2M; Series A then receives 20% of residual until its total reaches
+  the 3x cap of $6M at E=$22M. Conversion parity is $30M. At E=$20M, A=$5.6M
+  and common=$14.4M.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: series-a, name: Series A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 3 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 20000000
+expect:
+  payouts: { series-a: 5600000, common: 14400000 }
+  breakpoints: [2000000, 22000000, 30000000]
+tolerance: 0.01

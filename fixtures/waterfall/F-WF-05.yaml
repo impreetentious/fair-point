@@ -1,0 +1,18 @@
+id: F-WF-05
+kind: waterfall
+description: Pari-passu shortfall is pro-rata by preference amount.
+derivation: |
+  Claims are $2M and $1M in the same tier. At E=$1.5M they split 2:1, yielding
+  $1M and $0.5M respectively.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 1, holder: INVESTOR, invested: 2, prefMultiple: 1, participation: NONE }
+      - { id: b, name: B, kind: PREFERRED, shares: 1, holder: OTHER, invested: 1, prefMultiple: 1, participation: NONE }
+    grants: []
+    poolAvailable: 0
+  exitValue: 1.5
+expect:
+  payouts: { common: 0, a: 1, b: 0.5 }
+tolerance: 0.01

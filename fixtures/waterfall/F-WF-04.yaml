@@ -1,0 +1,16 @@
+id: F-WF-04
+kind: waterfall
+description: Exit below a tier-one preference is paid entirely to that tier.
+derivation: |
+  The $2M preference is only half funded at E=$1M, so common is zero.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2, holder: INVESTOR, invested: 2, prefMultiple: 1, participation: NONE }
+    grants: []
+    poolAvailable: 0
+  exitValue: 1
+expect:
+  payouts: { common: 0, a: 1 }
+tolerance: 0.01
