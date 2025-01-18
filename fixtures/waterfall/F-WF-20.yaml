@@ -1,0 +1,18 @@
+id: F-WF-20
+kind: waterfall
+description: Water filling retains one capped participant while the other converts.
+derivation: |
+  A's total cap is $4M. B converts because its $4M common value exceeds its $3M cap;
+  after A's $2M cap headroom, common receives $12M and B receives $4M.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 6000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 2 }
+      - { id: b, name: B, kind: PREFERRED, shares: 2000000, holder: OTHER, invested: 1000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 3 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 20000000
+expect:
+  payouts: { common: 12000000, a: 4000000, b: 4000000 }
+tolerance: 0.01

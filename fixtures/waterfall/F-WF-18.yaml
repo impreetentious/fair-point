@@ -1,0 +1,17 @@
+id: F-WF-18
+kind: waterfall
+description: Capped participant converts after its conversion parity threshold.
+derivation: |
+  At E=$40M, common conversion gives A 20% of E=$8M, exceeding its $6M cap path.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 3 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 40000000
+expect:
+  payouts: { common: 32000000, a: 8000000 }
+  pathTaken: { a: CONVERTED }
+tolerance: 0.01

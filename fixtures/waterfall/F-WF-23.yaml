@@ -1,0 +1,18 @@
+id: F-WF-23
+kind: waterfall
+description: Option exercise can coexist with a converted preferred class.
+derivation: |
+  At E=$150, A converts. The $10 grant then exercises: Edist=$160 over common, A,
+  and grant shares, PPS=$53.3333; grant net is $43.3333.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 1, holder: INVESTOR, invested: 50, prefMultiple: 1, participation: NONE }
+    grants: [ { id: g, options: 1, strike: 10, holder: OTHER } ]
+    poolAvailable: 0
+  exitValue: 150
+expect:
+  payouts: { common: 53.3333333333, a: 53.3333333333, g: 43.3333333333 }
+  strikeCashPaid: 10
+tolerance: 0.01

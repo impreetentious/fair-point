@@ -1,0 +1,16 @@
+id: F-WF-22
+kind: waterfall
+description: Multiple common classes split residual by issued shares.
+derivation: |
+  The two five-share common classes split the $100 exit equally.
+input:
+  capTable:
+    classes:
+      - { id: founder-common, name: Founder Common, kind: COMMON, shares: 5, holder: FOUNDER }
+      - { id: other-common, name: Other Common, kind: COMMON, shares: 5, holder: OTHER }
+    grants: []
+    poolAvailable: 0
+  exitValue: 100
+expect:
+  payouts: { founder-common: 50, other-common: 50 }
+tolerance: 0.01

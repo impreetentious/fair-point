@@ -1,0 +1,18 @@
+id: F-WF-19
+kind: waterfall
+description: Two full participants survive stacked preferences and share the residual.
+derivation: |
+  Senior A gets $2M and junior B gets $1M. The $7M residual over 10M common-equivalent
+  shares pays A=$1.4M, B=$1.4M, common=$4.2M.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 6000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: FULL, seniorityTier: 1 }
+      - { id: b, name: B, kind: PREFERRED, shares: 2000000, holder: OTHER, invested: 1000000, prefMultiple: 1, participation: FULL, seniorityTier: 2 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 10000000
+expect:
+  payouts: { common: 4200000, a: 3400000, b: 2400000 }
+tolerance: 0.01

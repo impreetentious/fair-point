@@ -1,0 +1,16 @@
+id: F-WF-21
+kind: waterfall
+description: A capped participant is paid its preference before the cap path has residual.
+derivation: |
+  E=$2M exactly fills A's 1x preference; no residual remains.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2, holder: INVESTOR, invested: 2, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 2 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 2
+expect:
+  payouts: { common: 0, a: 2 }
+tolerance: 0.01

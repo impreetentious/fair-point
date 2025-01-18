@@ -1,0 +1,17 @@
+id: F-WF-24
+kind: waterfall
+description: Full participation can be worth more than conversion at a large exit.
+derivation: |
+  A gets $2M plus 20% of the $38M residual, or $9.6M; conversion would only pay $8M.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: FULL }
+    grants: []
+    poolAvailable: 0
+  exitValue: 40000000
+expect:
+  payouts: { common: 30400000, a: 9600000 }
+  pathTaken: { a: PARTICIPATING }
+tolerance: 0.01
