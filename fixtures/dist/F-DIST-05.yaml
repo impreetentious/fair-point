@@ -1,0 +1,13 @@
+id: F-DIST-05
+kind: dist
+description: Mixture quantile honors the zero mass and conditional z-table points.
+derivation: |
+  p <= p0 maps to zero. At p=.60, conditional p is .50 and Q is P50=100.
+  At p=.92, conditional p is .90 and Q is P90=400.
+input:
+  operation: mixtureQuantile
+  beliefs: { p0: 0.2, p50: 100, p90: 400 }
+  p: 0.6
+expect:
+  value: 100
+tolerance: 0.000001

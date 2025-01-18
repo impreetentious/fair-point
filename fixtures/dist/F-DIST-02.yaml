@@ -1,0 +1,14 @@
+id: F-DIST-02
+kind: dist
+description: P10/P50/P90 fit records a consistency warning when the median conflicts.
+derivation: |
+  sigma = [ln(400) - ln(50)] / (2 * z90). The implied median sqrt(50 * 400)
+  differs from 100 by more than 10%, so the locked warning is emitted.
+input:
+  operation: fit
+  values: { p10: 50, p50: 100, p90: 400 }
+expect:
+  mu: 4.605170185988092
+  sigma: 0.8112984282439579
+  warnings: [beliefs not lognormal-consistent]
+tolerance: 0.01

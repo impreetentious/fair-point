@@ -1,0 +1,12 @@
+id: F-DIST-01
+kind: dist
+description: Fit a lognormal from conditional P50 and P90.
+derivation: |
+  mu = ln(100). sigma = [ln(400) - ln(100)] / 1.2815515655446004.
+input:
+  operation: fit
+  values: { p50: 100, p90: 400 }
+expect:
+  mu: 4.605170185988092
+  sigma: 1.0817312376586101
+tolerance: 0.000000000001

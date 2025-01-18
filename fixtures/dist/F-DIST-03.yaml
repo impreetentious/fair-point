@@ -1,0 +1,14 @@
+id: F-DIST-03
+kind: dist
+description: Full-support partial expectation equals the lognormal mean.
+derivation: |
+  E[X] for LN(0, 1) is exp(1/2); the [0, infinity) interval includes all mass.
+input:
+  operation: partialExpectation
+  mu: 0
+  sigma: 1
+  a: 0
+  b: .inf
+expect:
+  value: 1.6487212707001282
+tolerance: 0.000000001

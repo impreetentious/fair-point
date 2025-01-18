@@ -1,0 +1,11 @@
+id: F-DIST-06
+kind: dist
+description: mulberry32 seed-one first-five uniform snapshot.
+derivation: |
+  The values are the first five outputs of the locked mulberry32 recurrence for seed 1.
+input:
+  operation: mulberry32
+  seed: 1
+  count: 5
+expect:
+  values: [0.6270739405881613, 0.002735721180215478, 0.5274470399599522, 0.9810509674716741, 0.9683778982143849]

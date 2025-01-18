@@ -1,0 +1,14 @@
+id: F-DIST-04
+kind: dist
+description: Full-support interval probability is one.
+derivation: |
+  Phi(infinity) - Phi(-infinity) = 1.
+input:
+  operation: intervalProb
+  mu: 0
+  sigma: 1
+  a: 0
+  b: .inf
+expect:
+  value: 1
+tolerance: 0.000000000001
