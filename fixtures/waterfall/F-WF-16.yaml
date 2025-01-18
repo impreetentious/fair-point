@@ -1,0 +1,16 @@
+id: F-WF-16
+kind: waterfall
+description: Full participant receives a partially funded preference before residual exists.
+derivation: |
+  At E=$1M, the $2M preference is not full, so A receives all $1M and common receives zero.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: FULL }
+    grants: []
+    poolAvailable: 0
+  exitValue: 1000000
+expect:
+  payouts: { common: 0, a: 1000000 }
+tolerance: 0.01

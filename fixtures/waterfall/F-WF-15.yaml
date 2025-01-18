@@ -1,0 +1,18 @@
+id: F-WF-15
+kind: waterfall
+description: Non-participating preferred converts above its parity threshold.
+derivation: |
+  At E=$12M, 2M preferred shares converted into 10M common-equivalent shares receive
+  $2.4M, greater than the $2M preference.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: NONE }
+    grants: []
+    poolAvailable: 0
+  exitValue: 12000000
+expect:
+  payouts: { common: 9600000, a: 2400000 }
+  pathTaken: { a: CONVERTED }
+tolerance: 0.01

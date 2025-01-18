@@ -1,0 +1,14 @@
+id: F-WF-12
+kind: waterfall
+description: At-the-money option does not exercise under the strict EPS rule.
+derivation: |
+  Trial PPS is exactly $100, not strictly above the $100 strike, so common keeps E.
+input:
+  capTable:
+    classes: [ { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER } ]
+    grants: [ { id: g, options: 1, strike: 100, holder: OTHER } ]
+    poolAvailable: 0
+  exitValue: 100
+expect:
+  payouts: { common: 100, g: 0 }
+tolerance: 0.01

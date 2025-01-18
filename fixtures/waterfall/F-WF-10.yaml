@@ -1,0 +1,15 @@
+id: F-WF-10
+kind: waterfall
+description: Out-of-the-money option stays unexercised.
+derivation: |
+  Adding the $100 strike grant produces $99.50 per common share, below the strike.
+  The grant remains out and the single common share receives the $99 exit.
+input:
+  capTable:
+    classes: [ { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER } ]
+    grants: [ { id: g, options: 1, strike: 100, holder: OTHER } ]
+    poolAvailable: 0
+  exitValue: 99
+expect:
+  payouts: { common: 99, g: 0 }
+tolerance: 0.01

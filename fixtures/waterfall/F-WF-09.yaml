@@ -1,0 +1,18 @@
+id: F-WF-09
+kind: waterfall
+description: A conversion ratio other than one changes parity and converted residual shares.
+derivation: |
+  A converts into 2M common equivalents out of 10M shares. At E=$10M conversion
+  pays $2M, exceeding its $1M preference; common receives $8M.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 1000000, holder: INVESTOR, invested: 1000000, prefMultiple: 1, participation: NONE, conversionRatio: 2 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 10000000
+expect:
+  payouts: { common: 8000000, a: 2000000 }
+  pathTaken: { a: CONVERTED }
+tolerance: 0.01

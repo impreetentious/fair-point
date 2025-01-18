@@ -1,0 +1,17 @@
+id: F-WF-13
+kind: waterfall
+description: Lower strike option exercises before a higher strike option.
+derivation: |
+  The zero-strike grant enters the prefix and receives half of E. The $90 grant is not
+  ITM at the resulting PPS, so its net payout is zero.
+input:
+  capTable:
+    classes: [ { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER } ]
+    grants:
+      - { id: low, options: 1, strike: 0, holder: FOUNDER }
+      - { id: high, options: 1, strike: 90, holder: OTHER }
+    poolAvailable: 0
+  exitValue: 100
+expect:
+  payouts: { common: 50, low: 50, high: 0 }
+tolerance: 0.01
