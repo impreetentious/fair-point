@@ -1,0 +1,19 @@
+id: F-WF-REGIME-INF
+kind: waterfall
+description: Regime walk does not truncate the far conversion boundary.
+derivation: |
+  The $1M preference holds until conversion parity: E / 101 = $1M, so the final
+  boundary is $101M and final preferred slope is 1/101. At E=$202M, preferred gets $2M.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 100000000, holder: FOUNDER }
+      - { id: preferred, name: Preferred, kind: PREFERRED, shares: 1000000, holder: INVESTOR, invested: 1000000, prefMultiple: 1, participation: NONE }
+    grants: []
+    poolAvailable: 0
+  exitValue: 202000000
+expect:
+  payouts: { common: 200000000, preferred: 2000000 }
+  breakpoints: [101000000]
+  pathTaken: { preferred: CONVERTED }
+tolerance: 0.01

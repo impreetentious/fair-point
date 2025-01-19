@@ -1,0 +1,18 @@
+id: F-WF-OPTIONS-01
+kind: waterfall
+description: Ascending-strike prefix exercise rejects a high strike after a zero-strike group.
+derivation: |
+  g2 at strike zero exercises first, yielding PPS=100/101. g1 at strike 90 is then
+  not ITM. Reported payouts are common=100/101 and g2=10000/101.
+input:
+  capTable:
+    classes: [ { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER } ]
+    grants:
+      - { id: g1, options: 1, strike: 90, holder: OTHER }
+      - { id: g2, options: 100, strike: 0, holder: FOUNDER }
+    poolAvailable: 0
+  exitValue: 100
+expect:
+  payouts: { common: 0.9900990099, g1: 0, g2: 99.0099009901 }
+  strikeCashPaid: 0
+tolerance: 0.01

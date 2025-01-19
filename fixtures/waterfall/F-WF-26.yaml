@@ -1,0 +1,16 @@
+id: F-WF-26
+kind: waterfall
+description: A 2x capped participant reaches its cap at a smaller exit.
+derivation: |
+  A gets $2M preference plus $2M residual participation at E=$12M, exactly its $4M cap.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 2 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 12000000
+expect:
+  payouts: { common: 8000000, a: 4000000 }
+tolerance: 0.01

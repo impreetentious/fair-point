@@ -1,0 +1,18 @@
+id: F-WF-29
+kind: waterfall
+description: Symmetric interacting capped classes retain their participation equilibrium.
+derivation: |
+  Each class receives its $2M preference plus 20% of the $16M residual, or $5.2M;
+  conversion would be $4M each, so both remain on the capped participation path.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 6000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 3 }
+      - { id: b, name: B, kind: PREFERRED, shares: 2000000, holder: OTHER, invested: 2000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 3 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 20000000
+expect:
+  payouts: { common: 9600000, a: 5200000, b: 5200000 }
+tolerance: 0.01

@@ -1,0 +1,14 @@
+id: F-WF-28
+kind: waterfall
+description: Existing pool is excluded from exit residual membership.
+derivation: |
+  PoolAvailable is fully diluted for pricing but receives $0 at exit; common gets all $1M.
+input:
+  capTable:
+    classes: [ { id: common, name: Common, kind: COMMON, shares: 100, holder: FOUNDER } ]
+    grants: []
+    poolAvailable: 900
+  exitValue: 1000000
+expect:
+  payouts: { common: 1000000 }
+tolerance: 0.01

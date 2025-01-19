@@ -1,0 +1,16 @@
+id: F-WF-25
+kind: waterfall
+description: A 1.5x non-participating preference remains optimal below parity.
+derivation: |
+  A's preference is $3M. At E=$10M, conversion pays $2M, so A takes $3M.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1.5, participation: NONE }
+    grants: []
+    poolAvailable: 0
+  exitValue: 10000000
+expect:
+  payouts: { common: 7000000, a: 3000000 }
+tolerance: 0.01

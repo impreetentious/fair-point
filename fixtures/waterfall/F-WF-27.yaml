@@ -1,0 +1,16 @@
+id: F-WF-27
+kind: waterfall
+description: Preference amount scales with the locked multiple.
+derivation: |
+  A has a 2x preference on $1M. At E=$1.5M the preference is underfunded and takes all proceeds.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 9, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 1, holder: INVESTOR, invested: 1000000, prefMultiple: 2, participation: NONE }
+    grants: []
+    poolAvailable: 0
+  exitValue: 1500000
+expect:
+  payouts: { common: 0, a: 1500000 }
+tolerance: 0.01

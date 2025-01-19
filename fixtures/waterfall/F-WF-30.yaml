@@ -1,0 +1,19 @@
+id: F-WF-30
+kind: waterfall
+description: Symmetric capped classes convert once common proceeds exceed their caps.
+derivation: |
+  At E=$40M, all-converted ownership is 20%/20%/60%; each preferred gets $8M,
+  greater than its $6M capped participation return.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 6000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 3 }
+      - { id: b, name: B, kind: PREFERRED, shares: 2000000, holder: OTHER, invested: 2000000, prefMultiple: 1, participation: CAPPED, participationCapMultiple: 3 }
+    grants: []
+    poolAvailable: 0
+  exitValue: 40000000
+expect:
+  payouts: { common: 24000000, a: 8000000, b: 8000000 }
+  pathTaken: { a: CONVERTED, b: CONVERTED }
+tolerance: 0.01

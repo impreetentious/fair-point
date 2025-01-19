@@ -1,0 +1,16 @@
+id: F-WF-STRIKE-CASH
+kind: waterfall
+description: Reported net payouts reconcile to E while strike cash reconciles gross settlement.
+derivation: |
+  With the same one-option case as F-WF-11, class plus net grant payouts equal $100,
+  and strikeCashPaid is exactly $10.
+input:
+  capTable:
+    classes: [ { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER } ]
+    grants: [ { id: g, options: 1, strike: 10, holder: OTHER } ]
+    poolAvailable: 0
+  exitValue: 100
+expect:
+  payouts: { common: 55, g: 45 }
+  strikeCashPaid: 10
+tolerance: 0.01
