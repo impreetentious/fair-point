@@ -1,7 +1,7 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.3.4",
+  "version": "0.3.5",
   "type": "module",
   "engines": {
     "node": "20.18.x"
@@ -14,6 +14,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest run --passWithNoTests",
     "fixtures": "vitest run tests/fixtures.test.ts --passWithNoTests",
+    "bench": "vitest run tests/bench.test.ts --passWithNoTests",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run fixtures"
   },
   "dependencies": {
