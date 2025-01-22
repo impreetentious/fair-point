@@ -1,0 +1,21 @@
+id: F-VAL-05
+kind: validation
+description: V2 does not apply a post-money cap limit to a pre-money SAFE.
+derivation: |
+  The $1M/$0.5M ratio is 2.0, but V2 sums only POST_MONEY SAFE cap fractions; this
+  pre-money SAFE remains schema-valid.
+input:
+  schemaVersion: '1.0.0'
+  name: Pre-money V2 scope
+  pre:
+    classes: [ { id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER } ]
+    grants: []
+    poolAvailable: 0
+  safes: [ { id: pre, name: Pre, amount: 1000000, kind: PRE_MONEY, valuationCap: 500000 } ]
+  terms: { preMoney: 10000000, investment: 1000000, poolTargetPost: 0.1, prefMultiple: 1, participation: NONE, seniority: PARI }
+  founderBeliefs: { p0: 0.2, p50: 100, p90: 200 }
+  investorBeliefs: { p0: 0.2, p50: 100, p90: 200 }
+  sharedBeliefs: true
+  disagreement: { dF: 0, dI: 0 }
+  space: { preMoneyRange: [5000000, 15000000], preMoneySteps: 9, pinnedInvestment: 1000000, pools: [0.1], multiples: [1], participations: [NONE], seniority: PARI }
+expect: { valid: true }
