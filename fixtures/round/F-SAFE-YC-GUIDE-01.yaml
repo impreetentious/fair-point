@@ -1,0 +1,22 @@
+id: F-SAFE-YC-GUIDE-01
+kind: safe
+description: YC Post-Money Safe User Guide multi-safe Company Capitalization arithmetic.
+derivation: |
+  YC Post-Money Safe User Guide, retrieved 2025-01-14, rounds its worked Company
+  Capitalization example to 11,806,694 and its Series Seed-1 allocation to 590,334.
+  With a 5% cap SAFE A and 1,216,360 round-price shares from SAFE B,
+  A=.05*(10,000,000+1,216,360)/(1-.05)=590,334.7368 and capitalization is
+  10,000,000+1,216,360+590,334.7368=11,806,694.7368. The guide's printed whole
+  shares follow by rounding. Source: YC Post-Money Safe User Guide, Company
+  Capitalization worked example, https://www.ycombinator.com/assets/ycdc/Post%20Money%20Safe%20User%20Guide-9c2ac9d1875df3d952c0acb4d1cff31f0b3663fef73ded133ffb7b8afafc90e5.pdf.
+input:
+  baseCap: 10000000
+  roundPps: 1
+  safes:
+    - { id: series-seed-1, name: Series Seed-1, amount: 200000, kind: POST_MONEY, valuationCap: 4000000 }
+    - { id: round-price, name: Round price, amount: 1216360, kind: POST_MONEY, valuationCap: 100000000 }
+expect:
+  sharesBySafe: { series-seed-1: 590334.7368, round-price: 1216360 }
+  routeBySafe: { series-seed-1: CAP, round-price: ROUND_PRICE }
+  totalCapitalization: 11806694.7368
+tolerance: 0.01

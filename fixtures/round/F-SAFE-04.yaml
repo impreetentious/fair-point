@@ -1,0 +1,19 @@
+id: F-SAFE-04
+kind: round
+description: Mixed cap-and-discount post-money SAFE global solve with pool shuffle.
+derivation: |
+  The 20% discount route wins. Jointly solving T, P, and PPS gives T=1,666,666.6667,
+  P=1,666,666.6667, and PPS=$0.75 for Vpre=$10M, I=$2.5M, t=10%.
+input:
+  capTable:
+    classes: [ { id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER } ]
+    grants: []
+    poolAvailable: 0
+  safes: [ { id: mixed, name: Mixed, amount: 1000000, kind: POST_MONEY, valuationCap: 20000000, discount: 0.2 } ]
+  terms: { preMoney: 10000000, investment: 2500000, poolTargetPost: 0.1, prefMultiple: 1, participation: NONE, seniority: PARI }
+expect:
+  pps: 0.75
+  poolIncrease: 1666666.6667
+  safeShares: 1666666.6667
+  classes: { safe-mixed: { shares: 1666666.6667 } }
+tolerance: 0.01

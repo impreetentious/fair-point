@@ -1,0 +1,15 @@
+id: F-SAFE-03
+kind: safe
+description: Low-priced round route wins for a post-money SAFE.
+derivation: |
+  At a $0.10 round PPS, the round-price route gives 10M shares, more than the
+  cap-route 2.5M shares for a $1M SAFE at a $5M cap.
+input:
+  baseCap: 10000000
+  roundPps: 0.1
+  safes:
+    - { id: post, name: Post-money, amount: 1000000, kind: POST_MONEY, valuationCap: 5000000 }
+expect:
+  sharesBySafe: { post: 10000000 }
+  routeBySafe: { post: ROUND_PRICE }
+tolerance: 0.01

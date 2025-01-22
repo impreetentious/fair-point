@@ -1,0 +1,19 @@
+id: F-SAFE-YC-GUIDE-03
+kind: safe
+description: YC guide cap-and-discount SAFE chooses its discount conversion price.
+derivation: |
+  In the guide's cap-and-discount route comparison, the holder receives the most
+  shares from the lowest conversion price. At PPS=$0.80, a $1M SAFE with a $20M
+  cap and 25% discount has cap shares .05*10M/.95=526,315.7895, round-price
+  shares=1,250,000, and discount shares=1M/(.75*.80)=1,666,666.6667. Discount
+  therefore governs. Source: YC Post-Money Safe User Guide, cap-and-discount
+  conversion discussion, retrieved 2025-01-14, https://www.ycombinator.com/assets/ycdc/Post%20Money%20Safe%20User%20Guide-9c2ac9d1875df3d952c0acb4d1cff31f0b3663fef73ded133ffb7b8afafc90e5.pdf.
+input:
+  baseCap: 10000000
+  roundPps: 0.8
+  safes:
+    - { id: mixed-guide, name: Cap and discount guide SAFE, amount: 1000000, kind: POST_MONEY, valuationCap: 20000000, discount: 0.25 }
+expect:
+  sharesBySafe: { mixed-guide: 1666666.6667 }
+  routeBySafe: { mixed-guide: DISCOUNT }
+tolerance: 0.01

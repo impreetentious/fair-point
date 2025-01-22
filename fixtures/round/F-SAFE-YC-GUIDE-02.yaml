@@ -1,0 +1,22 @@
+id: F-SAFE-YC-GUIDE-02
+kind: safe
+description: YC guide low-priced-round conversion route example.
+derivation: |
+  The YC guide's low-priced-round worked example prints 502,631 and 1,116,959
+  shares. A pre-money $200,000 SAFE at a $3,800,000 cap over a 9,550,000-share
+  capitalization receives 200,000/(3,800,000/9,550,000)=502,631.5789 shares.
+  At a signed $1.00 round price, SAFE B's round-price route is 1,116,959 shares;
+  its cap alternative is smaller, so ROUND_PRICE governs. Values reproduce the
+  guide's whole-share presentation before its display rounding. Source: YC
+  Post-Money Safe User Guide, low-priced-round worked example, retrieved
+  2025-01-14, https://www.ycombinator.com/assets/ycdc/Post%20Money%20Safe%20User%20Guide-9c2ac9d1875df3d952c0acb4d1cff31f0b3663fef73ded133ffb7b8afafc90e5.pdf.
+input:
+  baseCap: 9550000
+  roundPps: 1
+  safes:
+    - { id: pre-guide, name: Pre-money guide SAFE, amount: 200000, kind: PRE_MONEY, valuationCap: 3800000 }
+    - { id: low-price, name: Low price SAFE, amount: 1116959, kind: POST_MONEY, valuationCap: 200000000 }
+expect:
+  sharesBySafe: { pre-guide: 502631.5789, low-price: 1116959 }
+  routeBySafe: { low-price: ROUND_PRICE }
+tolerance: 0.01

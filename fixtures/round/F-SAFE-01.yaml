@@ -1,0 +1,16 @@
+id: F-SAFE-01
+kind: safe
+description: Simultaneous YC post-money cap conversion.
+derivation: |
+  f1=.10 and f2=.025, so total cap shares are .125*10,000,000/(1-.125)
+  =1,428,571.4286; each holder receives its f_i portion of the same capitalization.
+input:
+  baseCap: 10000000
+  roundPps: 1
+  safes:
+    - { id: safe1, name: SAFE 1, amount: 500000, kind: POST_MONEY, valuationCap: 5000000 }
+    - { id: safe2, name: SAFE 2, amount: 250000, kind: POST_MONEY, valuationCap: 10000000 }
+expect:
+  sharesBySafe: { safe1: 1142857.1429, safe2: 285714.2857 }
+  routeBySafe: { safe1: CAP, safe2: CAP }
+tolerance: 0.01
