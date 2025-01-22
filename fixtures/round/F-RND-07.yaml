@@ -1,0 +1,15 @@
+id: F-RND-07
+kind: round
+description: Pre-money no-SAFE invariant preserves the investor ownership identity.
+derivation: |
+  With Vpre=$9M and I=$1M, N/FD_post must equal I/(Vpre+I)=10%.
+input:
+  capTable:
+    classes: [ { id: common, name: Common, kind: COMMON, shares: 9000000, holder: FOUNDER } ]
+    grants: []
+    poolAvailable: 0
+  safes: []
+  terms: { preMoney: 9000000, investment: 1000000, poolTargetPost: 0.1, prefMultiple: 1, participation: NONE, seniority: PARI }
+expect:
+  investorPct: 0.1
+tolerance: 0.000001

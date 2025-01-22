@@ -1,0 +1,18 @@
+id: F-RND-08
+kind: round
+description: Pre-money BWA fixed point preserves the new investor ownership invariant.
+derivation: |
+  The BWA adjustment re-enters the PPS solve. The fixture captures the deterministic converged
+  price and confirms that the new investor remains at I/(Vpre+I).
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, originalIssuePrice: 1, prefMultiple: 1, participation: NONE, antiDilution: BWA }
+    grants: []
+    poolAvailable: 0
+  safes: []
+  terms: { preMoney: 10000000, investment: 1000000, poolTargetPost: 0.1, prefMultiple: 1, participation: NONE, seniority: PARI }
+expect:
+  investorPct: 0.0909090909
+tolerance: 0.000001

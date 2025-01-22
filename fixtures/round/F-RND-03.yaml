@@ -1,0 +1,20 @@
+id: F-RND-03
+kind: round
+description: Broad-based weighted-average anti-dilution in direct PPS mode.
+derivation: |
+  A_bb=9.8M common +2M Series A +.2M issued grants=12M. B=1M, C=2M,
+  CP2=13/14 and the Series A conversion ratio becomes 14/13.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 9800000, holder: FOUNDER }
+      - { id: series-a, name: Series A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, originalIssuePrice: 1, prefMultiple: 1, participation: NONE, antiDilution: BWA }
+    grants: [ { id: options, options: 200000, strike: 0, holder: FOUNDER } ]
+    poolAvailable: 0
+  safes: []
+  terms: { pricedPerShare: 0.5, investment: 1000000, poolTargetPost: 0, prefMultiple: 1, participation: NONE, seniority: PARI }
+expect:
+  pps: 0.5
+  poolIncrease: 0
+  classes: { series-a: { conversionRatio: 1.0769230769 } }
+tolerance: 0.000001
