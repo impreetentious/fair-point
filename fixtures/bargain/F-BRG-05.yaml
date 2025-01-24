@@ -1,0 +1,9 @@
+id: F-BRG-05
+kind: bargain
+description: Nash product tie resolves to the lowest package index.
+derivation: |
+  (1,4) and (2,2) have the same gain product 4; D23 selects index 0.
+input:
+  points: [ { index: 0, uF: 1, uI: 4 }, { index: 1, uF: 2, uI: 2 } ]
+  disagreement: { dF: 0, dI: 0 }
+expect: { nash: 0, ks: 0 }

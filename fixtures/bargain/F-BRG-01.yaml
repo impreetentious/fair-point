@@ -1,0 +1,10 @@
+id: F-BRG-01
+kind: bargain
+description: Locked discrete divide-the-dollar bargaining answers.
+derivation: |
+  On x=0..100 with founder utility sqrt(x), investor utility 100-x, and d=(0,0),
+  the gain-product maximum is x=33; discrete KS maximizes its normalized minimum at
+  x=38; equal gains are closest at x=90; utilitarian ties x=0 and x=1 at 100 and
+  D23's gain-product tie-break selects x=1.
+input: { operation: divideDollar, max: 100 }
+expect: { nash: 33, ks: 38, egalitarian: 90, utilitarian: 1, zopa: true }

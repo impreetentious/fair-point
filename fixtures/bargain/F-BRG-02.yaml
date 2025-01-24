@@ -1,0 +1,9 @@
+id: F-BRG-02
+kind: bargain
+description: Empty ZOPA returns no bargaining selections.
+derivation: |
+  Both packages miss at least one $10 disagreement coordinate, so the IR set is empty.
+input:
+  points: [ { index: 0, uF: 9, uI: 12 }, { index: 1, uF: 12, uI: 9 } ]
+  disagreement: { dF: 10, dI: 10 }
+expect: { zopa: false, nash: null, ks: null, egalitarian: null, utilitarian: null }

@@ -1,0 +1,9 @@
+id: F-BRG-04
+kind: bargain
+description: Utilitarian equal-sum tie resolves by gain product.
+derivation: |
+  (0,100) and (1,99) both sum to 100. Their gain products are 0 and 99, so D23 selects index 1.
+input:
+  points: [ { index: 0, uF: 0, uI: 100 }, { index: 1, uF: 1, uI: 99 } ]
+  disagreement: { dF: 0, dI: 0 }
+expect: { utilitarian: 1 }
