@@ -1,0 +1,21 @@
+id: F-BRG-CRRA-01
+kind: bargain
+description: Deterministic quadrature CE agrees with seeded CRRA Monte Carlo.
+derivation: |
+  The 64-node probability-space quadrature and the n=200,000, seed-42 MC estimator
+  evaluate the same CRRA(0.5) founder payout distribution. The assertion permits 4 propagated
+  MC standard errors, as required by §6.8.
+input:
+  operation: crra
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - { id: series-a, name: Series A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: NONE }
+    grants: []
+    poolAvailable: 0
+  beliefs: { p0: 0.2, p50: 15000000, p90: 45000000 }
+  gamma: 0.5
+  w0: 250000
+  n: 200000
+  seed: 42
+expect: { withinSe: 4 }

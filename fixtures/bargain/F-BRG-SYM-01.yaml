@@ -1,0 +1,10 @@
+id: F-BRG-SYM-01
+kind: bargain
+description: Locked commuting-symmetry fixture with index-stable endpoint choice.
+derivation: |
+  The two mirror endpoints tie on score keys. In this orientation index 3 is the deterministic
+  representative; the property battery verifies that mirroring maps this selection accordingly.
+input:
+  points: [ { index: 3, uF: 2, uI: 1 }, { index: 4, uF: 1, uI: 2 } ]
+  disagreement: { dF: 0, dI: 0 }
+expect: { nash: 3, ks: 3 }
