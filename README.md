@@ -16,11 +16,11 @@ This product closes the gap with one structural insight: **a term package plus e
 
 ## What it does (the three hero moments)
 
-*(Illustrative numbers below are placeholders that will be regenerated from the shipped example decks at build time.)*
+*(The example values below are derived from the shipped deck snapshots.)*
 
 1. **See the physics.** Load a deal, drag the exit slider, and watch the waterfall chart kink at exact, labeled breakpoints: "Series A converts above $21.3M."
 2. **See the frontier.** Enter both parties' beliefs (P10/P50/P90 plus a failure probability) and hundreds of candidate term packages appear as a cloud in (founder EV, investor EV) space — the Pareto frontier lit up, Nash and Kalai–Smorodinsky (discrete) fair points flagged.
-3. **See the money on the table.** Pin the offer you actually received and read: "This offer leaves $X on the table jointly. A package with higher pre-money, 2×-capped participation, and a smaller pool gives you +$A and them +$B."
+3. **See the money on the table.** Pin the offer you actually received and read its exact joint surplus and ranked win-win alternatives. The shipped Series A clean snapshot is already grid-efficient under shared beliefs ($0 on the table); changing beliefs or pinning an off-grid offer makes the comparison live.
 
 ## Who it's for
 
@@ -53,7 +53,7 @@ Multi-party syndicate bargaining, employee-offer analysis, dividends, convertibl
 |---|---|
 | `README.md` | This brief — what the product is and why. |
 
-**Status:** v0.7.x — Phases 0–5 complete on `main` (full engine); Phase 6 (UI: Cap Table + Round + Waterfall) is next.
+**Status:** v0.7.x — Phases 0–6 complete on `main` (full engine + Cap Table / Round / Waterfall UI); Phase 7 (Beliefs + Frontier UI) is next.
 
 ---
 
@@ -68,4 +68,4 @@ This IST timestamp rule is permanent for all future workflows, commits, and AI a
 Follow this format for version control:
 
 * **Base Format Version:** 0.0.0 — the version of the version-block schema itself (the shape of these lines); it is bumped only when this block's structure changes, not on every commit.
-* **Product Version:** `v0.7.0_2025-01-26_22:09:55` (IST)
+* **Product Version:** `v0.7.1_2025-01-27_21:47:53` (IST)
