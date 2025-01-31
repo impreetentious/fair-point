@@ -16,3 +16,12 @@
 - Result: **9.849 ms EV** and **19.524 ms CRRA** on the warm run, both below the 400 ms CI budget
   and the 150 ms local target.
 - Load protocol: both budgets passed on the first measured run; no three-run remediation was needed.
+
+## Phase 9 — Release-day re-measurement
+
+- Measurement: 2025-01-13 release-hardening run under the same protocols as Phase 2 and Phase 5.
+- Waterfall `payoutsAt`: **4.707 µs median**, under the Phase 2 50 µs budget.
+- Full pipeline: **12.616 ms EV** and **25.091 ms CRRA**, both under the §4.4 CI 400 ms budget
+  and the 150 ms local target.
+- Bundle size: `dist/assets/index-*.js` at **193 KB gzipped** (JS) plus 1.96 KB gzipped CSS and
+  1.69 KB service worker, all under the §13 500 KB gzipped budget.

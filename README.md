@@ -53,7 +53,7 @@ Multi-party syndicate bargaining, employee-offer analysis, dividends, convertibl
 |---|---|
 | `README.md` | This brief — what the product is and why. |
 
-**Status:** v0.9.x — Phases 0–8 complete on `main` (engine + all six screens + persistence + offline SW + eight explainers); Phase 9 (hardening + release) is next.
+**Status:** v0.10.x — P0–P9 complete on `main`; v1.0.0 is an owner action post-audit.
 
 ---
 
@@ -68,4 +68,4 @@ This IST timestamp rule is permanent for all future workflows, commits, and AI a
 Follow this format for version control:
 
 * **Base Format Version:** 0.0.0 — the version of the version-block schema itself (the shape of these lines); it is bumped only when this block's structure changes, not on every commit.
-* **Product Version:** `v0.9.0_2025-01-30_01:38:08` (IST)
+* **Product Version:** `v0.10.0_2025-01-31_23:59:39` (IST)
