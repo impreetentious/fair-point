@@ -12,7 +12,7 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     void navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => undefined)
   })

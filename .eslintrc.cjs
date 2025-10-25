@@ -4,7 +4,7 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint'],
   extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended'],
-  ignorePatterns: ['dist', 'node_modules'],
+  ignorePatterns: ['dist', 'node_modules', '.next', 'out', 'next-env.d.ts'],
   rules: {
     '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/consistent-type-imports': 'error',

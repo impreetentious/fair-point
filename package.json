@@ -1,15 +1,15 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "engines": {
-    "node": "20.18.x"
+    "node": "20.19.x"
   },
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "npm run typecheck && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "dev": "next dev -H 127.0.0.1",
+    "build": "npm run typecheck && next build && node scripts/generate-sw.mjs",
+    "preview": "serve -l 4173 out",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest run --passWithNoTests",
@@ -18,26 +18,26 @@
     "verify": "npm run typecheck && npm run lint && npm run test && npm run fixtures"
   },
   "dependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "recharts": "2.15.0",
-    "zod": "3.24.1",
+    "next": "^15.5.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "recharts": "2.15.1",
+    "zod": "3.24.2",
     "zustand": "5.0.3"
   },
   "devDependencies": {
     "@types/js-yaml": "4.0.9",
-    "@types/node": "20.17.16",
-    "@types/react": "18.3.18",
-    "@types/react-dom": "18.3.5",
-    "@typescript-eslint/eslint-plugin": "8.22.0",
-    "@typescript-eslint/parser": "8.22.0",
-    "@vitejs/plugin-react": "4.3.4",
+    "@types/node": "20.17.24",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@typescript-eslint/eslint-plugin": "8.27.0",
+    "@typescript-eslint/parser": "8.27.0",
     "eslint": "8.57.1",
-    "fast-check": "3.23.2",
+    "fast-check": "4.0.0",
     "js-yaml": "4.1.0",
-    "prettier": "3.4.2",
+    "prettier": "3.5.3",
+    "serve": "^14.2.5",
     "typescript": "5.7.3",
-    "vite": "6.0.11",
-    "vitest": "3.0.4"
+    "vitest": "3.0.9"
   }
 }
