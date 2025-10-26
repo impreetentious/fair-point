@@ -81,6 +81,19 @@ function solveFixedRoutes(config: SafeSolveConfig, routes: Record<string, SafeRo
 }
 
 function maxRoute(config: SafeSolveConfig, routes: Record<string, SafeRoute>, safe: Safe): SafeRoute {
+  // Pre-money SAFEs (and notes projected as such) use cap-vs-discount only — §6.2.0 / §6.2.1.
+  if (safe.kind === 'PRE_MONEY') {
+    if (safe.valuationCap !== undefined && safe.discount !== undefined) {
+      const solved = solveFixedRoutes(config, routes)
+      const pool = solved.poolIncrease
+      const capPrice = safe.valuationCap / (config.baseCap + pool)
+      const discountPrice = (1 - safe.discount) * solved.pps
+      return capPrice <= discountPrice ? 'CAP' : 'DISCOUNT'
+    }
+    if (safe.valuationCap !== undefined) return 'CAP'
+    if (safe.discount !== undefined) return 'DISCOUNT'
+    return 'ROUND_PRICE'
+  }
   const candidates: SafeRoute[] = []
   if (safe.valuationCap !== undefined) candidates.push('CAP')
   if (safe.discount !== undefined) candidates.push('DISCOUNT')
@@ -124,6 +137,11 @@ function basicSafeClass(safe: Safe, shares: number): ShareClass {
     seniorityTier: 1,
     conversionRatio: 1,
     antiDilution: 'NONE',
+    dividendRate: 0,
+    dividendKind: 'NONE',
+    payToPlay: 'NONE',
+    accruedDividends: 0,
+    redemptionClaim: 0,
   }
 }
 

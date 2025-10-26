@@ -2,7 +2,7 @@
 
 **The term-sheet bargaining studio.** Exact liquidation-waterfall physics. Real Pareto frontiers. Your cap table never leaves your browser.
 
-**Status:** v0.12.1 — Playwright offline + Lighthouse a11y gates on main. Static offline-capable export; v1.0.0 tagging is a separate release step.
+**Status:** v0.12.2 — Schema extensions, accruals, and settlement preference hooks on main.
 
 ---
 

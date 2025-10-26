@@ -32,6 +32,17 @@ const PreferredClassInputSchema = z
     seniorityTier: finite.int().min(1).optional(),
     conversionRatio: positive.optional(),
     antiDilution: z.enum(['NONE', 'BWA', 'FULL_RATCHET']).optional(),
+    /** Annual dividend rate as a decimal (0.08 = 8%). Default none. §6.13 */
+    dividendRate: nonNegative.optional(),
+    dividendKind: z.enum(['NONE', 'SIMPLE', 'CUMULATIVE']).optional(),
+    /** Pay-to-play: non-participating preferred convert to common on a down round. §6.12 */
+    payToPlay: z.enum(['NONE', 'TO_COMMON']).optional(),
+    /** Redemption right: multiple of invested, eligible after eligibleYears. §6.14 */
+    redemptionMultiple: positive.optional(),
+    redemptionEligibleYears: nonNegative.optional(),
+    /** Settlement accruals — set by accrueForExit, not authored in deal files. */
+    accruedDividends: nonNegative.optional(),
+    redemptionClaim: nonNegative.optional(),
   })
   .strict()
 
@@ -93,6 +104,8 @@ const CapTableInputSchema = z
             options: positive,
             strike: nonNegative,
             holder: z.enum(['FOUNDER', 'OTHER']),
+            /** Warrants settle identically to options (cash-exercise treasury method). §6.11 */
+            instrument: z.enum(['OPTION', 'WARRANT']).default('OPTION'),
           })
           .strict(),
       )
@@ -144,6 +157,11 @@ const CapTableInputSchema = z
             seniorityTier: cls.seniorityTier ?? 1,
             conversionRatio: cls.conversionRatio ?? 1,
             antiDilution: cls.antiDilution ?? 'NONE',
+            dividendRate: cls.dividendRate ?? 0,
+            dividendKind: cls.dividendKind ?? 'NONE',
+            payToPlay: cls.payToPlay ?? 'NONE',
+            accruedDividends: cls.accruedDividends ?? 0,
+            redemptionClaim: cls.redemptionClaim ?? 0,
           }
         : cls,
     ),
@@ -165,6 +183,8 @@ const SafeInputSchema = z
     valuationCap: positive.optional(),
     discount: finite.gt(0).lt(1).optional(),
     holder: z.enum(['INVESTOR', 'OTHER']).default('OTHER'),
+    /** Most-favored-nation: adopt the best peer SAFE terms before conversion. §6.16 */
+    mfn: z.boolean().default(false),
   })
   .strict()
   .superRefine((safe, ctx) => {
@@ -180,6 +200,45 @@ const SafeInputSchema = z
 export const SafeSchema = SafeInputSchema
 export type Safe = z.output<typeof SafeSchema>
 
+/** Convertible note — distinct from SAFEs: principal accrues interest to an amount that then converts. §6.15 */
+export const ConvertibleNoteSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    principal: positive,
+    interestRate: nonNegative,
+    interestKind: z.enum(['SIMPLE', 'COMPOUND']),
+    accrualYears: nonNegative,
+    valuationCap: positive.optional(),
+    discount: finite.gt(0).lt(1).optional(),
+    maturityYears: positive.optional(),
+    holder: z.enum(['INVESTOR', 'OTHER']).default('OTHER'),
+  })
+  .strict()
+  .superRefine((note, ctx) => {
+    if (note.valuationCap === undefined && note.discount === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['valuationCap'],
+        message: 'V17: a convertible note requires a valuationCap or discount',
+      })
+    }
+  })
+export type ConvertibleNote = z.output<typeof ConvertibleNoteSchema>
+
+/** Secondary share sale — cash to the seller, not the company. §6.17 */
+export const SecondarySaleSchema = z
+  .object({
+    id: z.string().min(1),
+    sellerClassId: z.string().min(1),
+    shares: positive,
+    pricePerShare: positive,
+    buyerHolder: holder,
+    buyerClassId: z.string().min(1).optional(),
+  })
+  .strict()
+export type SecondarySale = z.output<typeof SecondarySaleSchema>
+
 export const RoundTermsSchema = z
   .object({
     preMoney: positive.optional(),
@@ -189,6 +248,11 @@ export const RoundTermsSchema = z
     prefMultiple: z.union([z.literal(1), z.literal(1.5), z.literal(2), z.literal(3)]),
     participation: z.enum(['NONE', 'CAP2', 'CAP3', 'FULL']),
     seniority: z.enum(['PARI', 'SENIOR']),
+    /**
+     * Class ids that are meeting their pay-to-play obligation in this round.
+     * Preferred with payToPlay=TO_COMMON that are NOT listed convert to common. §6.12
+     */
+    payToPlayParticipants: z.array(z.string().min(1)).optional(),
   })
   .strict()
   .superRefine((terms, ctx) => {
@@ -283,12 +347,22 @@ const RiskSchema = z
   })
   .strict()
 
+/** Opt-in time-discounting. Absent/null ⇒ undiscounted exit proceeds (D15 default). §6.18 */
+export const DiscountingSchema = z
+  .object({
+    annualRate: nonNegative,
+    yearsToExit: nonNegative,
+  })
+  .strict()
+export type Discounting = z.output<typeof DiscountingSchema>
+
 const DealFileBaseSchema = z
   .object({
     schemaVersion: z.literal('1.0.0'),
     name: z.string().min(1),
     pre: CapTableSchema,
     safes: z.array(SafeSchema),
+    notes: z.array(ConvertibleNoteSchema).default([]),
     terms: RoundTermsSchema,
     founderBeliefs: BeliefsSchema,
     investorBeliefs: BeliefsSchema,
@@ -296,6 +370,9 @@ const DealFileBaseSchema = z
     disagreement: DisagreementSchema,
     space: DealSpaceInputSchema,
     risk: RiskSchema.nullable().optional(),
+    /** Clock used for dividend accrual, note interest, redemption eligibility, and optional IRR. */
+    yearsToExit: nonNegative.default(0),
+    discounting: DiscountingSchema.nullable().optional(),
   })
   .strict()
   .superRefine((deal, ctx) => {
@@ -322,7 +399,7 @@ const DealFileBaseSchema = z
       }
     }
     const preferredCount = deal.pre.classes.filter((cls) => cls.kind === 'PREFERRED').length
-    if (preferredCount + deal.safes.length + 1 > 20) {
+    if (preferredCount + deal.safes.length + deal.notes.length + 1 > 20) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['pre', 'classes'],
@@ -334,6 +411,7 @@ const DealFileBaseSchema = z
 export const DealFileSchema = DealFileBaseSchema.transform((deal) => ({
   ...deal,
   risk: deal.risk ?? null,
+  discounting: deal.discounting ?? null,
   space: {
     ...deal.space,
     pinnedInvestment: deal.space.pinnedInvestment ?? deal.terms.investment,
@@ -406,10 +484,52 @@ export type BargainResult = {
   notes: string[]
 }
 
+/** N-party deal point for syndicate bargaining (§6.19). Utilities keyed by party id. */
+export type MultiPartyDealPoint = {
+  pkg: TermPackage
+  utilities: Record<string, number>
+  metric: 'EV' | 'CE'
+  diagnostics: { pps: number; investorPct: number; poolIncrease: number }
+}
+
+export type MultiPartyDisagreement = Record<string, number>
+
+export type MultiPartyBargainResult = {
+  parties: string[]
+  zopa: boolean
+  ir: number[]
+  frontier: number[]
+  nash: number | null
+  ks: number | null
+  egalitarian: number | null
+  utilitarian: number | null
+  points: MultiPartyDealPoint[]
+  metric: 'EV' | 'CE'
+  notes: string[]
+}
+
 export const FixtureSchema = z
   .object({
     id: z.string().regex(/^F-[A-Za-z0-9-]+$/),
-    kind: z.enum(['waterfall', 'round', 'safe', 'dist', 'bargain', 'validation']),
+    kind: z.enum([
+      'waterfall',
+      'round',
+      'safe',
+      'dist',
+      'bargain',
+      'validation',
+      'employee',
+      'note',
+      'warrant',
+      'dividend',
+      'redemption',
+      'paytoplay',
+      'mfn',
+      'secondary',
+      'discount',
+      'bargain-n',
+      'fairvalue',
+    ]),
     description: z.string().min(1),
     derivation: z.string().min(1),
     input: z.unknown(),

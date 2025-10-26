@@ -1,4 +1,5 @@
 import { EPS_DECISION, type CapTable, type Payouts, type ShareClassPreferred } from './schema'
+import { preferenceClaim } from './accruals'
 
 type DirectSettlement = Payouts & { exercised: Set<string> }
 
@@ -11,7 +12,7 @@ function preferredClasses(post: CapTable): ShareClassPreferred[] {
 }
 
 function preferenceAmount(cls: ShareClassPreferred): number {
-  return cls.prefMultiple * cls.invested
+  return preferenceClaim(cls)
 }
 
 function capAmount(cls: ShareClassPreferred): number {

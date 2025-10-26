@@ -44,6 +44,11 @@ function safeShadowClass(safe: Safe, shares: number, terms: RoundTerms, tier: nu
     seniorityTier: tier,
     conversionRatio: 1,
     antiDilution: 'NONE',
+    dividendRate: 0,
+    dividendKind: 'NONE',
+    payToPlay: 'NONE',
+    accruedDividends: 0,
+    redemptionClaim: 0,
   }
 }
 
@@ -82,6 +87,11 @@ function buildPost(
     seniorityTier: tier,
     conversionRatio: 1,
     antiDilution: 'NONE',
+    dividendRate: 0,
+    dividendKind: 'NONE',
+    payToPlay: 'NONE',
+    accruedDividends: 0,
+    redemptionClaim: 0,
   }
   return {
     post: {
