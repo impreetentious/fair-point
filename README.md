@@ -2,7 +2,7 @@
 
 **The term-sheet bargaining studio.** Exact liquidation-waterfall physics. Real Pareto frontiers. Your cap table never leaves your browser.
 
-**Status:** v0.12.0 — engine and six-screen UI on `main`. Static, offline-capable export; v1.0.0 tagging is a separate release step.
+**Status:** v0.12.1 — Playwright offline + Lighthouse a11y gates on main. Static offline-capable export; v1.0.0 tagging is a separate release step.
 
 ---
 
@@ -43,9 +43,9 @@ This product closes the gap with one structural insight: **a term package plus e
 - Three worked example decks, eight in-app explainers, a fixture suite of 40+ hand-derived tests, and export/import of deal files as versioned JSON.
 - A static, offline-capable build (service-worker-precached; survives a hard reload with the network offline) deployable on any static host (relative asset paths, no URL-path assumptions).
 
-## What v1 deliberately excludes
+## What v1 deliberately excluded (now mostly shipped as extensions)
 
-Multi-party syndicate bargaining, employee-offer analysis, dividends, convertible notes with interest/maturity, secondaries, 409A, IRR/time-discounting, warrants, and any backend or telemetry. Non-cash terms (board seats, vesting, no-shop) appear as a qualitative checklist on the Report screen, never in the math.
+v1 core excluded multi-party syndicate bargaining, employee-offer analysis, dividends, convertible notes, secondaries, 409A, IRR/time-discounting, warrants, and any backend or telemetry. Those engine extensions now live under §6.10–§6.20 with fixtures; non-cash terms (board seats, vesting, no-shop) remain a qualitative checklist on the Report screen, never in the math.
 
 ## Stack
 
