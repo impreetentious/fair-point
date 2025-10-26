@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useRef } from 'react'
 import { PRODUCT_NAME, PRODUCT_SLUG } from './branding'
 import { CapTableScreen } from './screens/CapTable'
