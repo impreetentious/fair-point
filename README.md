@@ -2,6 +2,8 @@
 
 **The term-sheet bargaining studio.** Exact liquidation-waterfall physics. Real Pareto frontiers. Your cap table never leaves your browser.
 
+**Status:** v0.12.0 — engine and six-screen UI on `main`. Static, offline-capable export; v1.0.0 tagging is a separate release step.
+
 ---
 
 ## What it is
@@ -15,8 +17,6 @@ Founders negotiate term sheets by anchoring on headline valuation, while the eco
 This product closes the gap with one structural insight: **a term package plus each party's exit-value beliefs yields exact per-stakeholder dollar distributions through deterministic algebra.** Utilities are computed, not elicited with sliders — which makes the Pareto frontier real rather than decorative.
 
 ## What it does (the three hero moments)
-
-*(The example values below are derived from the shipped deck snapshots.)*
 
 1. **See the physics.** Load a deal, drag the exit slider, and watch the waterfall chart kink at exact, labeled breakpoints: "Series A converts above $21.3M."
 2. **See the frontier.** Enter both parties' beliefs (P10/P50/P90 plus a failure probability) and hundreds of candidate term packages appear as a cloud in (founder EV, investor EV) space — the Pareto frontier lit up, Nash and Kalai–Smorodinsky (discrete) fair points flagged.
@@ -47,25 +47,30 @@ This product closes the gap with one structural insight: **a term package plus e
 
 Multi-party syndicate bargaining, employee-offer analysis, dividends, convertible notes with interest/maturity, secondaries, 409A, IRR/time-discounting, warrants, and any backend or telemetry. Non-cash terms (board seats, vesting, no-shop) appear as a qualitative checklist on the Report screen, never in the math.
 
-## Repository
+## Stack
 
-| File | Role |
-|---|---|
-| `README.md` | This brief — what the product is and why. |
+Next.js (App Router, static export) · TypeScript strict · React · Zustand · Recharts · Zod · Vitest · fast-check.
 
-**Status:** v0.11.x — P0–P9 complete on `main`; v1.0.0 is an owner action post-audit.
+## Run locally
+
+Requires Node `20.19.x`.
+
+```bash
+npm ci
+npm run dev
+```
+
+## Verify
+
+```bash
+npm run verify   # typecheck, lint, tests, fixtures
+npm run build    # static export to out/
+```
+
+## License
+
+MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 ---
 
 *Fairpoint is an educational instrument. It is not legal, financial, or investment advice.*
-
-## AI Agent Instructions
-
-Before making any new commits, update the **Product Version** string below in this file with the current IST time of commit (`Asia/Kolkata`). Keep the same numeric release version in `package.json` and the root package entries of `package-lock.json` (once `package.json` exists — from P0 on).
-
-This IST timestamp rule is permanent for all future workflows, commits, and AI agents working in this repository.
-
-Follow this format for version control:
-
-* **Base Format Version:** 0.0.0 — the version of the version-block schema itself (the shape of these lines); it is bumped only when this block's structure changes, not on every commit.
-* **Product Version:** `v0.11.1_2025-10-26_21:08:37` (IST)

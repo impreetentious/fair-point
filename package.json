@@ -1,7 +1,7 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.11.1",
+  "version": "0.12.0",
   "type": "module",
   "engines": {
     "node": "20.19.x"
@@ -18,7 +18,7 @@
     "verify": "npm run typecheck && npm run lint && npm run test && npm run fixtures"
   },
   "dependencies": {
-    "next": "^15.5.3",
+    "next": "^15.5.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "recharts": "2.15.1",
@@ -39,5 +39,16 @@
     "serve": "^14.2.5",
     "typescript": "5.7.3",
     "vitest": "3.0.9"
-  }
+  },
+  "license": "MIT",
+  "author": "Sidakpreet Singh",
+  "description": "Client-side term-sheet bargaining studio with exact waterfall and Pareto frontiers.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ItsMonarch04/fair-point.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ItsMonarch04/fair-point/issues"
+  },
+  "homepage": "https://github.com/ItsMonarch04/fair-point#"
 }
