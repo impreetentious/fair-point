@@ -1,0 +1,19 @@
+id: F-MFN-01
+kind: mfn
+description: MFN SAFE adopts the cohort's lowest cap and highest discount before conversion.
+derivation: |
+  SAFE A: amount $1M, POST_MONEY, cap $10M, discount 20%, mfn=true.
+  SAFE B: amount $1M, POST_MONEY, cap $8M, discount 10%, mfn=false.
+  applyMfn (§6.16): A adopts min(cap)= $8M and max(discount)=20%.
+  B unchanged. Shares are not asserted here — this fixture locks the pre-solve rewrite only.
+  Citation framing: YC SAFE MFN side-letter practice
+  (https://www.ycombinator.com/documents, retrieved 2025-01-14).
+input:
+  safes:
+    - { id: a, name: A, amount: 1000000, kind: POST_MONEY, valuationCap: 10000000, discount: 0.2, mfn: true }
+    - { id: b, name: B, amount: 1000000, kind: POST_MONEY, valuationCap: 8000000, discount: 0.1, mfn: false }
+expect:
+  safes:
+    a: { valuationCap: 8000000, discount: 0.2 }
+    b: { valuationCap: 8000000, discount: 0.1 }
+tolerance: 0.01

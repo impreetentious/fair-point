@@ -1,0 +1,37 @@
+id: F-NOTE-01
+kind: note
+description: Convertible note accrues simple interest then converts like a pre-money SAFE.
+derivation: |
+  Principal $1,000,000, simple 8%/yr, accrualYears=2 ⇒ accrued interest = 1e6×0.08×2 = $160,000;
+  conversion amount = $1,160,000 (§6.15).
+  Pre-money note with valuationCap $10,000,000 beside BaseCap = 8,000,000 common,
+  priced round PPS = $1.00, no pool, investment $2,000,000.
+  Cap price = 10e6 / (8e6 + P) with P=0 ⇒ $1.25; discount absent ⇒ converts at $1.25.
+  Shares = 1,160,000 / 1.25 = 928,000.
+  Citation: teaching accrual; distinct from YC Post-Money Safe (D12) which has no interest.
+input:
+  note:
+    id: note-1
+    name: Seed Note
+    principal: 1000000
+    interestRate: 0.08
+    interestKind: SIMPLE
+    accrualYears: 2
+    valuationCap: 10000000
+    holder: OTHER
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+    grants: []
+    poolAvailable: 0
+  terms:
+    pricedPerShare: 1
+    investment: 2000000
+    poolTargetPost: 0
+    prefMultiple: 1
+    participation: NONE
+    seniority: PARI
+expect:
+  accruedAmount: 1160000
+  shares: 928000
+tolerance: 0.01
