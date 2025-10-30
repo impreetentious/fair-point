@@ -1,0 +1,16 @@
+id: F-409A-01
+kind: fairvalue
+description: Educational 409A percent-of-preferred-PPS estimate.
+derivation: |
+  Preferred PPS = $2.00, percentOfPreferred = 0.30 ⇒ common FMV = $0.60 (§6.20).
+  Method label PERCENT_OF_PREFERRED_PPS. Not an appraisal.
+  Citation framing: IRS IRC §409A audit technique guide
+  https://www.irs.gov/businesses/corporations/nonqualified-deferred-compensation-audit-technique-guide
+  (retrieved 2025-01-14) — product ships only the transparent teaching shortcut.
+input:
+  preferredPps: 2
+  percentOfPreferred: 0.3
+expect:
+  fairValuePerShare: 0.6
+  method: PERCENT_OF_PREFERRED_PPS
+tolerance: 0.01

@@ -1,0 +1,27 @@
+id: F-SEC-01
+kind: secondary
+description: Secondary sale moves shares seller→buyer; cash does not enter the company.
+derivation: |
+  Founder common 10,000,000 shares. Secondary sells 1,000,000 @ $2.00 to OTHER buyer.
+  Proceeds = 1e6 × $2 = $2,000,000 to the seller (§6.17).
+  Post: founder common 9,000,000; new common class secondary-s1 with 1,000,000 OTHER.
+  Total shares outstanding unchanged at 10,000,000.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER }
+    grants: []
+    poolAvailable: 0
+  sale:
+    id: s1
+    sellerClassId: common
+    shares: 1000000
+    pricePerShare: 2
+    buyerHolder: OTHER
+expect:
+  proceeds: 2000000
+  classShares:
+    common: 9000000
+    secondary-s1: 1000000
+  totalShares: 10000000
+tolerance: 0.01

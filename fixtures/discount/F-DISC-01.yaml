@@ -1,0 +1,15 @@
+id: F-DISC-01
+kind: discount
+description: Opt-in discrete annual discount factor; default path remains undiscounted.
+derivation: |
+  annualRate=0.10, yearsToExit=5 ⇒ DF = 1 / (1.10)^5 = 0.620921323059 (§6.18).
+  Undiscounted EV $1,000,000 ⇒ PV = $620,921.323059.
+  Null discounting ⇒ DF = 1 (D15 default preserved).
+input:
+  discounting: { annualRate: 0.1, yearsToExit: 5 }
+  amount: 1000000
+expect:
+  factor: 0.620921323059
+  presentValue: 620921.323059
+  undiscountedFactor: 1
+tolerance: 0.01
