@@ -2,7 +2,7 @@
 
 **The term-sheet bargaining studio.** Exact liquidation-waterfall physics. Real Pareto frontiers. Your cap table never leaves your browser.
 
-**Status:** v0.12.4 — Secondary sales, opt-in discounting, and educational 409A on main.
+**Status:** v0.12.5 — Employee offer analyzer, n-party bargain, and warrants on main.
 
 ---
 

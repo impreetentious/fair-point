@@ -1,0 +1,26 @@
+id: F-WARRANT-01
+kind: warrant
+description: Investor warrant cash-exercises identically to an option grant at exit.
+derivation: |
+  Cap table: 90 common FOUNDER, 10 preferred INVESTOR invested $10 (1× NONE),
+  warrant grant 10 shares @ strike $0, instrument=WARRANT, holder OTHER.
+  At E=$110: strike cash $0, FD exercised = 90+10+10=110, pps=$1.
+  Preferred preference=$10 < converted $10? converted path = 10/110×110=$10 — indifferent;
+  NONE takes preference $10 when conversion does not strictly beat (§6.5 EPS).
+  Common 90, warrant 10 share residual $100 → common $90/110? Wait residual after pref:
+  Remaining $100 over common 90 + warrant 10 = 100 shares ⇒ $1/share.
+  Common $90, warrant net ($1−0)×10=$10, preferred $10. Σ=$110.
+  Citation: D11 cash-exercise treasury method; warrants = options for settlement (§6.11).
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 90, holder: FOUNDER }
+      - { id: series-a, name: Series A, kind: PREFERRED, shares: 10, holder: INVESTOR, invested: 10, prefMultiple: 1, participation: NONE }
+    grants:
+      - { id: warrant-1, options: 10, strike: 0, holder: OTHER, instrument: WARRANT }
+    poolAvailable: 0
+  exitValue: 110
+expect:
+  payouts: { series-a: 10, common: 90, warrant-1: 10 }
+  strikeCashPaid: 0
+tolerance: 0.01

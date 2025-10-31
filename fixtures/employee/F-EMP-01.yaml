@@ -1,0 +1,34 @@
+id: F-EMP-01
+kind: employee
+description: Employee option grant EV and exit payout reuse the waterfall engine.
+derivation: |
+  Pre: 90 common (FOUNDER), poolAvailable 20, no preferred, no SAFEs.
+  Round: pricedPerShare=$1, investment=$10, poolTargetPost=0, 1× NONE PARI
+  ⇒ new preferred N = 10 shares; post pool = 20.
+  Offer: 10 options @ strike $0 from the pool ⇒ post pool 10.
+  At E=$120 with strike $0: preferred converts (converted path 10/110×120 ≈ $10.909
+  beats preference $10), FD exercised = 90+10+10 = 110, pps = $120/110,
+  grant net = 10 × $120/110 = $10.9090909091.
+  Citation: same cash-exercise treasury method as D11 / §6.5.3.
+input:
+  pre:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 90, holder: FOUNDER }
+    grants: []
+    poolAvailable: 20
+    promisedOptions: 0
+  safes: []
+  terms:
+    pricedPerShare: 1
+    investment: 10
+    poolTargetPost: 0
+    prefMultiple: 1
+    participation: NONE
+    seniority: PARI
+  grant: { id: emp-1, options: 10, strike: 0, holder: OTHER, instrument: OPTION }
+  beliefs: { p0: 0, p50: 110, p90: 130 }
+  cashAlternative: 5
+  exitValue: 120
+expect:
+  payoutAtExit: 10.9090909091
+tolerance: 0.01

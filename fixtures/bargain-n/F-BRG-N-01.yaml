@@ -1,0 +1,24 @@
+id: F-BRG-N-01
+kind: bargain-n
+description: Three-party discrete Nash maximizes the product of gains over IR.
+derivation: |
+  Parties F, A, B. Disagreement (0,0,0). Points (index → utilities):
+  0: (3,1,1) product=3; 1: (2,2,2) product=8; 2: (4,0.5,0.5) product=1; 3: (1.5,1.5,3) product=6.75.
+  All IR. Nash = index 1 (product 8). Utilitarian = max sum: idx0 sum5, idx1 sum6, idx2 sum5,
+  idx3 sum6 — tie between 1 and 3 on sum=6; gain-product tie-break ⇒ idx1 (8 > 6.75).
+  Egalitarian max min-gain: idx0 min1, idx1 min2, idx2 min0.5, idx3 min1.5 ⇒ idx1.
+  Citation: Nash (1950) n-person product; discrete KS/egalitarian/utilitarian per §6.19.
+input:
+  parties: [F, A, B]
+  disagreement: { F: 0, A: 0, B: 0 }
+  points:
+    - { index: 0, utilities: { F: 3, A: 1, B: 1 } }
+    - { index: 1, utilities: { F: 2, A: 2, B: 2 } }
+    - { index: 2, utilities: { F: 4, A: 0.5, B: 0.5 } }
+    - { index: 3, utilities: { F: 1.5, A: 1.5, B: 3 } }
+expect:
+  nash: 1
+  utilitarian: 1
+  egalitarian: 1
+  zopa: true
+tolerance: 0.01
