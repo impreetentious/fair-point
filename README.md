@@ -2,10 +2,6 @@
 
 **The term-sheet bargaining studio.** Exact liquidation-waterfall physics. Real Pareto frontiers. Your cap table never leaves your browser.
 
-**Status:** v0.12.7 — Public-readiness pass: Lighthouse accessibility now 100/100 (import-file input labelled), Node pinned via `.nvmrc` + `engine-strict`. Gates + parking-lot ladder complete; v1.0.0 tagging is a separate release step.
-
----
-
 ## What it is
 
 Model any priced venture round as an exact cap-table and liquidation-waterfall engine, then negotiate it as a formal two-party bargain: ZOPA, Pareto frontier, Nash and Kalai–Smorodinsky fair points, and dollar-denominated "value left on the table" — computed entirely client-side from each party's own beliefs about exit outcomes.
@@ -16,15 +12,15 @@ Founders negotiate term sheets by anchoring on headline valuation, while the eco
 
 This product closes the gap with one structural insight: **a term package plus each party's exit-value beliefs yields exact per-stakeholder dollar distributions through deterministic algebra.** Utilities are computed, not elicited with sliders — which makes the Pareto frontier real rather than decorative.
 
-## What it does (the three hero moments)
+## What it does
 
 1. **See the physics.** Load a deal, drag the exit slider, and watch the waterfall chart kink at exact, labeled breakpoints: "Series A converts above $21.3M."
 2. **See the frontier.** Enter both parties' beliefs (P10/P50/P90 plus a failure probability) and hundreds of candidate term packages appear as a cloud in (founder EV, investor EV) space — the Pareto frontier lit up, Nash and Kalai–Smorodinsky (discrete) fair points flagged.
-3. **See the money on the table.** Pin the offer you actually received and read its exact joint surplus and ranked win-win alternatives. The shipped Series A clean snapshot is already grid-efficient under shared beliefs ($0 on the table); changing beliefs or pinning an off-grid offer makes the comparison live.
+3. **See the money on the table.** Pin the offer you actually received and read its exact joint surplus and ranked win-win alternatives. The bundled "Series A clean" example is already efficient under shared beliefs ($0 on the table); changing either party's beliefs, or pinning an offer that isn't on the candidate grid, makes the comparison live.
 
 ## Who it's for
 
-1. **Founders** with a live or imminent term sheet (seed → Series B). The hero user.
+1. **Founders** with a live or imminent term sheet (seed → Series B). The primary user.
 2. **Angels and VC associates** pressure-testing packages and explaining terms to founders.
 3. **Startup lawyers and educators** demonstrating waterfall and bargaining mechanics — the built-in example decks double as teaching material.
 
@@ -32,20 +28,24 @@ This product closes the gap with one structural insight: **a term package plus e
 
 - **Exact, not simulated.** Waterfall payouts are piecewise-linear with closed-form breakpoints; round mechanics and expected values have closed forms. The engine is verified to cent-per-million precision (max($0.01, 1e-8 × |expected|)); Monte Carlo exists only as an independent cross-check and for the optional risk-aversion mode.
 - **Deterministic.** Same inputs, bit-identical outputs. All randomness flows from a seeded PRNG.
-- **Verified against published oracles.** Fixtures are hand-re-derived from published worked examples (Venture Deals, the YC post-money SAFE user guide, NVCA model documents); the closed-form expectation-integration layer is checked against a Monte Carlo twin in CI; the settlement layer is checked against an independent naive reference implementation on the full waterfall battery; bargaining solutions are property-tested against their own defining axioms (Nash affine invariance, Nash discrete IIA, KS discrete affine invariance, Pareto membership).
+- **Verified against published sources.** Fixtures are hand-re-derived from published worked examples (Venture Deals, the YC post-money SAFE user guide, NVCA model documents); the closed-form expectation-integration layer is checked against a Monte Carlo twin in CI; the settlement layer is checked against an independent naive reference implementation on the full waterfall battery; bargaining solutions are property-tested against their own defining axioms (Nash affine invariance, Nash discrete IIA, KS discrete affine invariance, Pareto membership).
 - **Local-first, private by construction.** A static site with no server, no accounts, no telemetry, and zero network calls after load. A cap table is among the most sensitive documents a founder has; it never leaves the browser.
 - **Educational, not advisory.** The app names packages both parties' *stated beliefs* prefer. It never says "you should accept." It is an educational instrument — not legal, financial, or investment advice.
 
-## What v1 ships
+## What's included
 
 - An exact engine: round construction (pool shuffle, SAFE conversion, anti-dilution), liquidation waterfall with conversion equilibria, exact breakpoints, closed-form expected payouts, and the bargaining layer (ZOPA, frontier, Nash, Kalai–Smorodinsky, egalitarian, utilitarian, value-on-table).
-- Six screens: Cap Table, Round, Waterfall, Beliefs, Frontier (hero), and a printable one-page Report.
-- Three worked example decks, eight in-app explainers, a fixture suite of 40+ hand-derived tests, and export/import of deal files as versioned JSON.
+- Extensions beyond the two-party core: multi-party syndicate bargaining, employee-offer analysis, dividends and accruals, convertible notes, secondaries, 409A fair value, IRR/time-discounting, MFN clauses, and warrants.
+- Six screens: Cap Table, Round, Waterfall, Beliefs, Frontier (where the negotiation happens), and a printable one-page Report.
+- Three worked example decks, eight in-app explainers, a fixture suite of 80+ hand-derived tests, and export/import of deal files as versioned JSON.
 - A static, offline-capable build (service-worker-precached; survives a hard reload with the network offline) deployable on any static host (relative asset paths, no URL-path assumptions).
 
-## What v1 deliberately excluded (now mostly shipped as extensions)
+## Limitations
 
-v1 core excluded multi-party syndicate bargaining, employee-offer analysis, dividends, convertible notes, secondaries, 409A, IRR/time-discounting, warrants, and any backend or telemetry. Those engine extensions now live under §6.10–§6.20 with fixtures; non-cash terms (board seats, vesting, no-shop) remain a qualitative checklist on the Report screen, never in the math.
+- **Non-cash terms are never in the math.** Board seats, vesting, no-shop, information rights and similar terms appear as a qualitative checklist on the Report screen only.
+- **Two parties in the bargaining layer.** The frontier, fair points, and value-on-table are computed for a founder/investor pair; syndicate analysis is descriptive rather than a multi-party bargaining solution.
+- **KS monotonicity is not verified.** Bargaining solutions are property-tested against the axioms listed above; monotonicity is not meaningful on discrete point sets and is not claimed. Nash and KS solutions are labeled "discrete" in the UI for that reason.
+- **Beliefs are yours.** The engine is exact given the inputs. It has no market data, no comparables, and no opinion about whether your P50 exit is realistic.
 
 ## Stack
 
@@ -53,19 +53,31 @@ Next.js (App Router, static export) · TypeScript strict · React · Zustand · 
 
 ## Run locally
 
-Requires Node `20.19.x`.
+Requires Node `20.19.x` (see `.nvmrc`; `engine-strict` makes `npm ci` fail on a different version).
 
 ```bash
 npm ci
 npm run dev
 ```
 
+The dev server binds `127.0.0.1` — open `http://localhost:3000`.
+
 ## Verify
 
 ```bash
-npm run verify   # typecheck, lint, tests, fixtures
-npm run build    # static export to out/
+npm run verify     # typecheck, lint, tests, fixtures
+npm run test:e2e   # Playwright, including an offline reload check
+npm run test:a11y  # Lighthouse accessibility
 ```
+
+## Build and deploy
+
+```bash
+npm run build      # static export to out/, plus the service worker
+npm run preview    # serves out/ at http://localhost:4173
+```
+
+`out/` uses relative asset paths and assumes nothing about its URL path, so it serves from any static host, including a subdirectory. There is no hosted instance.
 
 ## License
 
@@ -74,3 +86,5 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 ---
 
 *Fairpoint is an educational instrument. It is not legal, financial, or investment advice.*
+
+**Version:** v0.13.0
