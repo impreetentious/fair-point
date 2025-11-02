@@ -203,6 +203,8 @@ export function constructRound(
           investorPct: investorShares / fdPost,
           poolIncrease: solve.poolIncrease,
           safeShares: solve.totalSafeShares,
+          routeBySafe: solve.routeBySafe,
+          sharesBySafe: solve.sharesBySafe,
         },
         warnings: solve.warnings,
       }

@@ -183,6 +183,7 @@ const SafeInputSchema = z
     valuationCap: positive.optional(),
     discount: finite.gt(0).lt(1).optional(),
     holder: z.enum(['INVESTOR', 'OTHER']).default('OTHER'),
+    count: finite.int().min(1).default(1),
     /** Most-favored-nation: adopt the best peer SAFE terms before conversion. §6.16 */
     mfn: z.boolean().default(false),
   })
@@ -347,6 +348,21 @@ const RiskSchema = z
   })
   .strict()
 
+const DealUiSchema = z
+  .object({
+    dealSpaceManual: z.boolean().default(false),
+    dealSpacePins: z
+      .object({
+        preMoney: z.boolean().default(false),
+        pools: z.boolean().default(false),
+        multiples: z.boolean().default(false),
+        participations: z.boolean().default(false),
+        seniority: z.boolean().default(false),
+      })
+      .default({}),
+  })
+  .default({})
+
 /** Opt-in time-discounting. Absent/null ⇒ undiscounted exit proceeds (D15 default). §6.18 */
 export const DiscountingSchema = z
   .object({
@@ -370,6 +386,7 @@ const DealFileBaseSchema = z
     disagreement: DisagreementSchema,
     space: DealSpaceInputSchema,
     risk: RiskSchema.nullable().optional(),
+    ui: DealUiSchema,
     /** Clock used for dividend accrual, note interest, redemption eligibility, and optional IRR. */
     yearsToExit: nonNegative.default(0),
     discounting: DiscountingSchema.nullable().optional(),
@@ -412,6 +429,16 @@ export const DealFileSchema = DealFileBaseSchema.transform((deal) => ({
   ...deal,
   risk: deal.risk ?? null,
   discounting: deal.discounting ?? null,
+  ui: {
+    dealSpaceManual: deal.ui.dealSpaceManual,
+    dealSpacePins: {
+      preMoney: deal.ui.dealSpacePins.preMoney ?? false,
+      pools: deal.ui.dealSpacePins.pools ?? false,
+      multiples: deal.ui.dealSpacePins.multiples ?? false,
+      participations: deal.ui.dealSpacePins.participations ?? false,
+      seniority: deal.ui.dealSpacePins.seniority ?? false,
+    },
+  },
   space: {
     ...deal.space,
     pinnedInvestment: deal.space.pinnedInvestment ?? deal.terms.investment,
@@ -448,7 +475,14 @@ export type SafeConversion = {
 
 export type RoundResult = {
   post: CapTable
-  diagnostics: { pps: number; investorPct: number; poolIncrease: number; safeShares: number }
+  diagnostics: {
+    pps: number
+    investorPct: number
+    poolIncrease: number
+    safeShares: number
+    routeBySafe: Record<string, SafeConversion['routeBySafe'][string]>
+    sharesBySafe: Record<string, number>
+  }
   warnings: string[]
 }
 

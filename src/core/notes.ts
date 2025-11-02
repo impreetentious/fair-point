@@ -23,6 +23,7 @@ export function noteAsPreMoneySafe(note: ConvertibleNote): Safe {
     valuationCap: note.valuationCap,
     discount: note.discount,
     holder: note.holder,
+    count: 1,
     mfn: false,
   }
 }

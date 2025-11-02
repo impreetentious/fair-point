@@ -122,11 +122,17 @@ function descending(left: number, right: number): number {
   return right - left
 }
 
+function descendingStable(left: number, right: number): number {
+  const delta = right - left
+  const tolerance = 1e-10 * Math.max(1, Math.abs(left), Math.abs(right))
+  return Math.abs(delta) <= tolerance ? 0 : delta
+}
+
 /** Analyze IR, frontier, and the four deterministic discrete bargaining selections. */
 export function analyze(points: DealPoint[], disagreement: Disagreement): BargainResult {
   const ordered = byIndex(points)
   const irPoints = ordered.filter((point) => point.uF >= disagreement.dF && point.uI >= disagreement.dI)
-  const nashPoint = choose(irPoints, (left, right) => descending(gain(left, disagreement).product, gain(right, disagreement).product) || left.pkg.index - right.pkg.index)
+  const nashPoint = choose(irPoints, (left, right) => descendingStable(gain(left, disagreement).product, gain(right, disagreement).product) || left.pkg.index - right.pkg.index)
   const notes: string[] = []
   let ksPoint: DealPoint | null = null
   if (irPoints.length > 0) {
@@ -143,7 +149,7 @@ export function analyze(points: DealPoint[], disagreement: Disagreement): Bargai
         const rightGain = gain(right, disagreement)
         const leftMinimum = Math.min(leftGain.f / denominatorF, leftGain.i / denominatorI)
         const rightMinimum = Math.min(rightGain.f / denominatorF, rightGain.i / denominatorI)
-        return descending(leftMinimum, rightMinimum) || descending(leftGain.product, rightGain.product) || left.pkg.index - right.pkg.index
+        return descendingStable(leftMinimum, rightMinimum) || descendingStable(leftGain.product, rightGain.product) || left.pkg.index - right.pkg.index
       })
     }
   }
