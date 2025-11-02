@@ -2,7 +2,7 @@
 
 **The term-sheet bargaining studio.** Exact liquidation-waterfall physics. Real Pareto frontiers. Your cap table never leaves your browser.
 
-**Status:** v0.12.6 — Non-cash-terms standing decision recorded; work-state sync on main. Gates + parking-lot ladder complete; v1.0.0 tagging is a separate release step.
+**Status:** v0.12.7 — Public-readiness pass: Lighthouse accessibility now 100/100 (import-file input labelled), Node pinned via `.nvmrc` + `engine-strict`. Gates + parking-lot ladder complete; v1.0.0 tagging is a separate release step.
 
 ---
 

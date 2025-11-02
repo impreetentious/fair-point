@@ -36,3 +36,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Coverage + Vercel
+/coverage/
+.vercel

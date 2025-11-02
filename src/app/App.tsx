@@ -54,7 +54,7 @@ export function App() {
   }
   return (
     <main className="app-shell">
-      <header className="app-header"><div><h1>{PRODUCT_NAME}</h1><p>The term-sheet bargaining studio</p></div><div className="header-actions"><button type="button" className="quiet-button" onClick={exportDeal}>Export deal</button><button type="button" className="quiet-button" onClick={() => importRef.current?.click()}>Import deal</button><input ref={importRef} className="visually-hidden" type="file" accept="application/json" onChange={(event) => { void importDeal(event.target.files?.[0]); event.currentTarget.value = '' }} /></div></header>
+      <header className="app-header"><div><h1>{PRODUCT_NAME}</h1><p>The term-sheet bargaining studio</p></div><div className="header-actions"><button type="button" className="quiet-button" onClick={exportDeal}>Export deal</button><button type="button" className="quiet-button" onClick={() => importRef.current?.click()}>Import deal</button><input ref={importRef} aria-label="Import deal file" className="visually-hidden" type="file" accept="application/json" onChange={(event) => { void importDeal(event.target.files?.[0]); event.currentTarget.value = '' }} /></div></header>
       <nav aria-label="Workspace screens">{SCREEN_IDS.map((id) => <button key={id} type="button" className={screen === id ? 'nav-item active' : 'nav-item'} onClick={() => setScreen(id)}><span className="readiness-dot" aria-hidden="true" />{LABELS[id]}</button>)}</nav>
       <ActiveScreen screen={screen} />
       <footer className="disclaimer">{PRODUCT_NAME} is an educational instrument. It is not legal, financial, or investment advice.</footer>
