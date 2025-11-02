@@ -26,5 +26,5 @@ export function ExplainDrawer({ screen }: { screen: string }) {
 }
 
 export function AllExplainers() {
-  return <section className="all-explainers"><h3>How the analysis works</h3>{EXPLAINERS.map((explainer) => <details key={explainer.id}><summary>{explainer.id}. {explainer.title}</summary><ul>{explainer.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul></details>)}</section>
+  return <section className="all-explainers"><h3>How the analysis works</h3>{EXPLAINERS.map((explainer) => <details id={`explainer-${explainer.id}`} key={explainer.id}><summary>{explainer.id}. {explainer.title}</summary><ul>{explainer.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul></details>)}</section>
 }
