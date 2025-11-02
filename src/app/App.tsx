@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { PRODUCT_NAME, PRODUCT_SLUG } from './branding'
 import { CapTableScreen } from './screens/CapTable'
 import { RoundScreen } from './screens/Round'
@@ -8,6 +8,7 @@ import { WaterfallScreen } from './screens/Waterfall'
 import { BeliefsScreen } from './screens/Beliefs'
 import { FrontierScreen } from './screens/Frontier'
 import { ReportScreen } from './screens/Report'
+import { screenReadiness } from './readiness'
 import { SCREEN_IDS, type ScreenId, useDealStore } from './state/store'
 
 const LABELS: Record<ScreenId, string> = {
@@ -28,11 +29,13 @@ export function App() {
   const screen = useDealStore((state) => state.activeScreen)
   const setScreen = useDealStore((state) => state.setScreen)
   const replaceDeal = useDealStore((state) => state.replaceDeal)
+  const importStatus = useDealStore((state) => state.importStatus)
+  const readiness = useMemo(() => screenReadiness(deal), [deal])
   const importRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
     const saved = window.localStorage.getItem(`${PRODUCT_SLUG}:v1:autosave`)
     if (saved !== null) {
-      try { replaceDeal(JSON.parse(saved)) } catch { /* Invalid local data remains non-authoritative. */ }
+      try { replaceDeal(JSON.parse(saved), 'autosave') } catch { /* Invalid local data remains non-authoritative. */ }
     }
   }, [replaceDeal])
   useEffect(() => {
@@ -50,12 +53,27 @@ export function App() {
   }
   const importDeal = async (file: File | undefined) => {
     if (file === undefined) return
-    replaceDeal(JSON.parse(await file.text()))
+    try {
+      const raw = JSON.parse(await file.text()) as unknown
+      if (
+        raw === null ||
+        typeof raw !== 'object' ||
+        !('schemaVersion' in raw) ||
+        (raw as { schemaVersion?: unknown }).schemaVersion !== '1.0.0'
+      ) {
+        replaceDeal({ schemaVersion: (raw as { schemaVersion?: unknown } | null)?.schemaVersion }, 'import')
+        return
+      }
+      replaceDeal(raw, 'import')
+    } catch {
+      replaceDeal({ schemaVersion: 'malformed-json' }, 'import')
+    }
   }
   return (
     <main className="app-shell">
       <header className="app-header"><div><h1>{PRODUCT_NAME}</h1><p>The term-sheet bargaining studio</p></div><div className="header-actions"><button type="button" className="quiet-button" onClick={exportDeal}>Export deal</button><button type="button" className="quiet-button" onClick={() => importRef.current?.click()}>Import deal</button><input ref={importRef} aria-label="Import deal file" className="visually-hidden" type="file" accept="application/json" onChange={(event) => { void importDeal(event.target.files?.[0]); event.currentTarget.value = '' }} /></div></header>
-      <nav aria-label="Workspace screens">{SCREEN_IDS.map((id) => <button key={id} type="button" className={screen === id ? 'nav-item active' : 'nav-item'} onClick={() => setScreen(id)}><span className="readiness-dot" aria-hidden="true" />{LABELS[id]}</button>)}</nav>
+      {importStatus !== null && <p className={`import-status ${importStatus.kind}`} role="status">{importStatus.message}</p>}
+      <nav aria-label="Workspace screens">{SCREEN_IDS.map((id) => <button key={id} type="button" className={screen === id ? 'nav-item active' : 'nav-item'} onClick={() => setScreen(id)}><span className={`readiness-dot ${readiness[id].state}`} role="img" aria-label={readiness[id].label} />{LABELS[id]}</button>)}</nav>
       <ActiveScreen screen={screen} />
       <footer className="disclaimer">{PRODUCT_NAME} is an educational instrument. It is not legal, financial, or investment advice.</footer>
     </main>

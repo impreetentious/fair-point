@@ -1,9 +1,52 @@
+import { useMemo, useState } from 'react'
 import { EXAMPLE_DECKS } from '../data/examples'
-import { dollars, shares } from '../components/format'
+import { dollars, percent, shares } from '../components/format'
+import { CommitNumber, CommitText } from '../components/CommitField'
+import { ExplainDrawer } from '../components/ExplainDrawer'
 import { ValidationPanel } from '../components/ValidationPanel'
 import { analyzeEmployeeOffer } from '../../core/employee-offer'
 import { useDealStore } from '../state/store'
-import { useMemo, useState } from 'react'
+import type { OptionGrant, ShareClass, ShareClassPreferred } from '../../core/schema'
+
+const holders = ['FOUNDER', 'INVESTOR', 'OTHER'] as const
+const grantHolders = ['FOUNDER', 'OTHER'] as const
+const antiDilution = ['NONE', 'BWA', 'FULL_RATCHET'] as const
+const participation = ['NONE', 'FULL', 'CAPPED'] as const
+
+function asConverted(cls: ShareClass): number {
+  return cls.kind === 'PREFERRED' ? cls.shares * cls.conversionRatio : cls.shares
+}
+
+function preferredDefaults(base: ShareClass): ShareClassPreferred {
+  return {
+    id: base.id,
+    name: base.name,
+    kind: 'PREFERRED',
+    shares: base.shares,
+    holder: base.holder,
+    invested: Math.max(1, base.shares),
+    originalIssuePrice: 1,
+    prefMultiple: 1,
+    participation: 'NONE',
+    participationCapMultiple: undefined,
+    seniorityTier: 1,
+    conversionRatio: 1,
+    antiDilution: 'NONE',
+    dividendRate: 0,
+    dividendKind: 'NONE',
+    payToPlay: 'NONE',
+    accruedDividends: 0,
+    redemptionClaim: 0,
+  }
+}
+
+function newClass(index: number): ShareClass {
+  return { id: `class-${index}`, name: `Class ${index}`, kind: 'COMMON', shares: 1_000_000, holder: 'FOUNDER' }
+}
+
+function newGrant(index: number): OptionGrant {
+  return { id: `grant-${index}`, options: 100_000, strike: 0.01, holder: 'OTHER', instrument: 'OPTION' }
+}
 
 export function CapTableScreen() {
   const deal = useDealStore((state) => state.deal)
@@ -33,16 +76,65 @@ export function CapTableScreen() {
       return { result: null, error: error instanceof Error ? error.message : 'Offer analysis failed' }
     }
   }, [cash, deal, options, strike])
+  const fd = useMemo(() => {
+    const classShares = deal.pre.classes.reduce((sum, cls) => sum + asConverted(cls), 0)
+    const grants = deal.pre.grants.reduce((sum, grant) => sum + grant.options, 0)
+    const total = classShares + grants + deal.pre.poolAvailable + deal.pre.promisedOptions
+    return {
+      classShares,
+      grants,
+      total,
+      byHolder: holders.map((holder) => ({
+        holder,
+        shares: deal.pre.classes.filter((cls) => cls.holder === holder).reduce((sum, cls) => sum + asConverted(cls), 0),
+      })),
+    }
+  }, [deal.pre])
+  const updateClass = (id: string, patch: (cls: ShareClass) => ShareClass) =>
+    patchDeal((current) => ({
+      ...current,
+      pre: { ...current.pre, classes: current.pre.classes.map((candidate) => (candidate.id === id ? patch(candidate) : candidate)) },
+    }))
+  const updateGrant = (id: string, patch: (grant: OptionGrant) => OptionGrant) =>
+    patchDeal((current) => ({
+      ...current,
+      pre: { ...current.pre, grants: current.pre.grants.map((candidate) => (candidate.id === id ? patch(candidate) : candidate)) },
+    }))
+
   return (
     <section className="screen-grid">
       <div className="main-panel">
-        <div className="section-heading"><div><p className="eyebrow">Inputs</p><h2>Cap table</h2></div><label>Example deck<select aria-label="Load example deck" value="" onChange={(event) => loadExample(event.target.value)}><option value="" disabled>Load an example</option>{EXAMPLE_DECKS.map((example) => <option key={example.id} value={example.id}>{example.label}</option>)}</select></label></div>
-        <p className="muted">Classes and issued grants are the pre-round ownership record. All changes are schema-checked before they become the active analysis.</p>
-        <div className="table-wrap"><table><thead><tr><th>Class</th><th>Kind</th><th>Holder</th><th>Shares</th><th>Invested</th><th>Tier</th></tr></thead><tbody>{deal.pre.classes.map((cls) => <tr key={cls.id}><td>{cls.name}</td><td>{cls.kind}</td><td>{cls.holder}</td><td><input aria-label={`${cls.name} shares`} type="number" min="0" value={cls.shares} onChange={(event) => patchDeal((current) => ({ ...current, pre: { ...current.pre, classes: current.pre.classes.map((candidate) => candidate.id === cls.id ? { ...candidate, shares: Number(event.target.value) } : candidate) } }))} /></td><td>{cls.kind === 'PREFERRED' ? shares(cls.invested) : '—'}</td><td>{cls.kind === 'PREFERRED' ? cls.seniorityTier : '—'}</td></tr>)}</tbody></table></div>
-        <div className="table-wrap"><table><thead><tr><th>Issued grant</th><th>Options</th><th>Strike</th><th>Holder</th></tr></thead><tbody>{deal.pre.grants.length === 0 ? <tr><td colSpan={4} className="muted">No issued option grants.</td></tr> : deal.pre.grants.map((grant) => <tr key={grant.id}><td>{grant.id}</td><td>{shares(grant.options)}</td><td>{grant.strike}</td><td>{grant.holder}</td></tr>)}</tbody></table></div>
-        <div className="field-grid"><label>Unissued pool<input aria-label="Unissued pool" type="number" min="0" value={deal.pre.poolAvailable} onChange={(event) => patchDeal((current) => ({ ...current, pre: { ...current.pre, poolAvailable: Number(event.target.value) } }))} /></label><label>Promised options<input aria-label="Promised options" type="number" min="0" value={deal.pre.promisedOptions} onChange={(event) => patchDeal((current) => ({ ...current, pre: { ...current.pre, promisedOptions: Number(event.target.value) } }))} /></label></div>
+        <div className="section-heading">
+          <div><p className="eyebrow">Inputs</p><h2>Cap table</h2></div>
+          <div className="header-actions">
+            <ExplainDrawer screen="cap-table" />
+            <label>Example deck<select aria-label="Load example deck" value="" onChange={(event) => loadExample(event.target.value)}><option value="" disabled>Load an example</option>{EXAMPLE_DECKS.map((example) => <option key={example.id} value={example.id}>{example.label}</option>)}</select></label>
+          </div>
+        </div>
+        {deal.pre.classes.length === 0 && <p className="empty-state">Start from an example deck or add your first share class.</p>}
+        <div className="section-heading"><h3>Share classes</h3><button type="button" className="quiet-button" onClick={() => patchDeal((current) => ({ ...current, pre: { ...current.pre, classes: [...current.pre.classes, newClass(current.pre.classes.length + 1)] } }))}>Add class</button></div>
+        <div className="table-wrap"><table><thead><tr><th>Class</th><th>Kind</th><th>Holder</th><th>Shares</th><th>Invested</th><th>OIP</th><th>Pref</th><th>Participation</th><th>Tier</th><th>CR</th><th>Anti-dilution</th><th /></tr></thead><tbody>{deal.pre.classes.map((cls) => (
+          <tr key={cls.id}>
+            <td><CommitText label={`${cls.name} name`} value={cls.name} onCommit={(name) => updateClass(cls.id, (candidate) => ({ ...candidate, name }))} /></td>
+            <td><select aria-label={`${cls.name} kind`} value={cls.kind} onChange={(event) => updateClass(cls.id, (candidate) => event.target.value === 'COMMON' ? { id: candidate.id, name: candidate.name, kind: 'COMMON', shares: candidate.shares, holder: candidate.holder } : preferredDefaults(candidate))}><option>COMMON</option><option>PREFERRED</option></select></td>
+            <td><select aria-label={`${cls.name} holder`} value={cls.holder} onChange={(event) => updateClass(cls.id, (candidate) => ({ ...candidate, holder: event.target.value as ShareClass['holder'] }))}>{holders.map((holder) => <option key={holder}>{holder}</option>)}</select></td>
+            <td><CommitNumber label={`${cls.name} shares`} value={cls.shares} min={1} onCommit={(value) => value !== undefined && updateClass(cls.id, (candidate) => ({ ...candidate, shares: value }))} /></td>
+            <td>{cls.kind === 'PREFERRED' ? <CommitNumber label={`${cls.name} invested`} value={cls.invested} min={1} step={1000} onCommit={(value) => value !== undefined && updateClass(cls.id, (candidate) => candidate.kind === 'PREFERRED' ? { ...candidate, invested: value, originalIssuePrice: value / candidate.shares } : candidate)} /> : '—'}</td>
+            <td>{cls.kind === 'PREFERRED' ? <CommitNumber label={`${cls.name} original issue price`} value={cls.originalIssuePrice} min={0.0001} step={0.0001} decimals={4} onCommit={(value) => value !== undefined && updateClass(cls.id, (candidate) => candidate.kind === 'PREFERRED' ? { ...candidate, originalIssuePrice: value } : candidate)} /> : '—'}</td>
+            <td>{cls.kind === 'PREFERRED' ? <CommitNumber label={`${cls.name} preference multiple`} value={cls.prefMultiple} min={1} step={0.5} onCommit={(value) => value !== undefined && updateClass(cls.id, (candidate) => candidate.kind === 'PREFERRED' ? { ...candidate, prefMultiple: value } : candidate)} /> : '—'}</td>
+            <td>{cls.kind === 'PREFERRED' ? <select aria-label={`${cls.name} participation`} value={cls.participation} onChange={(event) => updateClass(cls.id, (candidate) => candidate.kind === 'PREFERRED' ? { ...candidate, participation: event.target.value as ShareClassPreferred['participation'], participationCapMultiple: event.target.value === 'CAPPED' ? Math.max(2, candidate.prefMultiple + 0.5) : undefined } : candidate)}>{participation.map((item) => <option key={item}>{item}</option>)}</select> : '—'}{cls.kind === 'PREFERRED' && cls.participation === 'CAPPED' ? <CommitNumber label={`${cls.name} cap multiple`} value={cls.participationCapMultiple} min={cls.prefMultiple + 0.1} step={0.5} onCommit={(value) => value !== undefined && updateClass(cls.id, (candidate) => candidate.kind === 'PREFERRED' ? { ...candidate, participationCapMultiple: value } : candidate)} /> : null}</td>
+            <td>{cls.kind === 'PREFERRED' ? <CommitNumber label={`${cls.name} seniority tier`} value={cls.seniorityTier} min={1} step={1} onCommit={(value) => value !== undefined && updateClass(cls.id, (candidate) => candidate.kind === 'PREFERRED' ? { ...candidate, seniorityTier: Math.round(value) } : candidate)} /> : '—'}</td>
+            <td>{cls.kind === 'PREFERRED' ? <CommitNumber label={`${cls.name} conversion ratio`} value={cls.conversionRatio} min={0.0001} step={0.0001} decimals={4} onCommit={(value) => value !== undefined && updateClass(cls.id, (candidate) => candidate.kind === 'PREFERRED' ? { ...candidate, conversionRatio: value } : candidate)} /> : '—'}</td>
+            <td>{cls.kind === 'PREFERRED' ? <select aria-label={`${cls.name} anti-dilution`} value={cls.antiDilution} onChange={(event) => updateClass(cls.id, (candidate) => candidate.kind === 'PREFERRED' ? { ...candidate, antiDilution: event.target.value as ShareClassPreferred['antiDilution'] } : candidate)}>{antiDilution.map((item) => <option key={item}>{item}</option>)}</select> : '—'}</td>
+            <td><button type="button" className="quiet-button" onClick={() => patchDeal((current) => ({ ...current, pre: { ...current.pre, classes: current.pre.classes.filter((candidate) => candidate.id !== cls.id) } }))}>Remove</button></td>
+          </tr>
+        ))}</tbody></table></div>
+
+        <div className="section-heading"><h3>Issued grants</h3><button type="button" className="quiet-button" onClick={() => patchDeal((current) => ({ ...current, pre: { ...current.pre, grants: [...current.pre.grants, newGrant(current.pre.grants.length + 1)] } }))}>Add grant</button></div>
+        <div className="table-wrap"><table><thead><tr><th>ID</th><th>Instrument</th><th>Options</th><th>Strike</th><th>Holder</th><th /></tr></thead><tbody>{deal.pre.grants.length === 0 ? <tr><td colSpan={6} className="muted">No issued option grants.</td></tr> : deal.pre.grants.map((grant) => <tr key={grant.id}><td><CommitText label={`${grant.id} id`} value={grant.id} onCommit={(id) => updateGrant(grant.id, (candidate) => ({ ...candidate, id }))} /></td><td><select aria-label={`${grant.id} instrument`} value={grant.instrument} onChange={(event) => updateGrant(grant.id, (candidate) => ({ ...candidate, instrument: event.target.value as OptionGrant['instrument'] }))}><option>OPTION</option><option>WARRANT</option></select></td><td><CommitNumber label={`${grant.id} options`} value={grant.options} min={1} onCommit={(value) => value !== undefined && updateGrant(grant.id, (candidate) => ({ ...candidate, options: value }))} /></td><td><CommitNumber label={`${grant.id} strike`} value={grant.strike} min={0} step={0.0001} decimals={4} onCommit={(value) => value !== undefined && updateGrant(grant.id, (candidate) => ({ ...candidate, strike: value }))} /></td><td><select aria-label={`${grant.id} holder`} value={grant.holder} onChange={(event) => updateGrant(grant.id, (candidate) => ({ ...candidate, holder: event.target.value as OptionGrant['holder'] }))}>{grantHolders.map((holder) => <option key={holder}>{holder}</option>)}</select></td><td><button type="button" className="quiet-button" onClick={() => patchDeal((current) => ({ ...current, pre: { ...current.pre, grants: current.pre.grants.filter((candidate) => candidate.id !== grant.id) } }))}>Remove</button></td></tr>)}</tbody></table></div>
+        <div className="field-grid"><label>Unissued pool<CommitNumber label="Unissued pool" value={deal.pre.poolAvailable} min={0} onCommit={(value) => value !== undefined && patchDeal((current) => ({ ...current, pre: { ...current.pre, poolAvailable: value } }))} /></label><label>Promised options<CommitNumber label="Promised options" value={deal.pre.promisedOptions} min={0} onCommit={(value) => value !== undefined && patchDeal((current) => ({ ...current, pre: { ...current.pre, promisedOptions: value } }))} /></label></div>
+
         <div className="section-heading" style={{ marginTop: '1.5rem' }}><div><p className="eyebrow">Extension</p><h3>Employee offer analyzer</h3></div></div>
-        <p className="muted">Same waterfall engine — models a candidate grant from the post-round pool against founder beliefs and an optional cash alternative.</p>
         <div className="field-grid">
           <label>Options<input aria-label="Offer options" type="number" min="0" value={options} onChange={(event) => setOptions(Number(event.target.value))} /></label>
           <label>Strike<input aria-label="Offer strike" type="number" min="0" step="0.01" value={strike} onChange={(event) => setStrike(Number(event.target.value))} /></label>
@@ -56,7 +148,18 @@ export function CapTableScreen() {
           </dl>
         )}
       </div>
-      <div className="side-panel"><ValidationPanel messages={validation} /><p className="callout">Unissued pool and promised options count for pricing, but receive no exit payout.</p></div>
+      <div className="side-panel">
+        <ValidationPanel messages={validation} />
+        <h3>FD / as-converted</h3>
+        <dl className="metric-list">
+          <dt>Class shares</dt><dd>{shares(fd.classShares)}</dd>
+          <dt>Issued grants</dt><dd>{shares(fd.grants)}</dd>
+          <dt>Unissued + promised</dt><dd>{shares(deal.pre.poolAvailable + deal.pre.promisedOptions)}</dd>
+          <dt>FD total</dt><dd>{shares(fd.total)}</dd>
+        </dl>
+        <div className="ownership-pie" aria-label="Ownership pie">{fd.byHolder.map((row) => <span key={row.holder} style={{ flexGrow: fd.total === 0 ? 1 : Math.max(row.shares / fd.total, 0.03) }} title={`${row.holder}: ${percent(fd.total === 0 ? 0 : row.shares / fd.total)}`}>{row.holder[0]}</span>)}</div>
+        <p className="callout">Unissued pool and promised options count for pricing, but receive no exit payout. SAFEs may be aggregated: the Round screen stores a per-row count annotation for provenance.</p>
+      </div>
     </section>
   )
 }

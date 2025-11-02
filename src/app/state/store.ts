@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { EXAMPLE_DECKS } from '../data/examples'
 import { DealFileSchema, humanizeZodError, type Beliefs, type DealFile, type RoundTerms } from '../../core/schema'
+import { deriveDealSpace, refreshDerivedSpace } from '../deal-space'
 
 export const SCREEN_IDS = ['cap-table', 'round', 'waterfall', 'beliefs', 'frontier', 'report'] as const
 export type ScreenId = (typeof SCREEN_IDS)[number]
@@ -9,25 +10,39 @@ type Store = {
   deal: DealFile
   activeScreen: ScreenId
   validation: string[]
+  importStatus: { kind: 'success' | 'error'; message: string } | null
   exitValue: number
   compare: number[]
   setScreen: (screen: ScreenId) => void
-  replaceDeal: (raw: unknown) => boolean
+  replaceDeal: (raw: unknown, source?: 'import' | 'autosave' | 'example') => boolean
   patchDeal: (patch: (deal: DealFile) => DealFile) => boolean
   setTerms: (terms: RoundTerms) => boolean
   setBeliefs: (party: 'founder' | 'investor', beliefs: Beliefs) => boolean
   setExitValue: (value: number) => void
   toggleCompare: (index: number) => void
   loadExample: (id: string) => void
+  setDealSpace: (space: DealFile['space'], pins?: Partial<DealFile['ui']['dealSpacePins']>) => boolean
 }
 
-function parseAndUpdate(set: (partial: Partial<Store>) => void, raw: unknown): boolean {
+function parseAndUpdate(set: (partial: Partial<Store>) => void, raw: unknown, source?: 'import' | 'autosave' | 'example'): boolean {
   const parsed = DealFileSchema.safeParse(raw)
   if (!parsed.success) {
-    set({ validation: humanizeZodError(parsed.error) })
+    const messages = humanizeZodError(parsed.error)
+    set({
+      validation: messages,
+      importStatus: source === 'import' ? { kind: 'error', message: messages[0] ?? 'Deal file is invalid.' } : undefined,
+    })
     return false
   }
-  set({ deal: parsed.data, validation: [] })
+  const deal = parsed.data.ui.dealSpaceManual
+    ? parsed.data
+    : { ...parsed.data, space: deriveDealSpace(parsed.data.terms, null, parsed.data.ui.dealSpacePins) }
+  set({
+    deal,
+    validation: [],
+    compare: [],
+    importStatus: source === 'import' ? { kind: 'success', message: 'Deal file imported.' } : null,
+  })
   return true
 }
 
@@ -35,12 +50,13 @@ export const useDealStore = create<Store>((set, get) => ({
   deal: EXAMPLE_DECKS[1].deal,
   activeScreen: 'cap-table',
   validation: [],
+  importStatus: null,
   exitValue: 21_250_000,
   compare: [],
   setScreen: (activeScreen) => set({ activeScreen }),
-  replaceDeal: (raw) => parseAndUpdate(set, raw),
+  replaceDeal: (raw, source) => parseAndUpdate(set, raw, source),
   patchDeal: (patch) => parseAndUpdate(set, patch(get().deal)),
-  setTerms: (terms) => parseAndUpdate(set, { ...get().deal, terms }),
+  setTerms: (terms) => parseAndUpdate(set, refreshDerivedSpace(get().deal, terms)),
   setBeliefs: (party, beliefs) => {
     const deal = get().deal
     return parseAndUpdate(set, {
@@ -60,6 +76,18 @@ export const useDealStore = create<Store>((set, get) => ({
   },
   loadExample: (id) => {
     const example = EXAMPLE_DECKS.find((candidate) => candidate.id === id)
-    if (example !== undefined) set({ deal: example.deal, validation: [], compare: [], exitValue: 21_250_000 })
+    if (example !== undefined) parseAndUpdate(set, example.deal, 'example')
+  },
+  setDealSpace: (space, pins = {}) => {
+    const deal = get().deal
+    return parseAndUpdate(set, {
+      ...deal,
+      space,
+      ui: {
+        ...deal.ui,
+        dealSpaceManual: true,
+        dealSpacePins: { ...deal.ui.dealSpacePins, ...pins },
+      },
+    })
   },
 }))

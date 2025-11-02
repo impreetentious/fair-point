@@ -87,4 +87,4 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 *Fairpoint is an educational instrument. It is not legal, financial, or investment advice.*
 
-**Version:** v0.13.1
+**Version:** v0.13.2
