@@ -1,0 +1,33 @@
+id: F-RED-01
+kind: redemption
+description: Eligible redemption right lifts the preference floor above 1× invested.
+derivation: |
+  Series A: invested $1,000,000, prefMultiple=1, redemptionMultiple=1.5, eligibleYears=5.
+  At yearsToExit=5 the redemption claim = 1.5 × $1M = $1,500,000 (§6.14).
+  Preference claim = max(1×$1M + $0 dividends, $1.5M) = $1,500,000.
+  At E=$1,500,000 with 9M common / 1M preferred NONE: preferred takes $1.5M, common $0.
+  Citation: NVCA Model COI redemption mechanics (teaching simplification — exit-time floor);
+  retrieved 2025-01-14.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 9000000, holder: FOUNDER }
+      - id: series-a
+        name: Series A
+        kind: PREFERRED
+        shares: 1000000
+        holder: INVESTOR
+        invested: 1000000
+        prefMultiple: 1
+        participation: NONE
+        redemptionMultiple: 1.5
+        redemptionEligibleYears: 5
+    grants: []
+    poolAvailable: 0
+  yearsToExit: 5
+  exitValue: 1500000
+expect:
+  redemptionClaim: 1500000
+  preferenceClaim: 1500000
+  payouts: { series-a: 1500000, common: 0 }
+tolerance: 0.01

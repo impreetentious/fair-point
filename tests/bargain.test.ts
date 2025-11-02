@@ -1,7 +1,8 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { analyze, enumerateDeals, evaluatePackage, valueOnTable } from '../src/core/bargain'
-import { DealFileSchema, type DealPoint } from '../src/core/schema'
+import { analyzeN } from '../src/core/bargain-n'
+import { DealFileSchema, type DealPoint, type MultiPartyDealPoint } from '../src/core/schema'
 
 function point(index: number, uF: number, uI: number): DealPoint {
   return {
@@ -18,11 +19,32 @@ function point(index: number, uF: number, uI: number): DealPoint {
   }
 }
 
+function multiPoint(index: number, utilities: Record<string, number>): MultiPartyDealPoint {
+  return {
+    pkg: {
+      index,
+      terms: { preMoney: 1, investment: 1, poolTargetPost: 0, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' },
+    },
+    utilities,
+    metric: 'EV',
+    diagnostics: { pps: 1, investorPct: 0.5, poolIncrease: 0 },
+  }
+}
+
 const pointSets = fc
   .array(fc.tuple(fc.integer({ min: 0, max: 500 }), fc.integer({ min: 0, max: 500 })), { minLength: 2, maxLength: 16 })
   .map((pairs) => pairs.map(([uF, uI], index) => point(index, uF, uI)))
 
+const multiPointSets = fc
+  .array(
+    fc.tuple(fc.integer({ min: 0, max: 500 }), fc.integer({ min: 0, max: 500 }), fc.integer({ min: 0, max: 500 })),
+    { minLength: 2, maxLength: 16 },
+  )
+  .map((triples) => triples.map(([a, b, c], index) => multiPoint(index, { A: a, B: b, C: c })))
+
 const disagreement = { dF: 0, dI: 0 }
+const multiDisagreement = { A: 0, B: 0, C: 0 }
+const parties = ['A', 'B', 'C'] as const
 
 function seriesADeal() {
   return DealFileSchema.parse({
@@ -121,5 +143,64 @@ describe('bargaining engine', () => {
   it('returns the exact single-package value-on-table result', () => {
     const points = [point(0, 5, 5), point(1, 7, 7), point(2, 10, 5), point(3, 5, 12), point(4, 8, 8)]
     expect(valueOnTable(analyze(points, disagreement), points[0])).toEqual({ headline: 7, gainF: 5, gainI: 7, dominating: [4, 1, 3] })
+  })
+})
+
+describe('n-party bargaining (§6.19 defining axioms)', () => {
+  it('satisfies n-party Nash and KS affine invariance over 300 randomized 3-party clouds', () => {
+    fc.assert(
+      fc.property(
+        multiPointSets,
+        fc.double({ min: 0.1, max: 10, noNaN: true }),
+        fc.double({ min: 0.1, max: 10, noNaN: true }),
+        fc.double({ min: 0.1, max: 10, noNaN: true }),
+        fc.integer({ min: -100, max: 100 }),
+        fc.integer({ min: -100, max: 100 }),
+        fc.integer({ min: -100, max: 100 }),
+        (points, scaleA, scaleB, scaleC, offsetA, offsetB, offsetC) => {
+          const original = analyzeN(points, multiDisagreement, [...parties])
+          const transformed = points.map((candidate) =>
+            multiPoint(candidate.pkg.index, {
+              A: candidate.utilities.A * scaleA + offsetA,
+              B: candidate.utilities.B * scaleB + offsetB,
+              C: candidate.utilities.C * scaleC + offsetC,
+            }),
+          )
+          const transformedResult = analyzeN(transformed, { A: offsetA, B: offsetB, C: offsetC }, [...parties])
+          expect(transformedResult.nash).toBe(original.nash)
+          expect(transformedResult.ks).toBe(original.ks)
+        },
+      ),
+      { numRuns: 300 },
+    )
+  })
+
+  it('satisfies n-party Nash discrete IIA over 200 randomized point deletions', () => {
+    fc.assert(
+      fc.property(multiPointSets, fc.array(fc.boolean(), { minLength: 1, maxLength: 16 }), (points, keepFlags) => {
+        const original = analyzeN(points, multiDisagreement, [...parties])
+        if (original.nash === null) return
+        const reduced = points.filter((candidate, index) => candidate.pkg.index === original.nash || keepFlags[index % keepFlags.length])
+        expect(analyzeN(reduced, multiDisagreement, [...parties]).nash).toBe(original.nash)
+      }),
+      { numRuns: 200 },
+    )
+  })
+
+  it('keeps egalitarian and utilitarian selections inside IR and on the discrete frontier', () => {
+    fc.assert(
+      fc.property(multiPointSets, (points) => {
+        const result = analyzeN(points, multiDisagreement, [...parties])
+        for (const selection of [result.nash, result.ks, result.egalitarian, result.utilitarian]) {
+          if (selection === null) {
+            expect(result.zopa).toBe(false)
+            continue
+          }
+          expect(result.ir).toContain(selection)
+          expect(result.frontier).toContain(selection)
+        }
+      }),
+      { numRuns: 200 },
+    )
   })
 })

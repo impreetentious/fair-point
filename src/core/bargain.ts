@@ -1,7 +1,21 @@
 import { crraQuadrature } from './mc'
 import { expectedPayouts } from './outcomes'
 import { constructRound } from './round'
-import { RoundTermsSchema, type BargainResult, type Beliefs, type CapTable, type DealPoint, type DealSpace, type Disagreement, type RoundTerms, type Safe, type TermPackage } from './schema'
+import { presentValue } from './discounting'
+import {
+  RoundTermsSchema,
+  type BargainResult,
+  type Beliefs,
+  type CapTable,
+  type ConvertibleNote,
+  type DealPoint,
+  type DealSpace,
+  type Disagreement,
+  type Discounting,
+  type RoundTerms,
+  type Safe,
+  type TermPackage,
+} from './schema'
 
 function linspace([lower, upper]: DealSpace['preMoneyRange'], steps: number): number[] {
   if (steps === 1) return [lower]
@@ -48,15 +62,17 @@ export function evaluatePackage(
   founderBeliefs: Beliefs,
   investorBeliefs: Beliefs,
   risk: { gamma: 0.5 | 1; w0F: number; w0I: number } | null = null,
+  notes: ConvertibleNote[] = [],
+  discounting: Discounting | null = null,
 ): DealPoint {
-  const round = constructRound(pre, safes, pkg.terms)
+  const round = constructRound(pre, safes, pkg.terms, notes)
   if (risk !== null) {
     return {
       pkg,
-      uF: crraQuadrature(round.post, 'FOUNDER', founderBeliefs, risk.gamma, risk.w0F).ce,
-      uI: crraQuadrature(round.post, 'INVESTOR', investorBeliefs, risk.gamma, risk.w0I).ce,
-      uF_underI: crraQuadrature(round.post, 'FOUNDER', investorBeliefs, risk.gamma, risk.w0F).ce,
-      uI_underF: crraQuadrature(round.post, 'INVESTOR', founderBeliefs, risk.gamma, risk.w0I).ce,
+      uF: presentValue(crraQuadrature(round.post, 'FOUNDER', founderBeliefs, risk.gamma, risk.w0F).ce, discounting),
+      uI: presentValue(crraQuadrature(round.post, 'INVESTOR', investorBeliefs, risk.gamma, risk.w0I).ce, discounting),
+      uF_underI: presentValue(crraQuadrature(round.post, 'FOUNDER', investorBeliefs, risk.gamma, risk.w0F).ce, discounting),
+      uI_underF: presentValue(crraQuadrature(round.post, 'INVESTOR', founderBeliefs, risk.gamma, risk.w0I).ce, discounting),
       metric: 'CE',
       diagnostics: round.diagnostics,
     }
@@ -65,10 +81,10 @@ export function evaluatePackage(
   const investor = expectedPayouts(round.post, investorBeliefs)
   return {
     pkg,
-    uF: founder.party.founder,
-    uI: investor.party.investor,
-    uF_underI: investor.party.founder,
-    uI_underF: founder.party.investor,
+    uF: presentValue(founder.party.founder, discounting),
+    uI: presentValue(investor.party.investor, discounting),
+    uF_underI: presentValue(investor.party.founder, discounting),
+    uI_underF: presentValue(founder.party.investor, discounting),
     metric: 'EV',
     diagnostics: round.diagnostics,
   }

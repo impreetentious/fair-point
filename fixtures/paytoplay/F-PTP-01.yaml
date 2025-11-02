@@ -1,0 +1,44 @@
+id: F-PTP-01
+kind: paytoplay
+description: Non-participating pay-to-play preferred converts to common before the new round.
+derivation: |
+  Pre: common 8,000,000 FOUNDER; Series Seed preferred 2,000,000 INVESTOR invested $2M,
+  payToPlay=TO_COMMON, conversionRatio=1.
+  Round: pricedPerShare=$1, investment=$3M, pool=0, 1× NONE PARI.
+  payToPlayParticipants: [] (seed does not participate) ⇒ seed converts to 2,000,000 common
+  before the round (§6.12). Post classes: common 8M, seed-converted 2M common, new-round 3M preferred.
+  Citation: NVCA pay-to-play / pull-up teaching pattern; retrieved 2025-01-14.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - id: seed
+        name: Seed
+        kind: PREFERRED
+        shares: 2000000
+        holder: INVESTOR
+        invested: 2000000
+        prefMultiple: 1
+        participation: NONE
+        payToPlay: TO_COMMON
+    grants: []
+    poolAvailable: 0
+  safes: []
+  terms:
+    pricedPerShare: 1
+    investment: 3000000
+    poolTargetPost: 0
+    prefMultiple: 1
+    participation: NONE
+    seniority: PARI
+    payToPlayParticipants: []
+expect:
+  classKinds:
+    common: COMMON
+    seed-converted: COMMON
+    new-round: PREFERRED
+  classShares:
+    common: 8000000
+    seed-converted: 2000000
+    new-round: 3000000
+tolerance: 0.01

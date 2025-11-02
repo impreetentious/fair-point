@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { analyze, enumerateDeals, evaluatePackage, valueOnTable } from '../../core/bargain'
 import { regimes } from '../../core/breakpoints'
+import { accrueForExit } from '../../core/accruals'
 import { payoutsAt } from '../../core/waterfall'
 import { constructRound } from '../../core/round'
 import type { DealFile } from '../../core/schema'
@@ -8,7 +9,7 @@ import type { DealFile } from '../../core/schema'
 export function useRoundAnalysis(deal: DealFile) {
   return useMemo(() => {
     try {
-      const round = constructRound(deal.pre, deal.safes, deal.terms)
+      const round = constructRound(deal.pre, deal.safes, deal.terms, deal.notes)
       return { round, postRegimes: regimes(round.post), error: null as string | null }
     } catch (error) {
       return { round: null, postRegimes: [], error: error instanceof Error ? error.message : 'Round construction failed' }
@@ -21,11 +22,12 @@ export function useWaterfallAnalysis(deal: DealFile, exitValue: number) {
   return useMemo(() => {
     if (round.round === null) return { ...round, payout: null }
     try {
-      return { ...round, payout: payoutsAt(round.round.post, exitValue) }
+      const settled = accrueForExit(round.round.post, deal.yearsToExit)
+      return { ...round, payout: payoutsAt(settled, exitValue) }
     } catch (error) {
       return { ...round, payout: null, error: error instanceof Error ? error.message : 'Waterfall settlement failed' }
     }
-  }, [exitValue, round])
+  }, [deal.yearsToExit, exitValue, round])
 }
 
 export function useFrontierAnalysis(deal: DealFile) {
@@ -33,7 +35,9 @@ export function useFrontierAnalysis(deal: DealFile) {
     const start = performance.now()
     try {
       const packages = enumerateDeals(deal.space)
-      const points = packages.map((pkg) => evaluatePackage(deal.pre, deal.safes, pkg, deal.founderBeliefs, deal.investorBeliefs, deal.risk))
+      const points = packages.map((pkg) =>
+        evaluatePackage(deal.pre, deal.safes, pkg, deal.founderBeliefs, deal.investorBeliefs, deal.risk, deal.notes, deal.discounting),
+      )
       const result = analyze(points, deal.disagreement)
       const current = evaluatePackage(
         deal.pre,
@@ -42,6 +46,8 @@ export function useFrontierAnalysis(deal: DealFile) {
         deal.founderBeliefs,
         deal.investorBeliefs,
         deal.risk,
+        deal.notes,
+        deal.discounting,
       )
       return { result, current, value: valueOnTable(result, current), elapsed: performance.now() - start, error: null as string | null }
     } catch (error) {

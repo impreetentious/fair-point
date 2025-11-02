@@ -2,7 +2,7 @@
 
 **The term-sheet bargaining studio.** Exact liquidation-waterfall physics. Real Pareto frontiers. Your cap table never leaves your browser.
 
-**Status:** v0.12.5 — Employee offer analyzer, n-party bargain, and warrants on main.
+**Status:** v0.12.6 — Non-cash-terms standing decision recorded; work-state sync on main. Gates + parking-lot ladder complete; v1.0.0 tagging is a separate release step.
 
 ---
 
