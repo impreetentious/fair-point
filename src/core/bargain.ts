@@ -163,8 +163,10 @@ export function analyze(points: DealPoint[], disagreement: Disagreement): Bargai
   const irPoints = ordered.filter(
     (point) => point.uF >= disagreement.dF && point.uI >= disagreement.dI,
   )
+  const frontierIdx = new Set(frontier(irPoints))
+  const selectable = irPoints.filter((point) => frontierIdx.has(point.pkg.index))
   const nashPoint = choose(
-    irPoints,
+    selectable,
     (left, right) =>
       descendingStable(gain(left, disagreement).product, gain(right, disagreement).product) ||
       left.pkg.index - right.pkg.index,
@@ -180,7 +182,7 @@ export function analyze(points: DealPoint[], disagreement: Disagreement): Bargai
       ksPoint = nashPoint
       notes.push('KS fell back to Nash because an ideal gain denominator is zero.')
     } else {
-      ksPoint = choose(irPoints, (left, right) => {
+      ksPoint = choose(selectable, (left, right) => {
         const leftGain = gain(left, disagreement)
         const rightGain = gain(right, disagreement)
         const leftMinimum = Math.min(leftGain.f / denominatorF, leftGain.i / denominatorI)
@@ -193,7 +195,7 @@ export function analyze(points: DealPoint[], disagreement: Disagreement): Bargai
       })
     }
   }
-  const egalitarianPoint = choose(irPoints, (left, right) => {
+  const egalitarianPoint = choose(selectable, (left, right) => {
     const leftGain = gain(left, disagreement)
     const rightGain = gain(right, disagreement)
     return (
@@ -202,7 +204,7 @@ export function analyze(points: DealPoint[], disagreement: Disagreement): Bargai
       left.pkg.index - right.pkg.index
     )
   })
-  const utilitarianPoint = choose(irPoints, (left, right) => {
+  const utilitarianPoint = choose(selectable, (left, right) => {
     const leftGain = gain(left, disagreement)
     const rightGain = gain(right, disagreement)
     return (

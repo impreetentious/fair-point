@@ -65,7 +65,7 @@ The dev server binds `127.0.0.1` — open `http://localhost:3000`.
 ## Verify
 
 ```bash
-npm run verify     # typecheck, lint, tests, fixtures
+npm run verify     # typecheck, lint, format check, tests, fixtures
 npm run test:e2e   # Playwright, including an offline reload check
 npm run test:a11y  # Lighthouse accessibility
 ```
@@ -87,4 +87,4 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.14.0
+**Version:** v0.14.1
