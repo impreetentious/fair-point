@@ -7,7 +7,16 @@ input:
   capTable:
     classes:
       - { id: common, name: Common, kind: COMMON, shares: 9, holder: FOUNDER }
-      - { id: a, name: A, kind: PREFERRED, shares: 1, holder: INVESTOR, invested: 1000000, prefMultiple: 2, participation: NONE }
+      - {
+          id: a,
+          name: A,
+          kind: PREFERRED,
+          shares: 1,
+          holder: INVESTOR,
+          invested: 1000000,
+          prefMultiple: 2,
+          participation: NONE,
+        }
     grants: []
     poolAvailable: 0
   exitValue: 1500000

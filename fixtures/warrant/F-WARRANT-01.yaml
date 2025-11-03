@@ -15,7 +15,16 @@ input:
   capTable:
     classes:
       - { id: common, name: Common, kind: COMMON, shares: 90, holder: FOUNDER }
-      - { id: series-a, name: Series A, kind: PREFERRED, shares: 10, holder: INVESTOR, invested: 10, prefMultiple: 1, participation: NONE }
+      - {
+          id: series-a,
+          name: Series A,
+          kind: PREFERRED,
+          shares: 10,
+          holder: INVESTOR,
+          invested: 10,
+          prefMultiple: 1,
+          participation: NONE,
+        }
     grants:
       - { id: warrant-1, options: 10, strike: 0, holder: OTHER, instrument: WARRANT }
     poolAvailable: 0

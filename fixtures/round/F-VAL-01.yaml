@@ -13,10 +13,27 @@ input:
     grants: []
     poolAvailable: 0
   safes: []
-  terms: { preMoney: 100, investment: 10, poolTargetPost: 0.1, prefMultiple: 1, participation: NONE, seniority: PARI }
+  terms:
+    {
+      preMoney: 100,
+      investment: 10,
+      poolTargetPost: 0.1,
+      prefMultiple: 1,
+      participation: NONE,
+      seniority: PARI,
+    }
   founderBeliefs: { p0: 0.2, p50: 100, p90: 200 }
   investorBeliefs: { p0: 0.2, p50: 100, p90: 200 }
   sharedBeliefs: true
   disagreement: { dF: 0, dI: 0 }
-  space: { preMoneyRange: [50, 150], preMoneySteps: 9, pinnedInvestment: 10, pools: [0.1], multiples: [1], participations: [NONE], seniority: PARI }
+  space:
+    {
+      preMoneyRange: [50, 150],
+      preMoneySteps: 9,
+      pinnedInvestment: 10,
+      pools: [0.1],
+      multiples: [1],
+      participations: [NONE],
+      seniority: PARI,
+    }
 expect: { valid: false, message: 'V9: duplicate id' }

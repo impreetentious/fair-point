@@ -4,6 +4,6 @@ description: Discrete asymmetric symmetry tie follows the package-index rule.
 derivation: |
   Mirrored utility endpoints (2,1) and (1,2) tie on all Nash/KS score keys; lower index 7 wins.
 input:
-  points: [ { index: 7, uF: 2, uI: 1 }, { index: 9, uF: 1, uI: 2 } ]
+  points: [{ index: 7, uF: 2, uI: 1 }, { index: 9, uF: 1, uI: 2 }]
   disagreement: { dF: 0, dI: 0 }
 expect: { nash: 7, ks: 7 }

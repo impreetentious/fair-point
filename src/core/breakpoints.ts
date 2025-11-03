@@ -122,7 +122,10 @@ function coefficientsAt(post: CapTable, from: number): Coefficients {
         return [id, { m, c: first[id] - m * firstAt }]
       }),
     ) as Coefficients
-    const consistent = Object.entries(third).every(([id, value]) => Math.abs(value - (coeffs[id].m * thirdAt + coeffs[id].c)) <= lineTolerance(value))
+    const consistent = Object.entries(third).every(
+      ([id, value]) =>
+        Math.abs(value - (coeffs[id].m * thirdAt + coeffs[id].c)) <= lineTolerance(value),
+    )
     if (consistent) return coeffs
     delta /= 2
   }
@@ -143,17 +146,27 @@ function localSlope(post: CapTable, exitValue: number, delta: number): Record<st
 }
 
 function sameSlope(left: Record<string, number>, right: Record<string, number>): boolean {
-  return Object.keys(left).every((id) => Math.abs(left[id] - right[id]) <= Math.max(1e-7, 1e-7 * Math.abs(left[id])))
+  return Object.keys(left).every(
+    (id) => Math.abs(left[id] - right[id]) <= Math.max(1e-7, 1e-7 * Math.abs(left[id])),
+  )
 }
 
 function conservativeUpperBound(post: CapTable): number {
   const preferred = post.classes.filter((cls) => cls.kind === 'PREFERRED')
   const shareCount =
-    post.classes.reduce((sum, cls) => sum + (cls.kind === 'PREFERRED' ? cls.shares * cls.conversionRatio : cls.shares), 0) +
-    post.grants.reduce((sum, grant) => sum + grant.options, 0)
-  const smallestPreferred = Math.min(...preferred.map((cls) => cls.shares * cls.conversionRatio), Infinity)
+    post.classes.reduce(
+      (sum, cls) =>
+        sum + (cls.kind === 'PREFERRED' ? cls.shares * cls.conversionRatio : cls.shares),
+      0,
+    ) + post.grants.reduce((sum, grant) => sum + grant.options, 0)
+  const smallestPreferred = Math.min(
+    ...preferred.map((cls) => cls.shares * cls.conversionRatio),
+    Infinity,
+  )
   const preferenceOrCap = preferred.reduce(
-    (sum, cls) => sum + Math.max(cls.prefMultiple, cls.participationCapMultiple ?? cls.prefMultiple) * cls.invested,
+    (sum, cls) =>
+      sum +
+      Math.max(cls.prefMultiple, cls.participationCapMultiple ?? cls.prefMultiple) * cls.invested,
     0,
   )
   const maxStrike = Math.max(...post.grants.map((grant) => grant.strike), 0)
@@ -172,7 +185,8 @@ function eventLabel(post: CapTable, before: number, after: number): string {
     }
   }
   for (const grant of post.grants) {
-    if (left.byGrant[grant.id] === 0 && right.byGrant[grant.id] > 0) return `${grant.id} becomes exercisable`
+    if (left.byGrant[grant.id] === 0 && right.byGrant[grant.id] > 0)
+      return `${grant.id} becomes exercisable`
   }
   return 'regime change (unclassified)'
 }
@@ -187,7 +201,9 @@ function hasReachedTerminalState(post: CapTable, from: number): boolean {
   const preferredAreTerminal = post.classes
     .filter((cls) => cls.kind === 'PREFERRED')
     .every((cls) => sample.pathTaken[cls.id] === 'CONVERTED' || cls.participation === 'FULL')
-  const grantsAreTerminal = post.grants.every((grant) => sample.perCommonShareProceeds > grant.strike)
+  const grantsAreTerminal = post.grants.every(
+    (grant) => sample.perCommonShareProceeds > grant.strike,
+  )
   return preferencesAreFilled && preferredAreTerminal && grantsAreTerminal
 }
 
@@ -204,7 +220,12 @@ function computeRegimes(post: CapTable): Regime[] {
   for (let count = 0; count < 4 * (post.classes.length + post.grants.length) + 8; count += 1) {
     const coeffs = coefficientsAt(post, from)
     if (hasReachedTerminalState(post, from)) {
-      result.push({ from, to: Infinity, event: result.length === 0 ? '' : 'regime change (unclassified)', coeffs })
+      result.push({
+        from,
+        to: Infinity,
+        event: result.length === 0 ? '' : 'regime change (unclassified)',
+        coeffs,
+      })
       return result
     }
     const slopeDelta = 1
@@ -228,10 +249,20 @@ function computeRegimes(post: CapTable): Regime[] {
       previous = probe
     }
     if (next === null || next <= from + 1e-6) {
-      result.push({ from, to: Infinity, event: result.length === 0 ? '' : 'regime change (unclassified)', coeffs })
+      result.push({
+        from,
+        to: Infinity,
+        event: result.length === 0 ? '' : 'regime change (unclassified)',
+        coeffs,
+      })
       return result
     }
-    result.push({ from, to: next, event: result.length === 0 ? '' : eventLabel(post, next - 1e-4, next + 1e-4), coeffs })
+    result.push({
+      from,
+      to: next,
+      event: result.length === 0 ? '' : eventLabel(post, next - 1e-4, next + 1e-4),
+      coeffs,
+    })
     from = next
   }
   throw new Error('Regime walk exceeded its deterministic backstop')

@@ -5,7 +5,12 @@ type RawRecord = Record<string, unknown>
 type RawDeal = {
   schemaVersion: string
   name: string
-  pre: { classes: RawRecord[]; grants: RawRecord[]; poolAvailable: number; promisedOptions?: number }
+  pre: {
+    classes: RawRecord[]
+    grants: RawRecord[]
+    poolAvailable: number
+    promisedOptions?: number
+  }
   safes: RawRecord[]
   terms: RawRecord
   founderBeliefs: RawRecord
@@ -37,7 +42,14 @@ function validDeal(): RawDeal {
       poolAvailable: 0,
     },
     safes: [],
-    terms: { preMoney: 10_000_000, investment: 1_000_000, poolTargetPost: 0.1, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' },
+    terms: {
+      preMoney: 10_000_000,
+      investment: 1_000_000,
+      poolTargetPost: 0.1,
+      prefMultiple: 1,
+      participation: 'NONE',
+      seniority: 'PARI',
+    },
     founderBeliefs: { p0: 0.2, p50: 20_000_000, p90: 60_000_000 },
     investorBeliefs: { p0: 0.2, p50: 20_000_000, p90: 60_000_000 },
     sharedBeliefs: true,
@@ -71,7 +83,15 @@ describe('V1–V16 schema contract', () => {
       conversionRatio: 1,
       antiDilution: 'NONE',
     })
-    expect(SafeSchema.parse({ id: 'safe', name: 'Safe', amount: 1, kind: 'PRE_MONEY', valuationCap: 10 })).toMatchObject({ holder: 'OTHER' })
+    expect(
+      SafeSchema.parse({
+        id: 'safe',
+        name: 'Safe',
+        amount: 1,
+        kind: 'PRE_MONEY',
+        valuationCap: 10,
+      }),
+    ).toMatchObject({ holder: 'OTHER' })
   })
 
   it('enforces V1, V2, V3, V5, V7, V9, V10, V11, V12, V13, V14 and V15', () => {
@@ -86,7 +106,14 @@ describe('V1–V16 schema contract', () => {
       ]
     })
     invalid((deal) => {
-      deal.terms = { preMoney: 100, investment: 10_000, poolTargetPost: 0.4, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' }
+      deal.terms = {
+        preMoney: 100,
+        investment: 10_000,
+        poolTargetPost: 0.4,
+        prefMultiple: 1,
+        participation: 'NONE',
+        seniority: 'PARI',
+      }
     })
     invalid((deal) => {
       deal.founderBeliefs = { p0: 0.2, p10: 25, p50: 20, p90: 60 }
@@ -110,7 +137,18 @@ describe('V1–V16 schema contract', () => {
       deal.pre.grants = [{ id: 'common', options: 1, strike: 0, holder: 'FOUNDER' }]
     })
     invalid((deal) => {
-      deal.pre.classes = [{ id: 'preferred', name: 'Preferred', kind: 'PREFERRED', shares: 1, holder: 'OTHER', invested: 1, prefMultiple: 1, participation: 'NONE' }]
+      deal.pre.classes = [
+        {
+          id: 'preferred',
+          name: 'Preferred',
+          kind: 'PREFERRED',
+          shares: 1,
+          holder: 'OTHER',
+          invested: 1,
+          prefMultiple: 1,
+          participation: 'NONE',
+        },
+      ]
     })
     invalid((deal) => {
       deal.pre.classes[1].originalIssuePrice = 9
@@ -133,13 +171,45 @@ describe('V1–V16 schema contract', () => {
     const poolAboveTarget = validDeal()
     poolAboveTarget.pre.poolAvailable = 9_000_000
     expect(DealFileSchema.safeParse(poolAboveTarget).success).toBe(true)
-    expect(CapTableSchema.safeParse({
-      classes: [{ id: 'common', name: 'Common', kind: 'COMMON', shares: 1, holder: 'FOUNDER', invested: 1 }],
-      grants: [],
-      poolAvailable: 0,
-    }).success).toBe(false)
-    expect(RoundTermsSchema.safeParse({ preMoney: 1, investment: 1, poolTargetPost: 0, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' }).success).toBe(true)
-    expect(RoundTermsSchema.safeParse({ preMoney: 0, investment: 1, poolTargetPost: 0, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' }).success).toBe(false)
-    expect(SafeSchema.safeParse({ id: 'bad', name: 'Bad', amount: 1, kind: 'PRE_MONEY', discount: 1 }).success).toBe(false)
+    expect(
+      CapTableSchema.safeParse({
+        classes: [
+          {
+            id: 'common',
+            name: 'Common',
+            kind: 'COMMON',
+            shares: 1,
+            holder: 'FOUNDER',
+            invested: 1,
+          },
+        ],
+        grants: [],
+        poolAvailable: 0,
+      }).success,
+    ).toBe(false)
+    expect(
+      RoundTermsSchema.safeParse({
+        preMoney: 1,
+        investment: 1,
+        poolTargetPost: 0,
+        prefMultiple: 1,
+        participation: 'NONE',
+        seniority: 'PARI',
+      }).success,
+    ).toBe(true)
+    expect(
+      RoundTermsSchema.safeParse({
+        preMoney: 0,
+        investment: 1,
+        poolTargetPost: 0,
+        prefMultiple: 1,
+        participation: 'NONE',
+        seniority: 'PARI',
+      }).success,
+    ).toBe(false)
+    expect(
+      SafeSchema.safeParse({ id: 'bad', name: 'Bad', amount: 1, kind: 'PRE_MONEY', discount: 1 })
+        .success,
+    ).toBe(false)
   })
 })

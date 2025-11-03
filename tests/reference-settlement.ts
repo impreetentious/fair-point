@@ -12,10 +12,23 @@ function preferred(post: CapTable): ShareClassPreferred[] {
     .sort((a, b) => a.seniorityTier - b.seniorityTier || a.id.localeCompare(b.id))
 }
 
-function rawSettlement(post: CapTable, distributable: number, exercised: Set<string>, converted: Set<string>): Payouts {
-  const byClass = Object.fromEntries(post.classes.map((cls) => [cls.id, 0])) as Record<string, number>
-  const byGrant = Object.fromEntries(post.grants.map((grant) => [grant.id, 0])) as Record<string, number>
-  const pathTaken = Object.fromEntries(post.classes.map((cls) => [cls.id, cls.kind === 'COMMON' ? 'COMMON' : 'PREFERENCE'])) as Payouts['pathTaken']
+function rawSettlement(
+  post: CapTable,
+  distributable: number,
+  exercised: Set<string>,
+  converted: Set<string>,
+): Payouts {
+  const byClass = Object.fromEntries(post.classes.map((cls) => [cls.id, 0])) as Record<
+    string,
+    number
+  >
+  const byGrant = Object.fromEntries(post.grants.map((grant) => [grant.id, 0])) as Record<
+    string,
+    number
+  >
+  const pathTaken = Object.fromEntries(
+    post.classes.map((cls) => [cls.id, cls.kind === 'COMMON' ? 'COMMON' : 'PREFERENCE']),
+  ) as Payouts['pathTaken']
   let remaining = distributable
   const classes = preferred(post)
 
@@ -40,18 +53,27 @@ function rawSettlement(post: CapTable, distributable: number, exercised: Set<str
       pathTaken[cls.id] = cls.participation === 'FULL' ? 'PARTICIPATING' : 'CAPPED'
     }
   }
-  for (const grant of post.grants) if (exercised.has(grant.id)) buckets.push({ id: grant.id, units: grant.options })
+  for (const grant of post.grants)
+    if (exercised.has(grant.id)) buckets.push({ id: grant.id, units: grant.options })
 
   let remainingBuckets = buckets
   while (remaining > EPS && remainingBuckets.length > 0) {
     const totalUnits = remainingBuckets.reduce((sum, bucket) => sum + bucket.units, 0)
-    const provisional = remainingBuckets.map((bucket) => ({ bucket, dollars: (remaining * bucket.units) / totalUnits }))
+    const provisional = remainingBuckets.map((bucket) => ({
+      bucket,
+      dollars: (remaining * bucket.units) / totalUnits,
+    }))
     const caps = provisional.filter(({ bucket, dollars }) => {
       if (bucket.class?.participation !== 'CAPPED') return false
-      return byClass[bucket.id] + dollars > (bucket.class.participationCapMultiple ?? Infinity) * bucket.class.invested + EPS
+      return (
+        byClass[bucket.id] + dollars >
+        (bucket.class.participationCapMultiple ?? Infinity) * bucket.class.invested + EPS
+      )
     })
     if (caps.length === 0) {
-      for (const { bucket, dollars } of provisional) if (bucket.class !== undefined || post.classes.some((cls) => cls.id === bucket.id)) byClass[bucket.id] += dollars
+      for (const { bucket, dollars } of provisional)
+        if (bucket.class !== undefined || post.classes.some((cls) => cls.id === bucket.id))
+          byClass[bucket.id] += dollars
       remaining = 0
     } else {
       let consumed = 0
@@ -79,10 +101,17 @@ function rawSettlement(post: CapTable, distributable: number, exercised: Set<str
 }
 
 function powerSet(ids: string[]): Set<string>[] {
-  return Array.from({ length: 2 ** ids.length }, (_, mask) => new Set(ids.filter((_, index) => (mask & 2 ** index) !== 0)))
+  return Array.from(
+    { length: 2 ** ids.length },
+    (_, mask) => new Set(ids.filter((_, index) => (mask & (2 ** index)) !== 0)),
+  )
 }
 
-function selectConversions(post: CapTable, distributable: number, exercised: Set<string>): Set<string> {
+function selectConversions(
+  post: CapTable,
+  distributable: number,
+  exercised: Set<string>,
+): Set<string> {
   const classes = preferred(post)
   const candidates = powerSet(classes.map((cls) => cls.id))
   const consistent = candidates.filter((choice) =>
@@ -95,7 +124,12 @@ function selectConversions(post: CapTable, distributable: number, exercised: Set
       return assigned + EPS >= other
     }),
   )
-  const sort = (left: Set<string>, right: Set<string>) => left.size - right.size || [...left].sort().join('|').localeCompare([...right].sort().join('|'))
+  const sort = (left: Set<string>, right: Set<string>) =>
+    left.size - right.size ||
+    [...left]
+      .sort()
+      .join('|')
+      .localeCompare([...right].sort().join('|'))
   if (consistent.length > 0) return consistent.sort(sort)[0]
   return candidates
     .map((choice) => {
@@ -104,7 +138,14 @@ function selectConversions(post: CapTable, distributable: number, exercised: Set
         const alternate = new Set(choice)
         if (alternate.has(cls.id)) alternate.delete(cls.id)
         else alternate.add(cls.id)
-        return sum + Math.max(0, rawSettlement(post, distributable, exercised, alternate).byClass[cls.id] - settled.byClass[cls.id])
+        return (
+          sum +
+          Math.max(
+            0,
+            rawSettlement(post, distributable, exercised, alternate).byClass[cls.id] -
+              settled.byClass[cls.id],
+          )
+        )
       }, 0)
       return { choice, regret }
     })
@@ -113,16 +154,27 @@ function selectConversions(post: CapTable, distributable: number, exercised: Set
 
 export function referencePayouts(post: CapTable, exitValue: number): Payouts {
   const grouped = new Map<number, string[]>()
-  for (const grant of [...post.grants].sort((a, b) => a.strike - b.strike || a.id.localeCompare(b.id))) {
+  for (const grant of [...post.grants].sort(
+    (a, b) => a.strike - b.strike || a.id.localeCompare(b.id),
+  )) {
     grouped.set(grant.strike, [...(grouped.get(grant.strike) ?? []), grant.id])
   }
   const groups = [...grouped.entries()]
   for (let count = groups.length; count >= 0; count -= 1) {
     const exercised = new Set(groups.slice(0, count).flatMap(([, ids]) => ids))
-    const strikeCash = post.grants.filter((grant) => exercised.has(grant.id)).reduce((sum, grant) => sum + grant.strike * grant.options, 0)
-    const result = rawSettlement(post, exitValue + strikeCash, exercised, selectConversions(post, exitValue + strikeCash, exercised))
+    const strikeCash = post.grants
+      .filter((grant) => exercised.has(grant.id))
+      .reduce((sum, grant) => sum + grant.strike * grant.options, 0)
+    const result = rawSettlement(
+      post,
+      exitValue + strikeCash,
+      exercised,
+      selectConversions(post, exitValue + strikeCash, exercised),
+    )
     const optionConsistent = post.grants.every((grant) =>
-      exercised.has(grant.id) ? grant.strike < result.perCommonShareProceeds - EPS : grant.strike >= result.perCommonShareProceeds - EPS,
+      exercised.has(grant.id)
+        ? grant.strike < result.perCommonShareProceeds - EPS
+        : grant.strike >= result.perCommonShareProceeds - EPS,
     )
     if (optionConsistent) return result
   }

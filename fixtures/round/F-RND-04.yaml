@@ -7,12 +7,40 @@ input:
   capTable:
     classes:
       - { id: common, name: Common, kind: COMMON, shares: 5000000, holder: FOUNDER }
-      - { id: senior, name: Senior, kind: PREFERRED, shares: 3000000, holder: OTHER, invested: 3000000, prefMultiple: 1, participation: NONE, seniorityTier: 1 }
-      - { id: junior, name: Junior, kind: PREFERRED, shares: 2000000, holder: OTHER, invested: 2000000, prefMultiple: 1, participation: NONE, seniorityTier: 2 }
+      - {
+          id: senior,
+          name: Senior,
+          kind: PREFERRED,
+          shares: 3000000,
+          holder: OTHER,
+          invested: 3000000,
+          prefMultiple: 1,
+          participation: NONE,
+          seniorityTier: 1,
+        }
+      - {
+          id: junior,
+          name: Junior,
+          kind: PREFERRED,
+          shares: 2000000,
+          holder: OTHER,
+          invested: 2000000,
+          prefMultiple: 1,
+          participation: NONE,
+          seniorityTier: 2,
+        }
     grants: []
     poolAvailable: 0
   safes: []
-  terms: { pricedPerShare: 1, investment: 2000000, poolTargetPost: 0, prefMultiple: 1, participation: NONE, seniority: PARI }
+  terms:
+    {
+      pricedPerShare: 1,
+      investment: 2000000,
+      poolTargetPost: 0,
+      prefMultiple: 1,
+      participation: NONE,
+      seniority: PARI,
+    }
 expect:
   classes: { new-round: { seniorityTier: 2 } }
 tolerance: 0.01

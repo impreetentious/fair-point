@@ -6,11 +6,29 @@ derivation: |
   P=1,666,666.6667, and PPS=$0.75 for Vpre=$10M, I=$2.5M, t=10%.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER }]
     grants: []
     poolAvailable: 0
-  safes: [ { id: mixed, name: Mixed, amount: 1000000, kind: POST_MONEY, valuationCap: 20000000, discount: 0.2 } ]
-  terms: { preMoney: 10000000, investment: 2500000, poolTargetPost: 0.1, prefMultiple: 1, participation: NONE, seniority: PARI }
+  safes:
+    [
+      {
+        id: mixed,
+        name: Mixed,
+        amount: 1000000,
+        kind: POST_MONEY,
+        valuationCap: 20000000,
+        discount: 0.2,
+      },
+    ]
+  terms:
+    {
+      preMoney: 10000000,
+      investment: 2500000,
+      poolTargetPost: 0.1,
+      prefMultiple: 1,
+      participation: NONE,
+      seniority: PARI,
+    }
 expect:
   pps: 0.75
   poolIncrease: 1666666.6667

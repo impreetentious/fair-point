@@ -59,7 +59,12 @@ function entries(post: CapTable): string[] {
 }
 
 /** Seeded Monte Carlo twin used only for agreement tests and the CRRA inspector. */
-export function mcPayouts(post: CapTable, beliefs: Beliefs, n: number, seed: number): HolderMcStats {
+export function mcPayouts(
+  post: CapTable,
+  beliefs: Beliefs,
+  n: number,
+  seed: number,
+): HolderMcStats {
   if (!Number.isInteger(n) || n < 2) throw new RangeError('mcPayouts requires an integer n >= 2')
   const ids = entries(post)
   const mean = Object.fromEntries(ids.map((id) => [id, 0])) as Record<string, number>
@@ -75,7 +80,7 @@ export function mcPayouts(post: CapTable, beliefs: Beliefs, n: number, seed: num
       m2[id] += delta * (value - mean[id])
     }
   }
-  return { mean, se: Object.fromEntries(ids.map((id) => [id, Math.sqrt((m2[id] / (n - 1)) / n)])) }
+  return { mean, se: Object.fromEntries(ids.map((id) => [id, Math.sqrt(m2[id] / (n - 1) / n)])) }
 }
 
 function payoutSample(post: CapTable, exitValue: number): Record<string, number> {
@@ -84,20 +89,33 @@ function payoutSample(post: CapTable, exitValue: number): Record<string, number>
 }
 
 /** Seeded CRRA utility for a holder, class, grant, or party attribution. */
-export function crraUtility(post: CapTable, holderId: string, beliefs: Beliefs, gamma: number, w0: number, n: number, seed: number): CrraResult {
-  if (!(gamma === 0.5 || gamma === 1) || !(w0 > 0)) throw new RangeError('CRRA supports gamma 0.5 or 1 with w0 > 0')
+export function crraUtility(
+  post: CapTable,
+  holderId: string,
+  beliefs: Beliefs,
+  gamma: number,
+  w0: number,
+  n: number,
+  seed: number,
+): CrraResult {
+  if (!(gamma === 0.5 || gamma === 1) || !(w0 > 0))
+    throw new RangeError('CRRA supports gamma 0.5 or 1 with w0 > 0')
   if (!Number.isInteger(n) || n < 2) throw new RangeError('crraUtility requires an integer n >= 2')
   const uniform = mulberry32(seed)
   const normal = normals(seed ^ 0x9e3779b9)
   let mean = 0
   let m2 = 0
   for (let sample = 1; sample <= n; sample += 1) {
-    const value = utility(payoutValue(post, holderId, sampleExit(beliefs, uniform, normal)), gamma, w0)
+    const value = utility(
+      payoutValue(post, holderId, sampleExit(beliefs, uniform, normal)),
+      gamma,
+      w0,
+    )
     const delta = value - mean
     mean += delta / sample
     m2 += delta * (value - mean)
   }
-  return { u: mean, se: Math.sqrt((m2 / (n - 1)) / n), ce: certaintyEquivalent(mean, gamma, w0) }
+  return { u: mean, se: Math.sqrt(m2 / (n - 1) / n), ce: certaintyEquivalent(mean, gamma, w0) }
 }
 
 function lognormalProbability(value: number, mu: number, sigma: number): number {
@@ -107,7 +125,13 @@ function lognormalProbability(value: number, mu: number, sigma: number): number 
 }
 
 /** Deterministic 64-node Gauss–Legendre CE used by the bargaining grid in CRRA mode. */
-export function crraQuadrature(post: CapTable, holderId: string, beliefs: Beliefs, gamma: 0.5 | 1, w0: number): { u: number; ce: number } {
+export function crraQuadrature(
+  post: CapTable,
+  holderId: string,
+  beliefs: Beliefs,
+  gamma: 0.5 | 1,
+  w0: number,
+): { u: number; ce: number } {
   if (!(w0 > 0)) throw new RangeError('crraQuadrature requires w0 > 0')
   const { mu, sigma } = fitLognormal(beliefs)
   let conditional = 0

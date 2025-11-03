@@ -71,9 +71,18 @@ export function analyzeEmployeeOffer(input: EmployeeOfferInput): EmployeeOfferRe
     grantId: input.grant.id,
     payoutAt: (exitValue: number) => payoutValue(settled, input.grant.id, exitValue),
     expectedValue,
-    p10: presentValue(payoutQuantile(settled, input.grant.id, input.beliefs, 0.1), input.discounting),
-    p50: presentValue(payoutQuantile(settled, input.grant.id, input.beliefs, 0.5), input.discounting),
-    p90: presentValue(payoutQuantile(settled, input.grant.id, input.beliefs, 0.9), input.discounting),
+    p10: presentValue(
+      payoutQuantile(settled, input.grant.id, input.beliefs, 0.1),
+      input.discounting,
+    ),
+    p50: presentValue(
+      payoutQuantile(settled, input.grant.id, input.beliefs, 0.5),
+      input.discounting,
+    ),
+    p90: presentValue(
+      payoutQuantile(settled, input.grant.id, input.beliefs, 0.9),
+      input.discounting,
+    ),
     cashAlternative,
     surplusVsCash: expectedValue - cashAlternative,
     diagnostics: round.diagnostics,

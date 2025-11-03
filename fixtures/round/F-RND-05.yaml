@@ -7,11 +7,30 @@ input:
   capTable:
     classes:
       - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
-      - { id: a, name: A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, originalIssuePrice: 1, prefMultiple: 1, participation: NONE, antiDilution: FULL_RATCHET }
+      - {
+          id: a,
+          name: A,
+          kind: PREFERRED,
+          shares: 2000000,
+          holder: INVESTOR,
+          invested: 2000000,
+          originalIssuePrice: 1,
+          prefMultiple: 1,
+          participation: NONE,
+          antiDilution: FULL_RATCHET,
+        }
     grants: []
     poolAvailable: 0
   safes: []
-  terms: { pricedPerShare: 0.5, investment: 1000000, poolTargetPost: 0, prefMultiple: 1, participation: NONE, seniority: PARI }
+  terms:
+    {
+      pricedPerShare: 0.5,
+      investment: 1000000,
+      poolTargetPost: 0,
+      prefMultiple: 1,
+      participation: NONE,
+      seniority: PARI,
+    }
 expect:
   classes: { a: { conversionRatio: 2 } }
 tolerance: 0.000001

@@ -5,11 +5,19 @@ derivation: |
   A signed $1 PPS controls the round; P is zero even though the requested target is 20%.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER }]
     grants: []
     poolAvailable: 2000000
   safes: []
-  terms: { pricedPerShare: 1, investment: 1000000, poolTargetPost: 0.2, prefMultiple: 1, participation: NONE, seniority: PARI }
+  terms:
+    {
+      pricedPerShare: 1,
+      investment: 1000000,
+      poolTargetPost: 0.2,
+      prefMultiple: 1,
+      participation: NONE,
+      seniority: PARI,
+    }
 expect:
   pps: 1
   poolIncrease: 0

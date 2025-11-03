@@ -8,7 +8,14 @@ input:
   baseCap: 10000000
   roundPps: 1
   safes:
-    - { id: pre, name: Pre-money, amount: 1000000, kind: PRE_MONEY, valuationCap: 20000000, discount: 0.2 }
+    - {
+        id: pre,
+        name: Pre-money,
+        amount: 1000000,
+        kind: PRE_MONEY,
+        valuationCap: 20000000,
+        discount: 0.2,
+      }
 expect:
   sharesBySafe: { pre: 1250000 }
 tolerance: 0.01

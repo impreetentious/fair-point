@@ -4,6 +4,6 @@ description: A singleton IR set selects its sole package.
 derivation: |
   The only point weakly meets both disagreement coordinates, so every solution is index 12.
 input:
-  points: [ { index: 12, uF: 10, uI: 10 } ]
+  points: [{ index: 12, uF: 10, uI: 10 }]
   disagreement: { dF: 10, dI: 10 }
 expect: { zopa: true, nash: 12, ks: 12, egalitarian: 12, utilitarian: 12 }

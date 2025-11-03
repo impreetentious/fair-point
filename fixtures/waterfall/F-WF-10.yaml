@@ -6,8 +6,8 @@ derivation: |
   The grant remains out and the single common share receives the $99 exit.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER } ]
-    grants: [ { id: g, options: 1, strike: 100, holder: OTHER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER }]
+    grants: [{ id: g, options: 1, strike: 100, holder: OTHER }]
     poolAvailable: 0
   exitValue: 99
 expect:

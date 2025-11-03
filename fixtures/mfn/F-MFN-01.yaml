@@ -10,8 +10,24 @@ derivation: |
   (https://www.ycombinator.com/documents, retrieved 2025-01-14).
 input:
   safes:
-    - { id: a, name: A, amount: 1000000, kind: POST_MONEY, valuationCap: 10000000, discount: 0.2, mfn: true }
-    - { id: b, name: B, amount: 1000000, kind: POST_MONEY, valuationCap: 8000000, discount: 0.1, mfn: false }
+    - {
+        id: a,
+        name: A,
+        amount: 1000000,
+        kind: POST_MONEY,
+        valuationCap: 10000000,
+        discount: 0.2,
+        mfn: true,
+      }
+    - {
+        id: b,
+        name: B,
+        amount: 1000000,
+        kind: POST_MONEY,
+        valuationCap: 8000000,
+        discount: 0.1,
+        mfn: false,
+      }
 expect:
   safes:
     a: { valuationCap: 8000000, discount: 0.2 }

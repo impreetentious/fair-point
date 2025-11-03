@@ -15,11 +15,13 @@ export function fitLognormal(q: { p10?: number; p50: number; p90?: number }): Lo
     q.p10 === undefined
       ? (Math.log(q.p90) - Math.log(q.p50)) / Z90
       : (Math.log(q.p90) - Math.log(q.p10)) / (2 * Z90)
-  if (!(sigma > 0) || !Number.isFinite(sigma)) throw new RangeError('lognormal sigma must be positive')
+  if (!(sigma > 0) || !Number.isFinite(sigma))
+    throw new RangeError('lognormal sigma must be positive')
   const warnings: string[] = []
   if (q.p10 !== undefined) {
     const impliedMedian = Math.exp((Math.log(q.p10) + Math.log(q.p90)) / 2)
-    if (Math.abs(impliedMedian - q.p50) > 0.1 * q.p50) warnings.push('beliefs not lognormal-consistent')
+    if (Math.abs(impliedMedian - q.p50) > 0.1 * q.p50)
+      warnings.push('beliefs not lognormal-consistent')
   }
   return { mu, sigma, warnings }
 }
@@ -28,7 +30,10 @@ function bounds(mu: number, sigma: number, a: number, b: number): [number, numbe
   if (!(sigma > 0) || !Number.isFinite(mu) || a < 0 || !(b > a)) {
     throw new RangeError('interval bounds require finite mu, positive sigma, and 0 <= a < b')
   }
-  return [a === 0 ? -Infinity : (Math.log(a) - mu) / sigma, b === Infinity ? Infinity : (Math.log(b) - mu) / sigma]
+  return [
+    a === 0 ? -Infinity : (Math.log(a) - mu) / sigma,
+    b === Infinity ? Infinity : (Math.log(b) - mu) / sigma,
+  ]
 }
 
 export function intervalProb(mu: number, sigma: number, a: number, b: number): number {

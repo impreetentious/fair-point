@@ -30,7 +30,7 @@ This product closes the gap with one structural insight: **a term package plus e
 - **Deterministic.** Same inputs, bit-identical outputs. All randomness flows from a seeded PRNG.
 - **Verified against published sources.** Fixtures are hand-re-derived from published worked examples (Venture Deals, the YC post-money SAFE user guide, NVCA model documents); the closed-form expectation-integration layer is checked against a Monte Carlo twin in CI; the settlement layer is checked against an independent naive reference implementation on the full waterfall battery; bargaining solutions are property-tested against their own defining axioms (Nash affine invariance, Nash discrete IIA, KS discrete affine invariance, Pareto membership).
 - **Local-first, private by construction.** A static site with no server, no accounts, no telemetry, and zero network calls after load. A cap table is among the most sensitive documents a founder has; it never leaves the browser.
-- **Educational, not advisory.** The app names packages both parties' *stated beliefs* prefer. It never says "you should accept." It is an educational instrument — not legal, financial, or investment advice.
+- **Educational, not advisory.** The app names packages both parties' _stated beliefs_ prefer. It never says "you should accept." It is an educational instrument — not legal, financial, or investment advice.
 
 ## What's included
 
@@ -85,6 +85,6 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 ---
 
-*Fairpoint is an educational instrument. It is not legal, financial, or investment advice.*
+_Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.13.3
+**Version:** v0.14.0

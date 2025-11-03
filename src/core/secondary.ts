@@ -8,10 +8,14 @@ import type { CapTable, SecondarySale, ShareClass } from './schema'
  * If `buyerClassId` is omitted, a new COMMON class is created for the buyer.
  * Throws if the seller class lacks sufficient shares.
  */
-export function applySecondary(pre: CapTable, sale: SecondarySale): { post: CapTable; proceeds: number } {
+export function applySecondary(
+  pre: CapTable,
+  sale: SecondarySale,
+): { post: CapTable; proceeds: number } {
   const seller = pre.classes.find((cls) => cls.id === sale.sellerClassId)
   if (seller === undefined) throw new Error(`Unknown seller class '${sale.sellerClassId}'`)
-  if (seller.shares + 1e-12 < sale.shares) throw new Error(`Seller '${sale.sellerClassId}' lacks ${sale.shares} shares`)
+  if (seller.shares + 1e-12 < sale.shares)
+    throw new Error(`Seller '${sale.sellerClassId}' lacks ${sale.shares} shares`)
 
   const proceeds = sale.shares * sale.pricePerShare
   const classes: ShareClass[] = []

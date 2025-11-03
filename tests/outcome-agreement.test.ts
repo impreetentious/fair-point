@@ -11,20 +11,19 @@ const beliefPresets: Beliefs[] = [
 
 describe('locked dual-engine agreement battery', () => {
   for (const { fixture } of loadFixtures().filter((entry) => entry.fixture.kind === 'waterfall')) {
-    it(
-      `${fixture.id} matches the closed-form integration with the locked 200,000-sample MC twin`,
-      () => {
+    it(`${fixture.id} matches the closed-form integration with the locked 200,000-sample MC twin`, () => {
       const input = fixture.input as { capTable: unknown }
       const post = CapTableSchema.parse(input.capTable)
       for (const beliefs of beliefPresets) {
         const closed = expectedPayouts(post, beliefs)
         const sampled = mcPayouts(post, beliefs, 200_000, 42)
         for (const id of Object.keys(closed.ev)) {
-          expect(Math.abs(closed.ev[id] - sampled.mean[id]), `${fixture.id} / ${id}`).toBeLessThanOrEqual(4 * sampled.se[id] + 1)
+          expect(
+            Math.abs(closed.ev[id] - sampled.mean[id]),
+            `${fixture.id} / ${id}`,
+          ).toBeLessThanOrEqual(4 * sampled.se[id] + 1)
         }
       }
-      },
-      15_000,
-    )
+    }, 15_000)
   }
 })

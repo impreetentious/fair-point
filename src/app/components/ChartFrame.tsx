@@ -8,7 +8,12 @@ export function ChartFrame({ title, chart, table }: Props) {
     <section className="chart-frame" aria-label={title}>
       <div className="section-heading">
         <h3>{title}</h3>
-        <button type="button" className="quiet-button" onClick={() => setAsTable((value) => !value)} aria-pressed={asTable}>
+        <button
+          type="button"
+          className="quiet-button"
+          onClick={() => setAsTable((value) => !value)}
+          aria-pressed={asTable}
+        >
           {asTable ? 'View chart' : 'View as table'}
         </button>
       </div>

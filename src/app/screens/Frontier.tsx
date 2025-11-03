@@ -1,5 +1,16 @@
 import { useMemo, useState } from 'react'
-import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ReferenceArea,
+  ReferenceLine,
+  ResponsiveContainer,
+  Scatter,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { ChartFrame } from '../components/ChartFrame'
 import { CommitNumber } from '../components/CommitField'
 import { ExplainDrawer } from '../components/ExplainDrawer'
@@ -31,40 +42,188 @@ function termLine(point: DealPoint): string {
 function termDelta(current: RoundTerms, target: RoundTerms): string {
   const pre = (target.preMoney ?? 0) - (current.preMoney ?? 0)
   const pool = target.poolTargetPost - current.poolTargetPost
-  const pieces = [`pre ${pre >= 0 ? '+' : ''}${dollars(pre)}`, `pool ${pool >= 0 ? '+' : ''}${percent(pool)}`]
-  if (target.prefMultiple !== current.prefMultiple) pieces.push(`${current.prefMultiple}x -> ${target.prefMultiple}x`)
-  if (target.participation !== current.participation) pieces.push(`${current.participation} -> ${target.participation}`)
+  const pieces = [
+    `pre ${pre >= 0 ? '+' : ''}${dollars(pre)}`,
+    `pool ${pool >= 0 ? '+' : ''}${percent(pool)}`,
+  ]
+  if (target.prefMultiple !== current.prefMultiple)
+    pieces.push(`${current.prefMultiple}x -> ${target.prefMultiple}x`)
+  if (target.participation !== current.participation)
+    pieces.push(`${current.participation} -> ${target.participation}`)
   return pieces.join(' · ')
 }
 
 function pointByIndex(points: DealPoint[], index: number | null): DealPoint | null {
-  return index === null ? null : points.find((point) => point.pkg.index === index) ?? null
+  return index === null ? null : (points.find((point) => point.pkg.index === index) ?? null)
 }
 
 function SpaceEditor({ space }: { space: DealSpace }) {
   const deal = useDealStore((state) => state.deal)
   const setDealSpace = useDealStore((state) => state.setDealSpace)
   const pins = deal.ui.dealSpacePins
-  const setSpace = (next: DealSpace, pinPatch?: Partial<typeof pins>) => setDealSpace(next, pinPatch)
+  const setSpace = (next: DealSpace, pinPatch?: Partial<typeof pins>) =>
+    setDealSpace(next, pinPatch)
   const pin = (dimension: keyof typeof pins) => {
     const nextPins = { ...pins, [dimension]: !pins[dimension] }
     setSpace(deriveDealSpace(deal.terms, pins[dimension] ? null : space, nextPins), nextPins)
   }
-  const toggleArray = <T,>(values: T[], value: T): T[] => values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
-  return <section className="deal-space-editor" aria-label="Deal space editor">
-    <div className="section-heading"><h3>Deal space</h3><span className="muted">{deal.ui.dealSpaceManual ? 'Manually edited' : 'Derived from current offer'}</span></div>
-    <div className="field-grid">
-      <label>Pre-money low<CommitNumber label="Pre-money low" value={space.preMoneyRange[0]} min={1} step={1000} onCommit={(value) => value !== undefined && setSpace({ ...space, preMoneyRange: [value, space.preMoneyRange[1]] })} /></label>
-      <label>Pre-money high<CommitNumber label="Pre-money high" value={space.preMoneyRange[1]} min={1} step={1000} onCommit={(value) => value !== undefined && setSpace({ ...space, preMoneyRange: [space.preMoneyRange[0], value] })} /></label>
-      <label>Steps<CommitNumber label="Pre-money steps" value={space.preMoneySteps} min={1} step={1} onCommit={(value) => value !== undefined && setSpace({ ...space, preMoneySteps: Math.round(value) })} /></label>
-      <button type="button" className={pins.preMoney ? 'quiet-button selected-inline' : 'quiet-button'} onClick={() => pin('preMoney')} aria-pressed={pins.preMoney}>Pin pre-money</button>
-    </div>
-    <fieldset><legend>Pools <button type="button" className={pins.pools ? 'quiet-button selected-inline' : 'quiet-button'} onClick={() => pin('pools')} aria-pressed={pins.pools}>Pin</button></legend>{poolChoices.map((pool) => <label key={pool} className="toggle"><input type="checkbox" checked={space.pools.includes(pool)} onChange={() => setSpace({ ...space, pools: toggleArray(space.pools, pool) })} />{percent(pool)}</label>)}</fieldset>
-    <fieldset><legend>Multiples <button type="button" className={pins.multiples ? 'quiet-button selected-inline' : 'quiet-button'} onClick={() => pin('multiples')} aria-pressed={pins.multiples}>Pin</button></legend>{multipleChoices.map((multiple) => <label key={multiple} className="toggle"><input type="checkbox" checked={space.multiples.includes(multiple)} onChange={() => setSpace({ ...space, multiples: toggleArray(space.multiples, multiple) })} />{multiple}x</label>)}</fieldset>
-    <fieldset><legend>Participation <button type="button" className={pins.participations ? 'quiet-button selected-inline' : 'quiet-button'} onClick={() => pin('participations')} aria-pressed={pins.participations}>Pin</button></legend>{participationChoices.map((participation) => <label key={participation} className="toggle"><input type="checkbox" checked={space.participations.includes(participation)} onChange={() => setSpace({ ...space, participations: toggleArray(space.participations, participation) })} />{participation}</label>)}</fieldset>
-    <label>Seniority<select aria-label="Deal-space seniority" value={space.seniority} onChange={(event) => setSpace({ ...space, seniority: event.target.value as RoundTerms['seniority'] })}><option>PARI</option><option>SENIOR</option></select></label>
-    <button type="button" className={pins.seniority ? 'quiet-button selected-inline' : 'quiet-button'} onClick={() => pin('seniority')} aria-pressed={pins.seniority}>Pin seniority</button>
-  </section>
+  const toggleArray = <T,>(values: T[], value: T): T[] =>
+    values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
+  return (
+    <section className="deal-space-editor" aria-label="Deal space editor">
+      <div className="section-heading">
+        <h3>Deal space</h3>
+        <span className="muted">
+          {deal.ui.dealSpaceManual ? 'Manually edited' : 'Derived from current offer'}
+        </span>
+      </div>
+      <div className="field-grid">
+        <label>
+          Pre-money low
+          <CommitNumber
+            label="Pre-money low"
+            value={space.preMoneyRange[0]}
+            min={1}
+            step={1000}
+            onCommit={(value) =>
+              value !== undefined &&
+              setSpace({ ...space, preMoneyRange: [value, space.preMoneyRange[1]] })
+            }
+          />
+        </label>
+        <label>
+          Pre-money high
+          <CommitNumber
+            label="Pre-money high"
+            value={space.preMoneyRange[1]}
+            min={1}
+            step={1000}
+            onCommit={(value) =>
+              value !== undefined &&
+              setSpace({ ...space, preMoneyRange: [space.preMoneyRange[0], value] })
+            }
+          />
+        </label>
+        <label>
+          Steps
+          <CommitNumber
+            label="Pre-money steps"
+            value={space.preMoneySteps}
+            min={1}
+            step={1}
+            onCommit={(value) =>
+              value !== undefined && setSpace({ ...space, preMoneySteps: Math.round(value) })
+            }
+          />
+        </label>
+        <button
+          type="button"
+          className={pins.preMoney ? 'quiet-button selected-inline' : 'quiet-button'}
+          onClick={() => pin('preMoney')}
+          aria-pressed={pins.preMoney}
+        >
+          Pin pre-money
+        </button>
+      </div>
+      <fieldset>
+        <legend>
+          Pools{' '}
+          <button
+            type="button"
+            className={pins.pools ? 'quiet-button selected-inline' : 'quiet-button'}
+            onClick={() => pin('pools')}
+            aria-pressed={pins.pools}
+          >
+            Pin
+          </button>
+        </legend>
+        {poolChoices.map((pool) => (
+          <label key={pool} className="toggle">
+            <input
+              type="checkbox"
+              checked={space.pools.includes(pool)}
+              onChange={() => setSpace({ ...space, pools: toggleArray(space.pools, pool) })}
+            />
+            {percent(pool)}
+          </label>
+        ))}
+      </fieldset>
+      <fieldset>
+        <legend>
+          Multiples{' '}
+          <button
+            type="button"
+            className={pins.multiples ? 'quiet-button selected-inline' : 'quiet-button'}
+            onClick={() => pin('multiples')}
+            aria-pressed={pins.multiples}
+          >
+            Pin
+          </button>
+        </legend>
+        {multipleChoices.map((multiple) => (
+          <label key={multiple} className="toggle">
+            <input
+              type="checkbox"
+              checked={space.multiples.includes(multiple)}
+              onChange={() =>
+                setSpace({ ...space, multiples: toggleArray(space.multiples, multiple) })
+              }
+            />
+            {multiple}x
+          </label>
+        ))}
+      </fieldset>
+      <fieldset>
+        <legend>
+          Participation{' '}
+          <button
+            type="button"
+            className={pins.participations ? 'quiet-button selected-inline' : 'quiet-button'}
+            onClick={() => pin('participations')}
+            aria-pressed={pins.participations}
+          >
+            Pin
+          </button>
+        </legend>
+        {participationChoices.map((participation) => (
+          <label key={participation} className="toggle">
+            <input
+              type="checkbox"
+              checked={space.participations.includes(participation)}
+              onChange={() =>
+                setSpace({
+                  ...space,
+                  participations: toggleArray(space.participations, participation),
+                })
+              }
+            />
+            {participation}
+          </label>
+        ))}
+      </fieldset>
+      <label>
+        Seniority
+        <select
+          aria-label="Deal-space seniority"
+          value={space.seniority}
+          onChange={(event) =>
+            setSpace({ ...space, seniority: event.target.value as RoundTerms['seniority'] })
+          }
+        >
+          <option>PARI</option>
+          <option>SENIOR</option>
+        </select>
+      </label>
+      <button
+        type="button"
+        className={pins.seniority ? 'quiet-button selected-inline' : 'quiet-button'}
+        onClick={() => pin('seniority')}
+        aria-pressed={pins.seniority}
+      >
+        Pin seniority
+      </button>
+    </section>
+  )
 }
 
 export function FrontierScreen() {
@@ -78,17 +237,45 @@ export function FrontierScreen() {
     if (analysis.current === null || deal.risk === null) return null
     const round = constructRound(deal.pre, deal.safes, analysis.current.pkg.terms, deal.notes)
     return {
-      founder: crraUtility(round.post, 'FOUNDER', deal.founderBeliefs, deal.risk.gamma, deal.risk.w0F, MC_N, MC_SEED),
-      investor: crraUtility(round.post, 'INVESTOR', deal.investorBeliefs, deal.risk.gamma, deal.risk.w0I, MC_N, MC_SEED),
+      founder: crraUtility(
+        round.post,
+        'FOUNDER',
+        deal.founderBeliefs,
+        deal.risk.gamma,
+        deal.risk.w0F,
+        MC_N,
+        MC_SEED,
+      ),
+      investor: crraUtility(
+        round.post,
+        'INVESTOR',
+        deal.investorBeliefs,
+        deal.risk.gamma,
+        deal.risk.w0I,
+        MC_N,
+        MC_SEED,
+      ),
     }
   }, [analysis.current, deal])
-  if (analysis.error !== null || analysis.result === null || analysis.current === null || analysis.value === null) {
-    return <section className="main-panel"><h2>Frontier</h2><p className="validation invalid">{analysis.error}</p></section>
+  if (
+    analysis.error !== null ||
+    analysis.result === null ||
+    analysis.current === null ||
+    analysis.value === null
+  ) {
+    return (
+      <section className="main-panel">
+        <h2>Frontier</h2>
+        <p className="validation invalid">{analysis.error}</p>
+      </section>
+    )
   }
   const { result, value, current } = analysis
   const selected = new Set(compare)
   const frontierSet = new Set(result.frontier)
-  const frontierPoints = result.points.filter((point) => frontierSet.has(point.pkg.index)).sort((left, right) => left.uF - right.uF)
+  const frontierPoints = result.points
+    .filter((point) => frontierSet.has(point.pkg.index))
+    .sort((left, right) => left.uF - right.uF)
   const showCrossBeliefs = !deal.sharedBeliefs
   const maxF = Math.max(...result.points.map((point) => point.uF), current.uF)
   const maxI = Math.max(...result.points.map((point) => point.uI), current.uI)
@@ -98,32 +285,320 @@ export function FrontierScreen() {
     if (sort === 'pps') return right.diagnostics.pps - left.diagnostics.pps
     return left.pkg.index - right.pkg.index
   })
-  const solutionPoints = solutionSpecs.map(([key, label, color]) => ({ key, label, color, point: pointByIndex(result.points, result[key]) }))
+  const solutionPoints = solutionSpecs.map(([key, label, color]) => ({
+    key,
+    label,
+    color,
+    point: pointByIndex(result.points, result[key]),
+  }))
   const comparePoints = result.points.filter((point) => selected.has(point.pkg.index))
   return (
     <section className="main-panel">
-      <div className="section-heading"><div><p className="eyebrow">Bargaining</p><h2>Frontier</h2></div><ExplainDrawer screen="frontier" /></div>
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Bargaining</p>
+          <h2>Frontier</h2>
+        </div>
+        <ExplainDrawer screen="frontier" />
+      </div>
       <SpaceEditor space={deal.space} />
       <div className="field-grid">
-        <label>Founder BATNA<CommitNumber label="Founder BATNA" value={deal.disagreement.dF} min={0} step={1000} onCommit={(value) => value !== undefined && patchDeal((candidate) => ({ ...candidate, disagreement: { ...candidate.disagreement, dF: value } }))} /><span className="helper-copy">Expected personal proceeds from your best alternative: another offer, bootstrapping, or winding down.</span></label>
-        <label>Investor BATNA<CommitNumber label="Investor BATNA" value={deal.disagreement.dI} min={0} step={1000} onCommit={(value) => value !== undefined && patchDeal((candidate) => ({ ...candidate, disagreement: { ...candidate.disagreement, dI: value } }))} /><span className="helper-copy">Expected dollars from deploying this capital in your next-best opportunity (e.g., amount x expected net multiple).</span></label>
-        <label className="toggle"><input type="checkbox" checked={deal.risk !== null} onChange={(event) => patchDeal((candidate) => ({ ...candidate, risk: event.target.checked ? { gamma: 0.5, w0F: 250000, w0I: 250000 } : null }))} />CRRA mode</label>
+        <label>
+          Founder BATNA
+          <CommitNumber
+            label="Founder BATNA"
+            value={deal.disagreement.dF}
+            min={0}
+            step={1000}
+            onCommit={(value) =>
+              value !== undefined &&
+              patchDeal((candidate) => ({
+                ...candidate,
+                disagreement: { ...candidate.disagreement, dF: value },
+              }))
+            }
+          />
+          <span className="helper-copy">
+            Expected personal proceeds from your best alternative: another offer, bootstrapping, or
+            winding down.
+          </span>
+        </label>
+        <label>
+          Investor BATNA
+          <CommitNumber
+            label="Investor BATNA"
+            value={deal.disagreement.dI}
+            min={0}
+            step={1000}
+            onCommit={(value) =>
+              value !== undefined &&
+              patchDeal((candidate) => ({
+                ...candidate,
+                disagreement: { ...candidate.disagreement, dI: value },
+              }))
+            }
+          />
+          <span className="helper-copy">
+            Expected dollars from deploying this capital in your next-best opportunity (e.g., amount
+            x expected net multiple).
+          </span>
+        </label>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={deal.risk !== null}
+            onChange={(event) =>
+              patchDeal((candidate) => ({
+                ...candidate,
+                risk: event.target.checked ? { gamma: 0.5, w0F: 250000, w0I: 250000 } : null,
+              }))
+            }
+          />
+          CRRA mode
+        </label>
       </div>
-      <p className="muted">Recomputed {result.points.length} valid packages in {analysis.elapsed.toFixed(1)} ms. {result.metric === 'CE' ? 'Coordinates are certainty-equivalent dollars.' : 'Coordinates are expected dollars.'}</p>
-      {deal.risk !== null && mcInspector !== null && <p className="callout">Monte Carlo ± SE · n {MC_N.toLocaleString()} · seed 0x{MC_SEED.toString(16)} · current founder CE {dollars(mcInspector.founder.ce)} (SE {mcInspector.founder.se.toExponential(2)}) · investor CE {dollars(mcInspector.investor.ce)} (SE {mcInspector.investor.se.toExponential(2)})</p>}
-      {!result.zopa ? <p className="empty-state">No zone of agreement at these BATNAs — lower a BATNA or widen the deal space.</p> : <>
-        <div className="value-card"><strong>This offer leaves {dollars(value.headline)} on the table jointly.</strong><span>Best case for you {dollars(value.gainF)}; best case for them {dollars(value.gainI)}. These can be different packages.</span></div>
-        <ChartFrame
-          title="All evaluated packages"
-          chart={<div className="chart"><ResponsiveContainer width="100%" height={360}><ComposedChart><CartesianGrid /><XAxis type="number" dataKey="uF" name="Founder" domain={[0, maxF]} tickFormatter={dollars} /><YAxis type="number" dataKey="uI" name="Investor" domain={[0, maxI]} tickFormatter={dollars} /><Tooltip content={({ active, payload }) => { const point = payload?.[0]?.payload as DealPoint | undefined; return active && point !== undefined ? <div className="hover-card"><strong>Package #{point.pkg.index}</strong><span>{termLine(point)}</span><span>PPS {dollars(point.diagnostics.pps)} · investor {percent(point.diagnostics.investorPct)}</span><span>{dollars(point.uF)} / {dollars(point.uI)}</span></div> : null }} /><ReferenceArea x1={deal.disagreement.dF} x2={maxF} y1={deal.disagreement.dI} y2={maxI} fill="#009E73" fillOpacity={0.08} /><ReferenceLine x={deal.disagreement.dF} stroke="#555" strokeDasharray="4 3" /><ReferenceLine y={deal.disagreement.dI} stroke="#555" strokeDasharray="4 3" /><Line data={frontierPoints} type="linear" dataKey="uI" stroke="#000" dot={false} name="Pareto frontier" isAnimationActive={false} /> <Scatter data={result.points} fill="#56B4E9" onClick={(data: unknown) => { const point = (data as { payload?: DealPoint }).payload; if (point !== undefined) toggleCompare(point.pkg.index) }} />{solutionPoints.map(({ key, label, color, point }) => point === null ? null : <Scatter key={key} name={label} data={[point]} fill={color} />)}<Scatter name="Current offer ★" data={[current]} fill="#000000" /></ComposedChart></ResponsiveContainer></div>}
-          table={<div className="table-wrap"><table><thead><tr><th><button type="button" className="table-sort" onClick={() => setSort('index')}>#</button></th><th><button type="button" className="table-sort" onClick={() => setSort('uF')}>Founder</button></th><th><button type="button" className="table-sort" onClick={() => setSort('uI')}>Investor</button></th><th><button type="button" className="table-sort" onClick={() => setSort('pps')}>PPS</button></th>{showCrossBeliefs && <><th><a href="#explainer-7">Founder under investor beliefs</a></th><th><a href="#explainer-7">Investor under founder beliefs</a></th></>}<th>Frontier</th><th>Pin</th></tr></thead><tbody>{sorted.map((point) => <tr key={point.pkg.index}><td>{point.pkg.index}</td><td>{dollars(point.uF)}</td><td>{dollars(point.uI)}</td><td>{dollars(point.diagnostics.pps)}</td>{showCrossBeliefs && <><td>{dollars(point.uF_underI)}</td><td>{dollars(point.uI_underF)}</td></>}<td>{frontierSet.has(point.pkg.index) ? 'yes' : ''}</td><td><button type="button" className="quiet-button" onClick={() => toggleCompare(point.pkg.index)}>{selected.has(point.pkg.index) ? 'Unpin' : 'Pin'}</button></td></tr>)}</tbody></table></div>}
-        />
-        <div className="marker-row">{solutionPoints.map(({ key, label, point }) => <span key={key}>{label} #{point?.pkg.index ?? '—'}</span>)}<span>Current ★ {dollars(current.uF)} / {dollars(current.uI)}</span></div>
-        <h3>Top dominating packages</h3>
-        <div className="compare-tray">{value.dominating.length === 0 ? <span className="muted">No package weakly improves both sides from the current offer.</span> : value.dominating.map((index) => pointByIndex(result.points, index)).filter((point): point is DealPoint => point !== null).map((point) => <article key={point.pkg.index}><strong>Package #{point.pkg.index}</strong><span>{termDelta(current.pkg.terms, point.pkg.terms)}</span><span>ΔuF {dollars(point.uF - current.uF)} · ΔuI {dollars(point.uI - current.uI)}</span></article>)}</div>
-        <h3>Compare tray</h3>
-        <div className="compare-tray">{comparePoints.length === 0 ? <span className="muted">Pin up to three packages to compare terms, utilities, and quantiles.</span> : comparePoints.map((point) => { const round = constructRound(deal.pre, deal.safes, point.pkg.terms, deal.notes); return <article key={point.pkg.index}><strong>Package #{point.pkg.index}</strong><span>{termLine(point)}</span><span>{dollars(point.uF)} / {dollars(point.uI)}</span><span>Founder P50 {dollars(payoutQuantile(round.post, 'FOUNDER', deal.founderBeliefs, 0.5))}</span><span>Investor P50 {dollars(payoutQuantile(round.post, 'INVESTOR', deal.investorBeliefs, 0.5))}</span><span>PPS {dollars(point.diagnostics.pps)} · investor {percent(point.diagnostics.investorPct)}</span></article> })}</div>
-      </>}
+      <p className="muted">
+        Recomputed {result.points.length} valid packages in {analysis.elapsed.toFixed(1)} ms.{' '}
+        {result.metric === 'CE'
+          ? 'Coordinates are certainty-equivalent dollars.'
+          : 'Coordinates are expected dollars.'}
+      </p>
+      {deal.risk !== null && mcInspector !== null && (
+        <p className="callout">
+          Monte Carlo ± SE · n {MC_N.toLocaleString()} · seed 0x{MC_SEED.toString(16)} · current
+          founder CE {dollars(mcInspector.founder.ce)} (SE {mcInspector.founder.se.toExponential(2)}
+          ) · investor CE {dollars(mcInspector.investor.ce)} (SE{' '}
+          {mcInspector.investor.se.toExponential(2)})
+        </p>
+      )}
+      {!result.zopa ? (
+        <p className="empty-state">
+          No zone of agreement at these BATNAs — lower a BATNA or widen the deal space.
+        </p>
+      ) : (
+        <>
+          <div className="value-card">
+            <strong>This offer leaves {dollars(value.headline)} on the table jointly.</strong>
+            <span>
+              Best case for you {dollars(value.gainF)}; best case for them {dollars(value.gainI)}.
+              These can be different packages.
+            </span>
+          </div>
+          <ChartFrame
+            title="All evaluated packages"
+            chart={
+              <div className="chart">
+                <ResponsiveContainer width="100%" height={360}>
+                  <ComposedChart>
+                    <CartesianGrid />
+                    <XAxis
+                      type="number"
+                      dataKey="uF"
+                      name="Founder"
+                      domain={[0, maxF]}
+                      tickFormatter={dollars}
+                    />
+                    <YAxis
+                      type="number"
+                      dataKey="uI"
+                      name="Investor"
+                      domain={[0, maxI]}
+                      tickFormatter={dollars}
+                    />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        const point = payload?.[0]?.payload as DealPoint | undefined
+                        return active && point !== undefined ? (
+                          <div className="hover-card">
+                            <strong>Package #{point.pkg.index}</strong>
+                            <span>{termLine(point)}</span>
+                            <span>
+                              PPS {dollars(point.diagnostics.pps)} · investor{' '}
+                              {percent(point.diagnostics.investorPct)}
+                            </span>
+                            <span>
+                              {dollars(point.uF)} / {dollars(point.uI)}
+                            </span>
+                          </div>
+                        ) : null
+                      }}
+                    />
+                    <ReferenceArea
+                      x1={deal.disagreement.dF}
+                      x2={maxF}
+                      y1={deal.disagreement.dI}
+                      y2={maxI}
+                      fill="#009E73"
+                      fillOpacity={0.08}
+                    />
+                    <ReferenceLine x={deal.disagreement.dF} stroke="#555" strokeDasharray="4 3" />
+                    <ReferenceLine y={deal.disagreement.dI} stroke="#555" strokeDasharray="4 3" />
+                    <Line
+                      data={frontierPoints}
+                      type="linear"
+                      dataKey="uI"
+                      stroke="#000"
+                      dot={false}
+                      name="Pareto frontier"
+                      isAnimationActive={false}
+                    />{' '}
+                    <Scatter
+                      data={result.points}
+                      fill="#56B4E9"
+                      onClick={(data: unknown) => {
+                        const point = (data as { payload?: DealPoint }).payload
+                        if (point !== undefined) toggleCompare(point.pkg.index)
+                      }}
+                    />
+                    {solutionPoints.map(({ key, label, color, point }) =>
+                      point === null ? null : (
+                        <Scatter key={key} name={label} data={[point]} fill={color} />
+                      ),
+                    )}
+                    <Scatter name="Current offer ★" data={[current]} fill="#000000" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            }
+            table={
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>
+                        <button
+                          type="button"
+                          className="table-sort"
+                          onClick={() => setSort('index')}
+                        >
+                          #
+                        </button>
+                      </th>
+                      <th>
+                        <button type="button" className="table-sort" onClick={() => setSort('uF')}>
+                          Founder
+                        </button>
+                      </th>
+                      <th>
+                        <button type="button" className="table-sort" onClick={() => setSort('uI')}>
+                          Investor
+                        </button>
+                      </th>
+                      <th>
+                        <button type="button" className="table-sort" onClick={() => setSort('pps')}>
+                          PPS
+                        </button>
+                      </th>
+                      {showCrossBeliefs && (
+                        <>
+                          <th>
+                            <a href="#explainer-7">Founder under investor beliefs</a>
+                          </th>
+                          <th>
+                            <a href="#explainer-7">Investor under founder beliefs</a>
+                          </th>
+                        </>
+                      )}
+                      <th>Frontier</th>
+                      <th>Pin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((point) => (
+                      <tr key={point.pkg.index}>
+                        <td>{point.pkg.index}</td>
+                        <td>{dollars(point.uF)}</td>
+                        <td>{dollars(point.uI)}</td>
+                        <td>{dollars(point.diagnostics.pps)}</td>
+                        {showCrossBeliefs && (
+                          <>
+                            <td>{dollars(point.uF_underI)}</td>
+                            <td>{dollars(point.uI_underF)}</td>
+                          </>
+                        )}
+                        <td>{frontierSet.has(point.pkg.index) ? 'yes' : ''}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="quiet-button"
+                            onClick={() => toggleCompare(point.pkg.index)}
+                          >
+                            {selected.has(point.pkg.index) ? 'Unpin' : 'Pin'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            }
+          />
+          <div className="marker-row">
+            {solutionPoints.map(({ key, label, point }) => (
+              <span key={key}>
+                {label} #{point?.pkg.index ?? '—'}
+              </span>
+            ))}
+            <span>
+              Current ★ {dollars(current.uF)} / {dollars(current.uI)}
+            </span>
+          </div>
+          <h3>Top dominating packages</h3>
+          <div className="compare-tray">
+            {value.dominating.length === 0 ? (
+              <span className="muted">
+                No package weakly improves both sides from the current offer.
+              </span>
+            ) : (
+              value.dominating
+                .map((index) => pointByIndex(result.points, index))
+                .filter((point): point is DealPoint => point !== null)
+                .map((point) => (
+                  <article key={point.pkg.index}>
+                    <strong>Package #{point.pkg.index}</strong>
+                    <span>{termDelta(current.pkg.terms, point.pkg.terms)}</span>
+                    <span>
+                      ΔuF {dollars(point.uF - current.uF)} · ΔuI {dollars(point.uI - current.uI)}
+                    </span>
+                  </article>
+                ))
+            )}
+          </div>
+          <h3>Compare tray</h3>
+          <div className="compare-tray">
+            {comparePoints.length === 0 ? (
+              <span className="muted">
+                Pin up to three packages to compare terms, utilities, and quantiles.
+              </span>
+            ) : (
+              comparePoints.map((point) => {
+                const round = constructRound(deal.pre, deal.safes, point.pkg.terms, deal.notes)
+                return (
+                  <article key={point.pkg.index}>
+                    <strong>Package #{point.pkg.index}</strong>
+                    <span>{termLine(point)}</span>
+                    <span>
+                      {dollars(point.uF)} / {dollars(point.uI)}
+                    </span>
+                    <span>
+                      Founder P50{' '}
+                      {dollars(payoutQuantile(round.post, 'FOUNDER', deal.founderBeliefs, 0.5))}
+                    </span>
+                    <span>
+                      Investor P50{' '}
+                      {dollars(payoutQuantile(round.post, 'INVESTOR', deal.investorBeliefs, 0.5))}
+                    </span>
+                    <span>
+                      PPS {dollars(point.diagnostics.pps)} · investor{' '}
+                      {percent(point.diagnostics.investorPct)}
+                    </span>
+                  </article>
+                )
+              })
+            )}
+          </div>
+        </>
+      )}
     </section>
   )
 }

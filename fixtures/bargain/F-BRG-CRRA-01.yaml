@@ -10,7 +10,16 @@ input:
   capTable:
     classes:
       - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
-      - { id: series-a, name: Series A, kind: PREFERRED, shares: 2000000, holder: INVESTOR, invested: 2000000, prefMultiple: 1, participation: NONE }
+      - {
+          id: series-a,
+          name: Series A,
+          kind: PREFERRED,
+          shares: 2000000,
+          holder: INVESTOR,
+          invested: 2000000,
+          prefMultiple: 1,
+          participation: NONE,
+        }
     grants: []
     poolAvailable: 0
   beliefs: { p0: 0.2, p50: 15000000, p90: 45000000 }

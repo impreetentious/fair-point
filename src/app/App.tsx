@@ -12,7 +12,12 @@ import { screenReadiness } from './readiness'
 import { SCREEN_IDS, type ScreenId, useDealStore } from './state/store'
 
 const LABELS: Record<ScreenId, string> = {
-  'cap-table': 'Cap Table', round: 'Round', waterfall: 'Waterfall', beliefs: 'Beliefs', frontier: 'Frontier', report: 'Report',
+  'cap-table': 'Cap Table',
+  round: 'Round',
+  waterfall: 'Waterfall',
+  beliefs: 'Beliefs',
+  frontier: 'Frontier',
+  report: 'Report',
 }
 
 function ActiveScreen({ screen }: { screen: ScreenId }) {
@@ -35,11 +40,18 @@ export function App() {
   useEffect(() => {
     const saved = window.localStorage.getItem(`${PRODUCT_SLUG}:v1:autosave`)
     if (saved !== null) {
-      try { replaceDeal(JSON.parse(saved), 'autosave') } catch { /* Invalid local data remains non-authoritative. */ }
+      try {
+        replaceDeal(JSON.parse(saved), 'autosave')
+      } catch {
+        /* Invalid local data remains non-authoritative. */
+      }
     }
   }, [replaceDeal])
   useEffect(() => {
-    const timeout = window.setTimeout(() => window.localStorage.setItem(`${PRODUCT_SLUG}:v1:autosave`, JSON.stringify(deal)), 500)
+    const timeout = window.setTimeout(
+      () => window.localStorage.setItem(`${PRODUCT_SLUG}:v1:autosave`, JSON.stringify(deal)),
+      500,
+    )
     return () => window.clearTimeout(timeout)
   }, [deal])
   const exportDeal = () => {
@@ -61,7 +73,10 @@ export function App() {
         !('schemaVersion' in raw) ||
         (raw as { schemaVersion?: unknown }).schemaVersion !== '1.0.0'
       ) {
-        replaceDeal({ schemaVersion: (raw as { schemaVersion?: unknown } | null)?.schemaVersion }, 'import')
+        replaceDeal(
+          { schemaVersion: (raw as { schemaVersion?: unknown } | null)?.schemaVersion },
+          'import',
+        )
         return
       }
       replaceDeal(raw, 'import')
@@ -71,11 +86,58 @@ export function App() {
   }
   return (
     <main className="app-shell">
-      <header className="app-header"><div><h1>{PRODUCT_NAME}</h1><p>The term-sheet bargaining studio</p></div><div className="header-actions"><button type="button" className="quiet-button" onClick={exportDeal}>Export deal</button><button type="button" className="quiet-button" onClick={() => importRef.current?.click()}>Import deal</button><input ref={importRef} aria-label="Import deal file" className="visually-hidden" type="file" accept="application/json" onChange={(event) => { void importDeal(event.target.files?.[0]); event.currentTarget.value = '' }} /></div></header>
-      {importStatus !== null && <p className={`import-status ${importStatus.kind}`} role="status">{importStatus.message}</p>}
-      <nav aria-label="Workspace screens">{SCREEN_IDS.map((id) => <button key={id} type="button" className={screen === id ? 'nav-item active' : 'nav-item'} onClick={() => setScreen(id)}><span className={`readiness-dot ${readiness[id].state}`} role="img" aria-label={readiness[id].label} />{LABELS[id]}</button>)}</nav>
+      <header className="app-header">
+        <div>
+          <h1>{PRODUCT_NAME}</h1>
+          <p>The term-sheet bargaining studio</p>
+        </div>
+        <div className="header-actions">
+          <button type="button" className="quiet-button" onClick={exportDeal}>
+            Export deal
+          </button>
+          <button type="button" className="quiet-button" onClick={() => importRef.current?.click()}>
+            Import deal
+          </button>
+          <input
+            ref={importRef}
+            aria-label="Import deal file"
+            className="visually-hidden"
+            type="file"
+            accept="application/json"
+            onChange={(event) => {
+              void importDeal(event.target.files?.[0])
+              event.currentTarget.value = ''
+            }}
+          />
+        </div>
+      </header>
+      {importStatus !== null && (
+        <p className={`import-status ${importStatus.kind}`} role="status">
+          {importStatus.message}
+        </p>
+      )}
+      <nav aria-label="Workspace screens">
+        {SCREEN_IDS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            className={screen === id ? 'nav-item active' : 'nav-item'}
+            onClick={() => setScreen(id)}
+          >
+            <span
+              className={`readiness-dot ${readiness[id].state}`}
+              role="img"
+              aria-label={readiness[id].label}
+            />
+            {LABELS[id]}
+          </button>
+        ))}
+      </nav>
       <ActiveScreen screen={screen} />
-      <footer className="disclaimer">{PRODUCT_NAME} is an educational instrument. It is not legal, financial, or investment advice.</footer>
+      <footer className="disclaimer">
+        {PRODUCT_NAME} is an educational instrument. It is not legal, financial, or investment
+        advice.
+      </footer>
     </main>
   )
 }

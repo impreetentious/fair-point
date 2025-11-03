@@ -30,6 +30,8 @@ describe('deal-file persistence', () => {
 describe('explainers', () => {
   it('ships all eight explainers and gives each a reachable screen', () => {
     expect(EXPLAINERS).toHaveLength(8)
-    expect(EXPLAINERS.every((explainer) => explainer.screens.length > 0 && explainer.bullets.length > 0)).toBe(true)
+    expect(
+      EXPLAINERS.every((explainer) => explainer.screens.length > 0 && explainer.bullets.length > 0),
+    ).toBe(true)
   })
 })

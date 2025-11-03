@@ -1,9 +1,22 @@
 import { create } from 'zustand'
 import { EXAMPLE_DECKS } from '../data/examples'
-import { DealFileSchema, humanizeZodError, type Beliefs, type DealFile, type RoundTerms } from '../../core/schema'
+import {
+  DealFileSchema,
+  humanizeZodError,
+  type Beliefs,
+  type DealFile,
+  type RoundTerms,
+} from '../../core/schema'
 import { deriveDealSpace, refreshDerivedSpace } from '../deal-space'
 
-export const SCREEN_IDS = ['cap-table', 'round', 'waterfall', 'beliefs', 'frontier', 'report'] as const
+export const SCREEN_IDS = [
+  'cap-table',
+  'round',
+  'waterfall',
+  'beliefs',
+  'frontier',
+  'report',
+] as const
 export type ScreenId = (typeof SCREEN_IDS)[number]
 
 type Store = {
@@ -21,22 +34,35 @@ type Store = {
   setExitValue: (value: number) => void
   toggleCompare: (index: number) => void
   loadExample: (id: string) => void
-  setDealSpace: (space: DealFile['space'], pins?: Partial<DealFile['ui']['dealSpacePins']>) => boolean
+  setDealSpace: (
+    space: DealFile['space'],
+    pins?: Partial<DealFile['ui']['dealSpacePins']>,
+  ) => boolean
 }
 
-function parseAndUpdate(set: (partial: Partial<Store>) => void, raw: unknown, source?: 'import' | 'autosave' | 'example'): boolean {
+function parseAndUpdate(
+  set: (partial: Partial<Store>) => void,
+  raw: unknown,
+  source?: 'import' | 'autosave' | 'example',
+): boolean {
   const parsed = DealFileSchema.safeParse(raw)
   if (!parsed.success) {
     const messages = humanizeZodError(parsed.error)
     set({
       validation: messages,
-      importStatus: source === 'import' ? { kind: 'error', message: messages[0] ?? 'Deal file is invalid.' } : undefined,
+      importStatus:
+        source === 'import'
+          ? { kind: 'error', message: messages[0] ?? 'Deal file is invalid.' }
+          : undefined,
     })
     return false
   }
   const deal = parsed.data.ui.dealSpaceManual
     ? parsed.data
-    : { ...parsed.data, space: deriveDealSpace(parsed.data.terms, null, parsed.data.ui.dealSpacePins) }
+    : {
+        ...parsed.data,
+        space: deriveDealSpace(parsed.data.terms, null, parsed.data.ui.dealSpacePins),
+      }
   set({
     deal,
     validation: [],

@@ -11,8 +11,18 @@ type NumberProps = {
   allowEmpty?: boolean
 }
 
-export function CommitNumber({ label, value, onCommit, min, max, step, decimals, allowEmpty = false }: NumberProps) {
-  const format = (next: number | undefined) => (next === undefined ? '' : String(decimals === undefined ? next : Number(next.toFixed(decimals))))
+export function CommitNumber({
+  label,
+  value,
+  onCommit,
+  min,
+  max,
+  step,
+  decimals,
+  allowEmpty = false,
+}: NumberProps) {
+  const format = (next: number | undefined) =>
+    next === undefined ? '' : String(decimals === undefined ? next : Number(next.toFixed(decimals)))
   const [draft, setDraft] = useState(format(value))
   useEffect(() => setDraft(format(value)), [value])
   const commit = () => {

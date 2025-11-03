@@ -8,5 +8,9 @@ export type ExampleDeck = { id: string; label: string; deal: DealFile }
 export const EXAMPLE_DECKS: ExampleDeck[] = [
   { id: 'seed-with-safes', label: 'Seed with SAFEs', deal: DealFileSchema.parse(seedWithSafes) },
   { id: 'series-a-clean', label: 'Series A clean', deal: DealFileSchema.parse(seriesAClean) },
-  { id: 'series-b-stacked-down-round', label: 'Series B stacked + down round', deal: DealFileSchema.parse(seriesBStackedDownRound) },
+  {
+    id: 'series-b-stacked-down-round',
+    label: 'Series B stacked + down round',
+    deal: DealFileSchema.parse(seriesBStackedDownRound),
+  },
 ]

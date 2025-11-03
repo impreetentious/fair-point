@@ -19,11 +19,20 @@ import {
 
 function linspace([lower, upper]: DealSpace['preMoneyRange'], steps: number): number[] {
   if (steps === 1) return [lower]
-  return Array.from({ length: steps }, (_, index) => lower + ((upper - lower) * index) / (steps - 1))
+  return Array.from(
+    { length: steps },
+    (_, index) => lower + ((upper - lower) * index) / (steps - 1),
+  )
 }
 
-function validPair(multiple: RoundTerms['prefMultiple'], participation: RoundTerms['participation']): boolean {
-  return !((participation === 'CAP2' && multiple >= 2) || (participation === 'CAP3' && multiple >= 3))
+function validPair(
+  multiple: RoundTerms['prefMultiple'],
+  participation: RoundTerms['participation'],
+): boolean {
+  return !(
+    (participation === 'CAP2' && multiple >= 2) ||
+    (participation === 'CAP3' && multiple >= 3)
+  )
 }
 
 /** Enumerate the locked row-major 720-cell grid, retaining raw indices across invalid holes. */
@@ -69,10 +78,22 @@ export function evaluatePackage(
   if (risk !== null) {
     return {
       pkg,
-      uF: presentValue(crraQuadrature(round.post, 'FOUNDER', founderBeliefs, risk.gamma, risk.w0F).ce, discounting),
-      uI: presentValue(crraQuadrature(round.post, 'INVESTOR', investorBeliefs, risk.gamma, risk.w0I).ce, discounting),
-      uF_underI: presentValue(crraQuadrature(round.post, 'FOUNDER', investorBeliefs, risk.gamma, risk.w0F).ce, discounting),
-      uI_underF: presentValue(crraQuadrature(round.post, 'INVESTOR', founderBeliefs, risk.gamma, risk.w0I).ce, discounting),
+      uF: presentValue(
+        crraQuadrature(round.post, 'FOUNDER', founderBeliefs, risk.gamma, risk.w0F).ce,
+        discounting,
+      ),
+      uI: presentValue(
+        crraQuadrature(round.post, 'INVESTOR', investorBeliefs, risk.gamma, risk.w0I).ce,
+        discounting,
+      ),
+      uF_underI: presentValue(
+        crraQuadrature(round.post, 'FOUNDER', investorBeliefs, risk.gamma, risk.w0F).ce,
+        discounting,
+      ),
+      uI_underF: presentValue(
+        crraQuadrature(round.post, 'INVESTOR', founderBeliefs, risk.gamma, risk.w0I).ce,
+        discounting,
+      ),
       metric: 'CE',
       diagnostics: round.diagnostics,
     }
@@ -95,7 +116,9 @@ function byIndex(points: DealPoint[]): DealPoint[] {
 }
 
 function frontier(points: DealPoint[]): number[] {
-  const sorted = [...points].sort((left, right) => right.uF - left.uF || right.uI - left.uI || left.pkg.index - right.pkg.index)
+  const sorted = [...points].sort(
+    (left, right) => right.uF - left.uF || right.uI - left.uI || left.pkg.index - right.pkg.index,
+  )
   let highestInvestor = -Infinity
   const result: number[] = []
   for (const point of sorted) {
@@ -107,13 +130,19 @@ function frontier(points: DealPoint[]): number[] {
   return result
 }
 
-function gain(point: DealPoint, disagreement: Disagreement): { f: number; i: number; product: number; sum: number } {
+function gain(
+  point: DealPoint,
+  disagreement: Disagreement,
+): { f: number; i: number; product: number; sum: number } {
   const f = point.uF - disagreement.dF
   const i = point.uI - disagreement.dI
   return { f, i, product: f * i, sum: f + i }
 }
 
-function choose(candidates: DealPoint[], compare: (left: DealPoint, right: DealPoint) => number): DealPoint | null {
+function choose(
+  candidates: DealPoint[],
+  compare: (left: DealPoint, right: DealPoint) => number,
+): DealPoint | null {
   if (candidates.length === 0) return null
   return candidates.reduce((best, candidate) => (compare(candidate, best) < 0 ? candidate : best))
 }
@@ -131,8 +160,15 @@ function descendingStable(left: number, right: number): number {
 /** Analyze IR, frontier, and the four deterministic discrete bargaining selections. */
 export function analyze(points: DealPoint[], disagreement: Disagreement): BargainResult {
   const ordered = byIndex(points)
-  const irPoints = ordered.filter((point) => point.uF >= disagreement.dF && point.uI >= disagreement.dI)
-  const nashPoint = choose(irPoints, (left, right) => descendingStable(gain(left, disagreement).product, gain(right, disagreement).product) || left.pkg.index - right.pkg.index)
+  const irPoints = ordered.filter(
+    (point) => point.uF >= disagreement.dF && point.uI >= disagreement.dI,
+  )
+  const nashPoint = choose(
+    irPoints,
+    (left, right) =>
+      descendingStable(gain(left, disagreement).product, gain(right, disagreement).product) ||
+      left.pkg.index - right.pkg.index,
+  )
   const notes: string[] = []
   let ksPoint: DealPoint | null = null
   if (irPoints.length > 0) {
@@ -149,19 +185,31 @@ export function analyze(points: DealPoint[], disagreement: Disagreement): Bargai
         const rightGain = gain(right, disagreement)
         const leftMinimum = Math.min(leftGain.f / denominatorF, leftGain.i / denominatorI)
         const rightMinimum = Math.min(rightGain.f / denominatorF, rightGain.i / denominatorI)
-        return descendingStable(leftMinimum, rightMinimum) || descendingStable(leftGain.product, rightGain.product) || left.pkg.index - right.pkg.index
+        return (
+          descendingStable(leftMinimum, rightMinimum) ||
+          descendingStable(leftGain.product, rightGain.product) ||
+          left.pkg.index - right.pkg.index
+        )
       })
     }
   }
   const egalitarianPoint = choose(irPoints, (left, right) => {
     const leftGain = gain(left, disagreement)
     const rightGain = gain(right, disagreement)
-    return descending(Math.min(leftGain.f, leftGain.i), Math.min(rightGain.f, rightGain.i)) || descending(leftGain.sum, rightGain.sum) || left.pkg.index - right.pkg.index
+    return (
+      descending(Math.min(leftGain.f, leftGain.i), Math.min(rightGain.f, rightGain.i)) ||
+      descending(leftGain.sum, rightGain.sum) ||
+      left.pkg.index - right.pkg.index
+    )
   })
   const utilitarianPoint = choose(irPoints, (left, right) => {
     const leftGain = gain(left, disagreement)
     const rightGain = gain(right, disagreement)
-    return descending(leftGain.sum, rightGain.sum) || descending(leftGain.product, rightGain.product) || left.pkg.index - right.pkg.index
+    return (
+      descending(leftGain.sum, rightGain.sum) ||
+      descending(leftGain.product, rightGain.product) ||
+      left.pkg.index - right.pkg.index
+    )
   })
   return {
     zopa: irPoints.length > 0,
@@ -178,7 +226,10 @@ export function analyze(points: DealPoint[], disagreement: Disagreement): Bargai
 }
 
 /** Compute the locked single-package and per-party value-on-table measures. */
-export function valueOnTable(result: BargainResult, current: DealPoint): { headline: number; gainF: number; gainI: number; dominating: number[] } {
+export function valueOnTable(
+  result: BargainResult,
+  current: DealPoint,
+): { headline: number; gainF: number; gainI: number; dominating: number[] } {
   const ir = new Set(result.ir)
   const eligible = result.points.filter(
     (point) =>
@@ -188,12 +239,27 @@ export function valueOnTable(result: BargainResult, current: DealPoint): { headl
       point.uI >= current.uI - 1,
   )
   if (eligible.length === 0) return { headline: 0, gainF: 0, gainI: 0, dominating: [] }
-  const deltas = eligible.map((point) => ({ point, f: point.uF - current.uF, i: point.uI - current.uI }))
+  const deltas = eligible.map((point) => ({
+    point,
+    f: point.uF - current.uF,
+    i: point.uI - current.uI,
+  }))
   const headline = Math.max(...deltas.map((delta) => delta.f + delta.i))
-  const gainF = Math.max(0, ...deltas.filter((delta) => delta.point.uI >= current.uI).map((delta) => delta.f))
-  const gainI = Math.max(0, ...deltas.filter((delta) => delta.point.uF >= current.uF).map((delta) => delta.i))
+  const gainF = Math.max(
+    0,
+    ...deltas.filter((delta) => delta.point.uI >= current.uI).map((delta) => delta.f),
+  )
+  const gainI = Math.max(
+    0,
+    ...deltas.filter((delta) => delta.point.uF >= current.uF).map((delta) => delta.i),
+  )
   const dominating = [...deltas]
-    .sort((left, right) => descending(Math.min(left.f, left.i), Math.min(right.f, right.i)) || descending(left.f + left.i, right.f + right.i) || left.point.pkg.index - right.point.pkg.index)
+    .sort(
+      (left, right) =>
+        descending(Math.min(left.f, left.i), Math.min(right.f, right.i)) ||
+        descending(left.f + left.i, right.f + right.i) ||
+        left.point.pkg.index - right.point.pkg.index,
+    )
     .slice(0, 3)
     .map((delta) => delta.point.pkg.index)
   return { headline, gainF, gainI, dominating }

@@ -6,8 +6,8 @@ derivation: |
   grant's reported net payout is $55-$10=$45.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER } ]
-    grants: [ { id: g, options: 1, strike: 10, holder: OTHER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER }]
+    grants: [{ id: g, options: 1, strike: 10, holder: OTHER }]
     poolAvailable: 0
   exitValue: 100
 expect:

@@ -14,8 +14,12 @@ import type { Safe } from './schema'
  * deterministic pre-solve rewrite, not a post-hoc true-up.
  */
 export function applyMfn(safes: Safe[]): Safe[] {
-  const caps = safes.map((safe) => safe.valuationCap).filter((value): value is number => value !== undefined)
-  const discounts = safes.map((safe) => safe.discount).filter((value): value is number => value !== undefined)
+  const caps = safes
+    .map((safe) => safe.valuationCap)
+    .filter((value): value is number => value !== undefined)
+  const discounts = safes
+    .map((safe) => safe.discount)
+    .filter((value): value is number => value !== undefined)
   const bestCap = caps.length > 0 ? Math.min(...caps) : undefined
   const bestDiscount = discounts.length > 0 ? Math.max(...discounts) : undefined
   return safes.map((safe) => {

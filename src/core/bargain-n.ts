@@ -1,8 +1,4 @@
-import type {
-  MultiPartyBargainResult,
-  MultiPartyDealPoint,
-  MultiPartyDisagreement,
-} from './schema'
+import type { MultiPartyBargainResult, MultiPartyDealPoint, MultiPartyDisagreement } from './schema'
 
 function byIndex(points: MultiPartyDealPoint[]): MultiPartyDealPoint[] {
   return [...points].sort((left, right) => left.pkg.index - right.pkg.index)
@@ -12,7 +8,11 @@ function descending(left: number, right: number): number {
   return right - left
 }
 
-function gains(point: MultiPartyDealPoint, parties: string[], d0: MultiPartyDisagreement): number[] {
+function gains(
+  point: MultiPartyDealPoint,
+  parties: string[],
+  d0: MultiPartyDisagreement,
+): number[] {
   return parties.map((party) => (point.utilities[party] ?? 0) - (d0[party] ?? 0))
 }
 
@@ -45,9 +45,14 @@ function frontierN(points: MultiPartyDealPoint[], parties: string[]): number[] {
   })
   const kept: MultiPartyDealPoint[] = []
   for (const point of sorted) {
-    const dominated = kept.some((prior) =>
-      parties.every((party) => (prior.utilities[party] ?? 0) >= (point.utilities[party] ?? 0) - 1e-12) &&
-      parties.some((party) => (prior.utilities[party] ?? 0) > (point.utilities[party] ?? 0) + 1e-12),
+    const dominated = kept.some(
+      (prior) =>
+        parties.every(
+          (party) => (prior.utilities[party] ?? 0) >= (point.utilities[party] ?? 0) - 1e-12,
+        ) &&
+        parties.some(
+          (party) => (prior.utilities[party] ?? 0) > (point.utilities[party] ?? 0) + 1e-12,
+        ),
     )
     if (!dominated) kept.push(point)
   }
@@ -87,8 +92,7 @@ export function analyzeN(
 ): MultiPartyBargainResult {
   const ordered = byIndex(points)
   const parties =
-    partyOrder ??
-    Object.keys(disagreement).sort((left, right) => left.localeCompare(right))
+    partyOrder ?? Object.keys(disagreement).sort((left, right) => left.localeCompare(right))
   if (parties.length < 2) throw new RangeError('analyzeN requires at least two parties')
   for (const party of parties) {
     if (!(party in disagreement)) throw new RangeError(`Missing disagreement for party '${party}'`)
@@ -110,7 +114,10 @@ export function analyzeN(
   let ksPoint: MultiPartyDealPoint | null = null
   if (irPoints.length > 0) {
     const ideals = Object.fromEntries(
-      parties.map((party) => [party, Math.max(...irPoints.map((point) => point.utilities[party] ?? 0))]),
+      parties.map((party) => [
+        party,
+        Math.max(...irPoints.map((point) => point.utilities[party] ?? 0)),
+      ]),
     )
     const denominators = parties.map((party) => ideals[party] - (disagreement[party] ?? 0))
     if (denominators.some((value) => value === 0)) {

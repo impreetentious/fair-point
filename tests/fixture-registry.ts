@@ -1,5 +1,10 @@
 import { expect } from 'vitest'
-import { fitLognormal, intervalProb, mixtureQuantile, partialExpectation } from '../src/core/distributions'
+import {
+  fitLognormal,
+  intervalProb,
+  mixtureQuantile,
+  partialExpectation,
+} from '../src/core/distributions'
 import { mulberry32 } from '../src/core/numerics'
 import {
   BeliefsSchema,
@@ -33,11 +38,23 @@ function d16Precision(tolerance: number | undefined): number {
 
 type DistFixtureInput =
   | { operation: 'fit'; values: { p10?: number; p50: number; p90: number } }
-  | { operation: 'partialExpectation' | 'intervalProb'; mu: number; sigma: number; a: number; b: number }
+  | {
+      operation: 'partialExpectation' | 'intervalProb'
+      mu: number
+      sigma: number
+      a: number
+      b: number
+    }
   | { operation: 'mixtureQuantile'; beliefs: unknown; p: number }
   | { operation: 'mulberry32'; seed: number; count: number }
 
-type DistFixtureExpect = { value?: number; mu?: number; sigma?: number; warnings?: string[]; values?: number[] }
+type DistFixtureExpect = {
+  value?: number
+  mu?: number
+  sigma?: number
+  warnings?: string[]
+  values?: number[]
+}
 
 function asInput(value: unknown): DistFixtureInput {
   return value as DistFixtureInput
@@ -59,16 +76,25 @@ registerFixtureHandler('dist', (fixture) => {
     return
   }
   if (input.operation === 'partialExpectation') {
-    expect(partialExpectation(input.mu, input.sigma, input.a, input.b)).toBeCloseTo(expected.value ?? Number.NaN, Math.max(0, Math.floor(-Math.log10(tolerance))))
+    expect(partialExpectation(input.mu, input.sigma, input.a, input.b)).toBeCloseTo(
+      expected.value ?? Number.NaN,
+      Math.max(0, Math.floor(-Math.log10(tolerance))),
+    )
     return
   }
   if (input.operation === 'intervalProb') {
-    expect(intervalProb(input.mu, input.sigma, input.a, input.b)).toBeCloseTo(expected.value ?? Number.NaN, Math.max(0, Math.floor(-Math.log10(tolerance))))
+    expect(intervalProb(input.mu, input.sigma, input.a, input.b)).toBeCloseTo(
+      expected.value ?? Number.NaN,
+      Math.max(0, Math.floor(-Math.log10(tolerance))),
+    )
     return
   }
   if (input.operation === 'mixtureQuantile') {
     const beliefs = BeliefsSchema.parse(input.beliefs)
-    expect(mixtureQuantile(beliefs, input.p)).toBeCloseTo(expected.value ?? Number.NaN, Math.max(0, Math.floor(-Math.log10(tolerance))))
+    expect(mixtureQuantile(beliefs, input.p)).toBeCloseTo(
+      expected.value ?? Number.NaN,
+      Math.max(0, Math.floor(-Math.log10(tolerance))),
+    )
     return
   }
   if (input.operation === 'mulberry32') {
@@ -76,7 +102,9 @@ registerFixtureHandler('dist', (fixture) => {
     expect(Array.from({ length: input.count }, () => uniform())).toEqual(expected.values)
     return
   }
-  throw new Error(`Unsupported distribution fixture operation: ${(input as { operation: string }).operation}`)
+  throw new Error(
+    `Unsupported distribution fixture operation: ${(input as { operation: string }).operation}`,
+  )
 })
 
 type WaterfallFixtureInput = { capTable: unknown; exitValue: number }
@@ -94,13 +122,18 @@ registerFixtureHandler('waterfall', (fixture) => {
   const result = payoutsAt(post, input.exitValue)
   const values = { ...result.byClass, ...result.byGrant }
   const precision = Math.max(0, Math.floor(-Math.log10(fixture.tolerance ?? 0.01)))
-  for (const [id, value] of Object.entries(expected.payouts)) expect(values[id]).toBeCloseTo(value, precision)
-  if (expected.strikeCashPaid !== undefined) expect(result.strikeCashPaid).toBeCloseTo(expected.strikeCashPaid, precision)
+  for (const [id, value] of Object.entries(expected.payouts))
+    expect(values[id]).toBeCloseTo(value, precision)
+  if (expected.strikeCashPaid !== undefined)
+    expect(result.strikeCashPaid).toBeCloseTo(expected.strikeCashPaid, precision)
   if (expected.pathTaken !== undefined) {
-    for (const [id, path] of Object.entries(expected.pathTaken)) expect(result.pathTaken[id]).toBe(path)
+    for (const [id, path] of Object.entries(expected.pathTaken))
+      expect(result.pathTaken[id]).toBe(path)
   }
   if (expected.breakpoints !== undefined) {
-    const actual = regimes(post).map((regime) => regime.from).filter((value) => value > 0)
+    const actual = regimes(post)
+      .map((regime) => regime.from)
+      .filter((value) => value > 0)
     for (const breakpoint of expected.breakpoints) {
       expect(actual.some((value) => Math.abs(value - breakpoint) <= 0.01)).toBe(true)
     }
@@ -108,19 +141,32 @@ registerFixtureHandler('waterfall', (fixture) => {
 })
 
 type SafeFixtureInput = { baseCap: number; safes: unknown[]; roundPps: number }
-type SafeFixtureExpect = { sharesBySafe: Record<string, number>; routeBySafe?: Record<string, string>; totalCapitalization?: number }
+type SafeFixtureExpect = {
+  sharesBySafe: Record<string, number>
+  routeBySafe?: Record<string, string>
+  totalCapitalization?: number
+}
 
 registerFixtureHandler('safe', (fixture) => {
   const input = fixture.input as SafeFixtureInput
   const expected = fixture.expect as SafeFixtureExpect
-  const result = convertSafes(input.baseCap, input.safes.map((safe) => SafeSchema.parse(safe)), input.roundPps)
+  const result = convertSafes(
+    input.baseCap,
+    input.safes.map((safe) => SafeSchema.parse(safe)),
+    input.roundPps,
+  )
   const precision = Math.max(0, Math.floor(-Math.log10(fixture.tolerance ?? 0.01)))
-  for (const [id, shares] of Object.entries(expected.sharesBySafe)) expect(result.sharesBySafe[id]).toBeCloseTo(shares, precision)
+  for (const [id, shares] of Object.entries(expected.sharesBySafe))
+    expect(result.sharesBySafe[id]).toBeCloseTo(shares, precision)
   if (expected.totalCapitalization !== undefined) {
-    expect(input.baseCap + result.totalSafeShares).toBeCloseTo(expected.totalCapitalization, precision)
+    expect(input.baseCap + result.totalSafeShares).toBeCloseTo(
+      expected.totalCapitalization,
+      precision,
+    )
   }
   if (expected.routeBySafe !== undefined) {
-    for (const [id, route] of Object.entries(expected.routeBySafe)) expect(result.routeBySafe[id]).toBe(route)
+    for (const [id, route] of Object.entries(expected.routeBySafe))
+      expect(result.routeBySafe[id]).toBe(route)
   }
 })
 
@@ -142,16 +188,22 @@ registerFixtureHandler('round', (fixture) => {
     RoundTermsSchema.parse(input.terms),
   )
   const precision = Math.max(0, Math.floor(-Math.log10(fixture.tolerance ?? 0.01)))
-  if (expected.pps !== undefined) expect(result.diagnostics.pps).toBeCloseTo(expected.pps, precision)
-  if (expected.investorPct !== undefined) expect(result.diagnostics.investorPct).toBeCloseTo(expected.investorPct, precision)
-  if (expected.poolIncrease !== undefined) expect(result.diagnostics.poolIncrease).toBeCloseTo(expected.poolIncrease, precision)
-  if (expected.safeShares !== undefined) expect(result.diagnostics.safeShares).toBeCloseTo(expected.safeShares, precision)
+  if (expected.pps !== undefined)
+    expect(result.diagnostics.pps).toBeCloseTo(expected.pps, precision)
+  if (expected.investorPct !== undefined)
+    expect(result.diagnostics.investorPct).toBeCloseTo(expected.investorPct, precision)
+  if (expected.poolIncrease !== undefined)
+    expect(result.diagnostics.poolIncrease).toBeCloseTo(expected.poolIncrease, precision)
+  if (expected.safeShares !== undefined)
+    expect(result.diagnostics.safeShares).toBeCloseTo(expected.safeShares, precision)
   for (const [id, values] of Object.entries(expected.classes ?? {})) {
     const cls = result.post.classes.find((candidate) => candidate.id === id)
     expect(cls).toBeDefined()
     if (values.shares !== undefined) expect(cls!.shares).toBeCloseTo(values.shares, precision)
-    if (values.seniorityTier !== undefined && cls?.kind === 'PREFERRED') expect(cls.seniorityTier).toBe(values.seniorityTier)
-    if (values.conversionRatio !== undefined && cls?.kind === 'PREFERRED') expect(cls.conversionRatio).toBeCloseTo(values.conversionRatio, precision)
+    if (values.seniorityTier !== undefined && cls?.kind === 'PREFERRED')
+      expect(cls.seniorityTier).toBe(values.seniorityTier)
+    if (values.conversionRatio !== undefined && cls?.kind === 'PREFERRED')
+      expect(cls.conversionRatio).toBeCloseTo(values.conversionRatio, precision)
   }
 })
 
@@ -160,15 +212,30 @@ registerFixtureHandler('validation', (fixture) => {
   const parsed = DealFileSchema.safeParse(fixture.input)
   expect(parsed.success).toBe(expected.valid)
   if (!expected.valid && expected.message !== undefined && !parsed.success) {
-    expect(parsed.error.issues.map((issue) => issue.message).join(' | ')).toContain(expected.message)
+    expect(parsed.error.issues.map((issue) => issue.message).join(' | ')).toContain(
+      expected.message,
+    )
   }
 })
 
 type BargainPointInput = { index: number; uF: number; uI: number }
 type BargainFixtureInput =
   | { operation: 'divideDollar'; max: number }
-  | { operation?: 'points'; points: BargainPointInput[]; disagreement: { dF: number; dI: number }; currentIndex?: number }
-  | { operation: 'crra'; capTable: unknown; beliefs: unknown; gamma: 0.5 | 1; w0: number; n: number; seed: number }
+  | {
+      operation?: 'points'
+      points: BargainPointInput[]
+      disagreement: { dF: number; dI: number }
+      currentIndex?: number
+    }
+  | {
+      operation: 'crra'
+      capTable: unknown
+      beliefs: unknown
+      gamma: 0.5 | 1
+      w0: number
+      n: number
+      seed: number
+    }
 type BargainFixtureExpect = {
   nash?: number | null
   ks?: number | null
@@ -185,7 +252,14 @@ function fixturePoint(point: BargainPointInput) {
   return {
     pkg: {
       index: point.index,
-      terms: RoundTermsSchema.parse({ preMoney: 1, investment: 1, poolTargetPost: 0, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' }),
+      terms: RoundTermsSchema.parse({
+        preMoney: 1,
+        investment: 1,
+        poolTargetPost: 0,
+        prefMultiple: 1,
+        participation: 'NONE',
+        seniority: 'PARI',
+      }),
     },
     uF: point.uF,
     uI: point.uI,
@@ -203,15 +277,33 @@ registerFixtureHandler('bargain', (fixture) => {
     const post = CapTableSchema.parse(input.capTable)
     const beliefs = BeliefsSchema.parse(input.beliefs)
     const quadrature = crraQuadrature(post, 'FOUNDER', beliefs, input.gamma, input.w0)
-    const sampled = crraUtility(post, 'FOUNDER', beliefs, input.gamma, input.w0, input.n, input.seed)
+    const sampled = crraUtility(
+      post,
+      'FOUNDER',
+      beliefs,
+      input.gamma,
+      input.w0,
+      input.n,
+      input.seed,
+    )
     const seCe = sampled.se * Math.pow(sampled.ce + input.w0, input.gamma)
-    if (expected.ce !== undefined) expect(quadrature.ce).toBeCloseTo(expected.ce, Math.max(0, Math.floor(-Math.log10(fixture.tolerance ?? 0.01))))
-    expect(Math.abs(quadrature.ce - sampled.ce)).toBeLessThanOrEqual((expected.withinSe ?? 4) * seCe + 1)
+    if (expected.ce !== undefined)
+      expect(quadrature.ce).toBeCloseTo(
+        expected.ce,
+        Math.max(0, Math.floor(-Math.log10(fixture.tolerance ?? 0.01))),
+      )
+    expect(Math.abs(quadrature.ce - sampled.ce)).toBeLessThanOrEqual(
+      (expected.withinSe ?? 4) * seCe + 1,
+    )
     return
   }
   const pointInputs =
     input.operation === 'divideDollar'
-      ? Array.from({ length: input.max + 1 }, (_, index) => ({ index, uF: Math.sqrt(index), uI: input.max - index }))
+      ? Array.from({ length: input.max + 1 }, (_, index) => ({
+          index,
+          uF: Math.sqrt(index),
+          uI: input.max - index,
+        }))
       : input.points
   const disagreement = input.operation === 'divideDollar' ? { dF: 0, dI: 0 } : input.disagreement
   const points = pointInputs.map(fixturePoint)
@@ -233,7 +325,13 @@ registerFixtureHandler('employee', (fixture) => {
     pre: unknown
     safes: unknown[]
     terms: unknown
-    grant: { id: string; options: number; strike: number; holder: 'FOUNDER' | 'OTHER'; instrument?: 'OPTION' | 'WARRANT' }
+    grant: {
+      id: string
+      options: number
+      strike: number
+      holder: 'FOUNDER' | 'OTHER'
+      instrument?: 'OPTION' | 'WARRANT'
+    }
     beliefs: unknown
     cashAlternative?: number
     exitValue: number
@@ -247,15 +345,26 @@ registerFixtureHandler('employee', (fixture) => {
     beliefs: BeliefsSchema.parse(input.beliefs),
     cashAlternative: input.cashAlternative,
   })
-  expect(result.payoutAt(input.exitValue)).toBeCloseTo(expected.payoutAtExit, d16Precision(fixture.tolerance))
+  expect(result.payoutAt(input.exitValue)).toBeCloseTo(
+    expected.payoutAtExit,
+    d16Precision(fixture.tolerance),
+  )
 })
 
 registerFixtureHandler('note', (fixture) => {
   const input = fixture.input as { note: unknown; capTable: unknown; terms: unknown }
   const expected = fixture.expect as { accruedAmount: number; shares: number }
   const note = ConvertibleNoteSchema.parse(input.note)
-  expect(noteAccruedAmount(note)).toBeCloseTo(expected.accruedAmount, d16Precision(fixture.tolerance))
-  const round = constructRound(CapTableSchema.parse(input.capTable), [], RoundTermsSchema.parse(input.terms), [note])
+  expect(noteAccruedAmount(note)).toBeCloseTo(
+    expected.accruedAmount,
+    d16Precision(fixture.tolerance),
+  )
+  const round = constructRound(
+    CapTableSchema.parse(input.capTable),
+    [],
+    RoundTermsSchema.parse(input.terms),
+    [note],
+  )
   const shadow = round.post.classes.find((cls) => cls.id === `safe-${note.id}`)
   expect(shadow).toBeDefined()
   expect(shadow!.shares).toBeCloseTo(expected.shares, d16Precision(fixture.tolerance))
@@ -272,8 +381,14 @@ registerFixtureHandler('dividend', (fixture) => {
   const preferred = settled.classes.find((cls) => cls.kind === 'PREFERRED')!
   expect(preferred.kind).toBe('PREFERRED')
   if (preferred.kind === 'PREFERRED') {
-    expect(preferred.accruedDividends).toBeCloseTo(expected.accruedDividends, d16Precision(fixture.tolerance))
-    expect(preferenceClaim(preferred)).toBeCloseTo(expected.preferenceClaim, d16Precision(fixture.tolerance))
+    expect(preferred.accruedDividends).toBeCloseTo(
+      expected.accruedDividends,
+      d16Precision(fixture.tolerance),
+    )
+    expect(preferenceClaim(preferred)).toBeCloseTo(
+      expected.preferenceClaim,
+      d16Precision(fixture.tolerance),
+    )
   }
   const payout = payoutsAt(settled, input.exitValue)
   for (const [id, value] of Object.entries(expected.payouts)) {
@@ -291,8 +406,14 @@ registerFixtureHandler('redemption', (fixture) => {
   const settled = accrueForExit(CapTableSchema.parse(input.capTable), input.yearsToExit)
   const preferred = settled.classes.find((cls) => cls.kind === 'PREFERRED')!
   if (preferred.kind === 'PREFERRED') {
-    expect(preferred.redemptionClaim).toBeCloseTo(expected.redemptionClaim, d16Precision(fixture.tolerance))
-    expect(preferenceClaim(preferred)).toBeCloseTo(expected.preferenceClaim, d16Precision(fixture.tolerance))
+    expect(preferred.redemptionClaim).toBeCloseTo(
+      expected.redemptionClaim,
+      d16Precision(fixture.tolerance),
+    )
+    expect(preferenceClaim(preferred)).toBeCloseTo(
+      expected.preferenceClaim,
+      d16Precision(fixture.tolerance),
+    )
   }
   const payout = payoutsAt(settled, input.exitValue)
   for (const [id, value] of Object.entries(expected.payouts)) {
@@ -323,12 +444,16 @@ registerFixtureHandler('paytoplay', (fixture) => {
 
 registerFixtureHandler('mfn', (fixture) => {
   const input = fixture.input as { safes: unknown[] }
-  const expected = fixture.expect as { safes: Record<string, { valuationCap?: number; discount?: number }> }
+  const expected = fixture.expect as {
+    safes: Record<string, { valuationCap?: number; discount?: number }>
+  }
   const rewritten = applyMfn(input.safes.map((safe) => SafeSchema.parse(safe)))
   for (const [id, values] of Object.entries(expected.safes)) {
     const safe = rewritten.find((candidate) => candidate.id === id)!
-    if (values.valuationCap !== undefined) expect(safe.valuationCap).toBeCloseTo(values.valuationCap, d16Precision(fixture.tolerance))
-    if (values.discount !== undefined) expect(safe.discount).toBeCloseTo(values.discount, d16Precision(fixture.tolerance))
+    if (values.valuationCap !== undefined)
+      expect(safe.valuationCap).toBeCloseTo(values.valuationCap, d16Precision(fixture.tolerance))
+    if (values.discount !== undefined)
+      expect(safe.discount).toBeCloseTo(values.discount, d16Precision(fixture.tolerance))
   }
 })
 
@@ -339,7 +464,10 @@ registerFixtureHandler('secondary', (fixture) => {
     classShares: Record<string, number>
     totalShares: number
   }
-  const result = applySecondary(CapTableSchema.parse(input.capTable), SecondarySaleSchema.parse(input.sale))
+  const result = applySecondary(
+    CapTableSchema.parse(input.capTable),
+    SecondarySaleSchema.parse(input.sale),
+  )
   expect(result.proceeds).toBeCloseTo(expected.proceeds, d16Precision(fixture.tolerance))
   for (const [id, shares] of Object.entries(expected.classShares)) {
     const cls = result.post.classes.find((candidate) => candidate.id === id)
@@ -351,10 +479,17 @@ registerFixtureHandler('secondary', (fixture) => {
 
 registerFixtureHandler('discount', (fixture) => {
   const input = fixture.input as { discounting: unknown; amount: number }
-  const expected = fixture.expect as { factor: number; presentValue: number; undiscountedFactor: number }
+  const expected = fixture.expect as {
+    factor: number
+    presentValue: number
+    undiscountedFactor: number
+  }
   const discounting = DiscountingSchema.parse(input.discounting)
   expect(discountFactor(discounting)).toBeCloseTo(expected.factor, 12)
-  expect(presentValue(input.amount, discounting)).toBeCloseTo(expected.presentValue, d16Precision(fixture.tolerance))
+  expect(presentValue(input.amount, discounting)).toBeCloseTo(
+    expected.presentValue,
+    d16Precision(fixture.tolerance),
+  )
   expect(discountFactor(null)).toBeCloseTo(expected.undiscountedFactor, 12)
 })
 
@@ -397,7 +532,10 @@ registerFixtureHandler('fairvalue', (fixture) => {
   const input = fixture.input as { preferredPps: number; percentOfPreferred: number }
   const expected = fixture.expect as { fairValuePerShare: number; method: string }
   const result = estimate409A(input.preferredPps, input.percentOfPreferred)
-  expect(result.fairValuePerShare).toBeCloseTo(expected.fairValuePerShare, d16Precision(fixture.tolerance))
+  expect(result.fairValuePerShare).toBeCloseTo(
+    expected.fairValuePerShare,
+    d16Precision(fixture.tolerance),
+  )
   expect(result.method).toBe(expected.method)
 })
 
@@ -410,6 +548,9 @@ registerFixtureHandler('warrant', (fixture) => {
     expect(values[id]).toBeCloseTo(value, d16Precision(fixture.tolerance))
   }
   if (expected.strikeCashPaid !== undefined) {
-    expect(result.strikeCashPaid).toBeCloseTo(expected.strikeCashPaid, d16Precision(fixture.tolerance))
+    expect(result.strikeCashPaid).toBeCloseTo(
+      expected.strikeCashPaid,
+      d16Precision(fixture.tolerance),
+    )
   }
 })

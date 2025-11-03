@@ -48,7 +48,10 @@ try {
   })
   const score = Math.round((result.lhr.categories.accessibility.score ?? 0) * 100)
   const audits = Object.values(result.lhr.audits)
-    .filter((audit) => audit.score !== null && audit.score < 1 && audit.scoreDisplayMode !== 'notApplicable')
+    .filter(
+      (audit) =>
+        audit.score !== null && audit.score < 1 && audit.scoreDisplayMode !== 'notApplicable',
+    )
     .map((audit) => `  - ${audit.id}: ${audit.title} (score ${audit.score})`)
   console.log(`Lighthouse accessibility: ${score}/100 (threshold ${THRESHOLD})`)
   if (audits.length > 0) {

@@ -42,15 +42,14 @@ describe('numerics', () => {
   it('has the locked mulberry32 snapshot and deterministic Box-Muller stream', () => {
     const uniform = mulberry32(1)
     expect(Array.from({ length: 5 }, () => uniform())).toEqual([
-      0.6270739405881613,
-      0.002735721180215478,
-      0.5274470399599522,
-      0.9810509674716741,
+      0.6270739405881613, 0.002735721180215478, 0.5274470399599522, 0.9810509674716741,
       0.9683778982143849,
     ])
     const first = normals(42)
     const second = normals(42)
-    expect(Array.from({ length: 8 }, () => first())).toEqual(Array.from({ length: 8 }, () => second()))
+    expect(Array.from({ length: 8 }, () => first())).toEqual(
+      Array.from({ length: 8 }, () => second()),
+    )
   })
 
   it('integrates the entire lognormal mean exactly enough for fixture tolerance', () => {

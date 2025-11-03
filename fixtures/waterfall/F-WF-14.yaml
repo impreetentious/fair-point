@@ -5,7 +5,7 @@ derivation: |
   The 100 unissued pool shares get no exit distribution; the single issued common share gets E.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER }]
     grants: []
     poolAvailable: 100
   exitValue: 100

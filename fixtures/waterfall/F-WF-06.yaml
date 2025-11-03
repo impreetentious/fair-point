@@ -7,8 +7,28 @@ input:
   capTable:
     classes:
       - { id: common, name: Common, kind: COMMON, shares: 8, holder: FOUNDER }
-      - { id: senior, name: Senior, kind: PREFERRED, shares: 1, holder: INVESTOR, invested: 2, prefMultiple: 1, participation: NONE, seniorityTier: 1 }
-      - { id: junior, name: Junior, kind: PREFERRED, shares: 1, holder: OTHER, invested: 1, prefMultiple: 1, participation: NONE, seniorityTier: 2 }
+      - {
+          id: senior,
+          name: Senior,
+          kind: PREFERRED,
+          shares: 1,
+          holder: INVESTOR,
+          invested: 2,
+          prefMultiple: 1,
+          participation: NONE,
+          seniorityTier: 1,
+        }
+      - {
+          id: junior,
+          name: Junior,
+          kind: PREFERRED,
+          shares: 1,
+          holder: OTHER,
+          invested: 1,
+          prefMultiple: 1,
+          participation: NONE,
+          seniorityTier: 2,
+        }
     grants: []
     poolAvailable: 0
   exitValue: 2.5

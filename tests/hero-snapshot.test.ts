@@ -4,9 +4,25 @@ import { EXAMPLE_DECKS } from '../src/app/data/examples'
 
 it('reproduces the deck-2 hero snapshot from the shipped engine', () => {
   const deal = EXAMPLE_DECKS.find((example) => example.id === 'series-a-clean')!.deal
-  const points = enumerateDeals(deal.space).map((pkg) => evaluatePackage(deal.pre, deal.safes, pkg, deal.founderBeliefs, deal.investorBeliefs, deal.risk))
+  const points = enumerateDeals(deal.space).map((pkg) =>
+    evaluatePackage(
+      deal.pre,
+      deal.safes,
+      pkg,
+      deal.founderBeliefs,
+      deal.investorBeliefs,
+      deal.risk,
+    ),
+  )
   const result = analyze(points, deal.disagreement)
-  const current = evaluatePackage(deal.pre, deal.safes, { index: -1, terms: deal.terms }, deal.founderBeliefs, deal.investorBeliefs, deal.risk)
+  const current = evaluatePackage(
+    deal.pre,
+    deal.safes,
+    { index: -1, terms: deal.terms },
+    deal.founderBeliefs,
+    deal.investorBeliefs,
+    deal.risk,
+  )
   const value = valueOnTable(result, current)
   expect(current.diagnostics.pps).toBeCloseTo(2.03125, 12)
   expect(current.diagnostics.investorPct).toBeCloseTo(0.2, 12)

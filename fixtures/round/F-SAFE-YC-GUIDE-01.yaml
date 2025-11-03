@@ -13,8 +13,20 @@ input:
   baseCap: 10000000
   roundPps: 1
   safes:
-    - { id: series-seed-1, name: Series Seed-1, amount: 200000, kind: POST_MONEY, valuationCap: 4000000 }
-    - { id: round-price, name: Round price, amount: 1216360, kind: POST_MONEY, valuationCap: 100000000 }
+    - {
+        id: series-seed-1,
+        name: Series Seed-1,
+        amount: 200000,
+        kind: POST_MONEY,
+        valuationCap: 4000000,
+      }
+    - {
+        id: round-price,
+        name: Round price,
+        amount: 1216360,
+        kind: POST_MONEY,
+        valuationCap: 100000000,
+      }
 expect:
   sharesBySafe: { series-seed-1: 590334.7368, round-price: 1216360 }
   routeBySafe: { series-seed-1: CAP, round-price: ROUND_PRICE }

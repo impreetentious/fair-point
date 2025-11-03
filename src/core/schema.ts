@@ -53,7 +53,11 @@ const ShareClassInputSchema = z.discriminatedUnion('kind', [
 
 type ShareClassInput = z.output<typeof ShareClassInputSchema>
 
-function checkPreferredClass(cls: ShareClassInput, ctx: z.RefinementCtx, path: (string | number)[]) {
+function checkPreferredClass(
+  cls: ShareClassInput,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+) {
   if (cls.kind !== 'PREFERRED') return
   if (cls.participation === 'CAPPED' && cls.participationCapMultiple === undefined) {
     ctx.addIssue({
@@ -304,10 +308,7 @@ export const BeliefsSchema = z
 export type Beliefs = z.output<typeof BeliefsSchema>
 
 const validPackagePair = (multiple: number, participation: RoundTerms['participation']) =>
-  !(
-    (participation === 'CAP2' && multiple >= 2) ||
-    (participation === 'CAP3' && multiple >= 3)
-  )
+  !((participation === 'CAP2' && multiple >= 2) || (participation === 'CAP3' && multiple >= 3))
 
 const DealSpaceInputSchema = z
   .object({
@@ -328,7 +329,11 @@ const DealSpaceInputSchema = z
         message: 'V13: preMoneyRange lower bound must not exceed upper bound',
       })
     }
-    if (!space.multiples.some((multiple) => space.participations.some((p) => validPackagePair(multiple, p)))) {
+    if (
+      !space.multiples.some((multiple) =>
+        space.participations.some((p) => validPackagePair(multiple, p)),
+      )
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['participations'],

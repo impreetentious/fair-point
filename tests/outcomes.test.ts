@@ -31,7 +31,9 @@ describe('outcomes and Monte Carlo twin', () => {
     const exact = expectedPayouts(post, beliefs)
     const simulated = mcPayouts(post, beliefs, 200_000, 42)
     for (const id of Object.keys(exact.ev)) {
-      expect(Math.abs(exact.ev[id] - simulated.mean[id])).toBeLessThanOrEqual(4 * simulated.se[id] + 1)
+      expect(Math.abs(exact.ev[id] - simulated.mean[id])).toBeLessThanOrEqual(
+        4 * simulated.se[id] + 1,
+      )
     }
     expect(exact.party.founder).toBeCloseTo(exact.ev.common, 6)
     expect(exact.party.investor).toBeCloseTo(exact.ev['series-a'], 6)
@@ -39,7 +41,8 @@ describe('outcomes and Monte Carlo twin', () => {
 
   it('maps payout quantiles directly through the locked exit quantile', () => {
     for (const p of [0, beliefs.p0, 0.25, 0.5, 0.9]) {
-      const expected = p <= beliefs.p0 ? 0 : payoutsAt(post, mixtureQuantile(beliefs, p)).byClass['series-a']
+      const expected =
+        p <= beliefs.p0 ? 0 : payoutsAt(post, mixtureQuantile(beliefs, p)).byClass['series-a']
       expect(payoutQuantile(post, 'series-a', beliefs, p)).toBeCloseTo(expected, 10)
     }
     const values = [0.21, 0.4, 0.7, 0.95].map((p) => payoutQuantile(post, 'FOUNDER', beliefs, p))
@@ -54,7 +57,9 @@ describe('outcomes and Monte Carlo twin', () => {
         (left, right) => {
           const low = Math.min(left, right)
           const high = Math.max(left, right)
-          expect(payoutQuantile(post, 'FOUNDER', beliefs, high)).toBeGreaterThanOrEqual(payoutQuantile(post, 'FOUNDER', beliefs, low) - 1e-8)
+          expect(payoutQuantile(post, 'FOUNDER', beliefs, high)).toBeGreaterThanOrEqual(
+            payoutQuantile(post, 'FOUNDER', beliefs, low) - 1e-8,
+          )
         },
       ),
       { numRuns: 300 },

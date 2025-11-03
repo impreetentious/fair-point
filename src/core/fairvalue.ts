@@ -19,10 +19,7 @@ export type FairValueEstimate = {
   disclaimer: string
 }
 
-export function estimate409A(
-  preferredPps: number,
-  percentOfPreferred = 0.3,
-): FairValueEstimate {
+export function estimate409A(preferredPps: number, percentOfPreferred = 0.3): FairValueEstimate {
   if (!(preferredPps > 0) || !Number.isFinite(preferredPps)) {
     throw new RangeError('preferredPps must be a positive finite number')
   }
@@ -34,7 +31,6 @@ export function estimate409A(
     method: 'PERCENT_OF_PREFERRED_PPS',
     preferredPps,
     percentOfPreferred,
-    disclaimer:
-      'Educational estimate only — not a 409A appraisal, legal opinion, or tax advice.',
+    disclaimer: 'Educational estimate only — not a 409A appraisal, legal opinion, or tax advice.',
   }
 }

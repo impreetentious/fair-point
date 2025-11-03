@@ -6,7 +6,15 @@ derivation: |
   while index 4 ranks first as the balanced win; the dominating set is ordered by balanced
   gain, then joint gain, then index.
 input:
-  points: [ { index: 0, uF: 5, uI: 5 }, { index: 1, uF: 7, uI: 7 }, { index: 2, uF: 10, uI: 5 }, { index: 3, uF: 5, uI: 12 }, { index: 4, uF: 8, uI: 8 }, { index: 5, uF: 4.5, uI: 8 } ]
+  points:
+    [
+      { index: 0, uF: 5, uI: 5 },
+      { index: 1, uF: 7, uI: 7 },
+      { index: 2, uF: 10, uI: 5 },
+      { index: 3, uF: 5, uI: 12 },
+      { index: 4, uF: 8, uI: 8 },
+      { index: 5, uF: 4.5, uI: 8 },
+    ]
   disagreement: { dF: 0, dI: 0 }
   currentIndex: 0
 expect:

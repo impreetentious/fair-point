@@ -32,7 +32,13 @@ export function discoverFixtureFiles(root = resolve(process.cwd(), 'fixtures')):
 export function loadFixtures(root?: string): { path: string; fixture: Fixture }[] {
   return discoverFixtureFiles(root).map((path) => {
     const parsed = FixtureSchema.parse(load(readFileSync(path, 'utf8')))
-    if (parsed.id !== path.split('/').at(-1)?.replace(/\.ya?ml$/i, '')) {
+    if (
+      parsed.id !==
+      path
+        .split('/')
+        .at(-1)
+        ?.replace(/\.ya?ml$/i, '')
+    ) {
       throw new Error(`Fixture id '${parsed.id}' must match filename '${path.split('/').at(-1)}'.`)
     }
     return { path, fixture: parsed }
@@ -41,11 +47,14 @@ export function loadFixtures(root?: string): { path: string; fixture: Fixture }[
 
 export async function dispatchFixture(fixture: Fixture): Promise<void> {
   const handler = handlers.get(fixture.kind)
-  if (handler === undefined) throw new Error(`No fixture handler is registered for ${fixture.kind} (${fixture.id}).`)
+  if (handler === undefined)
+    throw new Error(`No fixture handler is registered for ${fixture.kind} (${fixture.id}).`)
   await handler(fixture)
 }
 
-export async function runFixtureHarness(root?: string): Promise<{ id: string; status: 'PASS' | 'DISPUTED' }[]> {
+export async function runFixtureHarness(
+  root?: string,
+): Promise<{ id: string; status: 'PASS' | 'DISPUTED' }[]> {
   const fixtures = loadFixtures(root)
   const results: { id: string; status: 'PASS' | 'DISPUTED' }[] = []
   for (const { fixture } of fixtures) {

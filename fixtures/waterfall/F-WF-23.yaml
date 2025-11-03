@@ -8,8 +8,17 @@ input:
   capTable:
     classes:
       - { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER }
-      - { id: a, name: A, kind: PREFERRED, shares: 1, holder: INVESTOR, invested: 50, prefMultiple: 1, participation: NONE }
-    grants: [ { id: g, options: 1, strike: 10, holder: OTHER } ]
+      - {
+          id: a,
+          name: A,
+          kind: PREFERRED,
+          shares: 1,
+          holder: INVESTOR,
+          invested: 50,
+          prefMultiple: 1,
+          participation: NONE,
+        }
+    grants: [{ id: g, options: 1, strike: 10, holder: OTHER }]
     poolAvailable: 0
   exitValue: 150
 expect:

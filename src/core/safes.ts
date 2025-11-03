@@ -33,10 +33,16 @@ function poolIncrease(baseCap: number, totalSafeShares: number, config: SafeSolv
   const r = (config.preMoney + config.investment) / config.preMoney
   const denominator = 1 - config.poolTargetPost * r
   if (denominator < 0.05 - 1e-12) throw new Error('V3: pool target is infeasible')
-  return Math.max(0, (config.poolTargetPost * r * (baseCap + totalSafeShares) - config.poolAvailable) / denominator)
+  return Math.max(
+    0,
+    (config.poolTargetPost * r * (baseCap + totalSafeShares) - config.poolAvailable) / denominator,
+  )
 }
 
-function solveFixedRoutes(config: SafeSolveConfig, routes: Record<string, SafeRoute>): Omit<SafeSolve, 'iterations'> {
+function solveFixedRoutes(
+  config: SafeSolveConfig,
+  routes: Record<string, SafeRoute>,
+): Omit<SafeSolve, 'iterations'> {
   const directPps = config.pricedPerShare
   let pps = directPps ?? config.preMoney! / config.baseCap
   let pool = 0
@@ -46,23 +52,36 @@ function solveFixedRoutes(config: SafeSolveConfig, routes: Record<string, SafeRo
     const postMoney = config.safes.filter((safe) => safe.kind === 'POST_MONEY')
     const provisional: Record<string, number> = {}
     for (const safe of preMoney) {
-      const capPrice = safe.valuationCap === undefined ? Infinity : safe.valuationCap / (config.baseCap + pool)
+      const capPrice =
+        safe.valuationCap === undefined ? Infinity : safe.valuationCap / (config.baseCap + pool)
       const discountPrice = safe.discount === undefined ? Infinity : (1 - safe.discount) * pps
       provisional[safe.id] = safe.amount / Math.min(capPrice, discountPrice)
     }
-    const capSafes = postMoney.filter((safe) => routes[safe.id] === 'CAP' && safe.valuationCap !== undefined)
-    const nonCapSafes = postMoney.filter((safe) => !capSafes.some((capSafe) => capSafe.id === safe.id))
+    const capSafes = postMoney.filter(
+      (safe) => routes[safe.id] === 'CAP' && safe.valuationCap !== undefined,
+    )
+    const nonCapSafes = postMoney.filter(
+      (safe) => !capSafes.some((capSafe) => capSafe.id === safe.id),
+    )
     for (const safe of nonCapSafes) {
-      provisional[safe.id] = routes[safe.id] === 'DISCOUNT' && safe.discount !== undefined ? safe.amount / ((1 - safe.discount) * pps) : safe.amount / pps
+      provisional[safe.id] =
+        routes[safe.id] === 'DISCOUNT' && safe.discount !== undefined
+          ? safe.amount / ((1 - safe.discount) * pps)
+          : safe.amount / pps
     }
     const totalOther = Object.values(provisional).reduce((sum, shares) => sum + shares, 0)
     const capFraction = capSafes.reduce((sum, safe) => sum + safe.amount / safe.valuationCap!, 0)
-    if (capFraction > 0.95 + 1e-12) throw new Error('V2: SAFE caps too low — conversion exceeds 95% of the company.')
-    for (const safe of capSafes) provisional[safe.id] = (safe.amount / safe.valuationCap!) * (config.baseCap + totalOther) / (1 - capFraction)
+    if (capFraction > 0.95 + 1e-12)
+      throw new Error('V2: SAFE caps too low — conversion exceeds 95% of the company.')
+    for (const safe of capSafes)
+      provisional[safe.id] =
+        ((safe.amount / safe.valuationCap!) * (config.baseCap + totalOther)) / (1 - capFraction)
     const total = Object.values(provisional).reduce((sum, shares) => sum + shares, 0)
     const nextPool = poolIncrease(config.baseCap, total, config)
     const nextPps = directPps ?? config.preMoney! / (config.baseCap + total + nextPool)
-    const stable = Math.abs(nextPps - pps) <= 1e-10 * Math.max(1, Math.abs(pps)) && Math.abs(nextPool - pool) <= 1e-8
+    const stable =
+      Math.abs(nextPps - pps) <= 1e-10 * Math.max(1, Math.abs(pps)) &&
+      Math.abs(nextPool - pool) <= 1e-8
     pps = nextPps
     pool = nextPool
     sharesBySafe = provisional
@@ -73,14 +92,24 @@ function solveFixedRoutes(config: SafeSolveConfig, routes: Record<string, SafeRo
         sharesBySafe,
         routeBySafe: routes,
         totalSafeShares: total,
-        warnings: pool === 0 && config.preMoney !== undefined && config.poolTargetPost > 0 && config.poolAvailable > 0 ? ['existing pool already exceeds target'] : [],
+        warnings:
+          pool === 0 &&
+          config.preMoney !== undefined &&
+          config.poolTargetPost > 0 &&
+          config.poolAvailable > 0
+            ? ['existing pool already exceeds target']
+            : [],
       }
     }
   }
   throw new Error('NonConvergence: SAFE, pool, and PPS solve did not converge')
 }
 
-function maxRoute(config: SafeSolveConfig, routes: Record<string, SafeRoute>, safe: Safe): SafeRoute {
+function maxRoute(
+  config: SafeSolveConfig,
+  routes: Record<string, SafeRoute>,
+  safe: Safe,
+): SafeRoute {
   // Pre-money SAFEs (and notes projected as such) use cap-vs-discount only — §6.2.0 / §6.2.1.
   if (safe.kind === 'PRE_MONEY') {
     if (safe.valuationCap !== undefined && safe.discount !== undefined) {
@@ -105,19 +134,30 @@ function maxRoute(config: SafeSolveConfig, routes: Record<string, SafeRoute>, sa
   })
   const maxShares = Math.max(...evaluated.map((candidate) => candidate.shares))
   const current = evaluated.find((candidate) => candidate.route === routes[safe.id])
-  if (current !== undefined && Math.abs(current.shares - maxShares) <= 1e-8 * Math.max(1, maxShares)) return current.route
-  return evaluated.find((candidate) => Math.abs(candidate.shares - maxShares) <= 1e-8 * Math.max(1, maxShares))!.route
+  if (
+    current !== undefined &&
+    Math.abs(current.shares - maxShares) <= 1e-8 * Math.max(1, maxShares)
+  )
+    return current.route
+  return evaluated.find(
+    (candidate) => Math.abs(candidate.shares - maxShares) <= 1e-8 * Math.max(1, maxShares),
+  )!.route
 }
 
 /** Joint SAFE route + pool + PPS solve used by round construction. */
 export function solveSafes(config: SafeSolveConfig): SafeSolve {
-  const routes = Object.fromEntries(config.safes.map((safe) => [safe.id, initialRoute(safe)])) as Record<string, SafeRoute>
+  const routes = Object.fromEntries(
+    config.safes.map((safe) => [safe.id, initialRoute(safe)]),
+  ) as Record<string, SafeRoute>
   // §6.2.3: each post-money SAFE can switch at most once toward a route with more
   // shares, so a stable route assignment must be found within #SAFEs + 1 passes.
   for (let iteration = 1; iteration <= config.safes.length + 1; iteration += 1) {
     const solved = solveFixedRoutes(config, routes)
-    const updated = Object.fromEntries(config.safes.map((safe) => [safe.id, maxRoute(config, routes, safe)])) as Record<string, SafeRoute>
-    if (config.safes.every((safe) => updated[safe.id] === routes[safe.id])) return { ...solved, iterations: iteration }
+    const updated = Object.fromEntries(
+      config.safes.map((safe) => [safe.id, maxRoute(config, routes, safe)]),
+    ) as Record<string, SafeRoute>
+    if (config.safes.every((safe) => updated[safe.id] === routes[safe.id]))
+      return { ...solved, iterations: iteration }
     for (const safe of config.safes) routes[safe.id] = updated[safe.id]
   }
   throw new Error('NonConvergence: SAFE route selection did not stabilize')

@@ -1,16 +1,26 @@
 export function dollars(value: number): string {
   if (!Number.isFinite(value)) return '—'
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)
 }
 
 export function dollarsPrecise(value: number, digits = 4): string {
   if (!Number.isFinite(value)) return '—'
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: digits }).format(value)
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: digits,
+  }).format(value)
 }
 
 export function percent(value: number): string {
   if (!Number.isFinite(value)) return '—'
-  return new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 }).format(value)
+  return new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 }).format(
+    value,
+  )
 }
 
 export function compactMillions(value: number): string {

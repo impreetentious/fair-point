@@ -8,13 +8,21 @@ derivation: |
   global solution's deterministic numeric snapshot.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER }]
     grants: []
     poolAvailable: 0
   safes:
     - { id: a, name: A, amount: 1000000, kind: POST_MONEY, valuationCap: 10000000, discount: 0.5 }
     - { id: b, name: B, amount: 843750, kind: POST_MONEY, valuationCap: 8437500, discount: 0.1 }
-  terms: { preMoney: 10000000, investment: 1000000, poolTargetPost: 0, prefMultiple: 1, participation: NONE, seniority: PARI }
+  terms:
+    {
+      preMoney: 10000000,
+      investment: 1000000,
+      poolTargetPost: 0,
+      prefMultiple: 1,
+      participation: NONE,
+      seniority: PARI,
+    }
 expect:
   pps: 0.7063
   safeShares: 4160000

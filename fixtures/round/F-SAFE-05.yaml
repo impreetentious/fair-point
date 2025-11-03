@@ -6,13 +6,21 @@ derivation: |
   .10*(10M+1M)/(1-.10)=1,222,222.2222 shares, exactly 10% of 12,222,222.2222.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER }]
     grants: []
     poolAvailable: 0
   safes:
     - { id: pre, name: Pre, amount: 1000000, kind: PRE_MONEY, valuationCap: 10000000 }
     - { id: post, name: Post, amount: 1000000, kind: POST_MONEY, valuationCap: 10000000 }
-  terms: { pricedPerShare: 1, investment: 1000000, poolTargetPost: 0, prefMultiple: 1, participation: NONE, seniority: PARI }
+  terms:
+    {
+      pricedPerShare: 1,
+      investment: 1000000,
+      poolTargetPost: 0,
+      prefMultiple: 1,
+      participation: NONE,
+      seniority: PARI,
+    }
 expect:
   pps: 1
   safeShares: 2222222.2222

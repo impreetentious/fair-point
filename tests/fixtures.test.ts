@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import './fixture-registry'
-import { discoverFixtureFiles, dispatchFixture, loadFixtures, runFixtureHarness } from './fixture-harness'
+import {
+  discoverFixtureFiles,
+  dispatchFixture,
+  loadFixtures,
+  runFixtureHarness,
+} from './fixture-harness'
 
 describe('fixture harness', () => {
   it('discovers, validates, dispatches, and reports every fixture', async () => {
@@ -11,7 +16,9 @@ describe('fixture harness', () => {
   })
 })
 
-for (const { fixture } of loadFixtures().filter((entry) => (entry.fixture as { disputed?: boolean }).disputed === true)) {
+for (const { fixture } of loadFixtures().filter(
+  (entry) => (entry.fixture as { disputed?: boolean }).disputed === true,
+)) {
   it.fails(`${fixture.id} remains an explicit owner-review fixture`, async () => {
     await dispatchFixture(fixture)
   })

@@ -7,7 +7,10 @@ import type { ConvertibleNote, Safe } from './schema'
  * Interest compounds annually when interestKind = COMPOUND; otherwise simple.
  */
 export function noteAccruedAmount(note: ConvertibleNote): number {
-  return note.principal + accruedInterest(note.principal, note.interestRate, note.accrualYears, note.interestKind)
+  return (
+    note.principal +
+    accruedInterest(note.principal, note.interestRate, note.accrualYears, note.interestKind)
+  )
 }
 
 /**

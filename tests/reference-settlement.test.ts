@@ -13,8 +13,10 @@ describe('independent reference settlement', () => {
       const post = CapTableSchema.parse(input.capTable)
       const actual = payoutsAt(post, input.exitValue)
       const reference = referencePayouts(post, input.exitValue)
-      for (const id of Object.keys(actual.byClass)) expect(actual.byClass[id]).toBeCloseTo(reference.byClass[id], 2)
-      for (const id of Object.keys(actual.byGrant)) expect(actual.byGrant[id]).toBeCloseTo(reference.byGrant[id], 2)
+      for (const id of Object.keys(actual.byClass))
+        expect(actual.byClass[id]).toBeCloseTo(reference.byClass[id], 2)
+      for (const id of Object.keys(actual.byGrant))
+        expect(actual.byGrant[id]).toBeCloseTo(reference.byGrant[id], 2)
     }
   })
 
@@ -28,16 +30,41 @@ describe('independent reference settlement', () => {
         (commonShares, aShares, bShares, exitValue) => {
           const post = CapTableSchema.parse({
             classes: [
-              { id: 'common', name: 'Common', kind: 'COMMON', shares: commonShares, holder: 'FOUNDER' },
-              { id: 'a', name: 'A', kind: 'PREFERRED', shares: aShares, holder: 'INVESTOR', invested: 100, prefMultiple: 1, participation: 'NONE' },
-              { id: 'b', name: 'B', kind: 'PREFERRED', shares: bShares, holder: 'OTHER', invested: 50, prefMultiple: 1, participation: 'NONE' },
+              {
+                id: 'common',
+                name: 'Common',
+                kind: 'COMMON',
+                shares: commonShares,
+                holder: 'FOUNDER',
+              },
+              {
+                id: 'a',
+                name: 'A',
+                kind: 'PREFERRED',
+                shares: aShares,
+                holder: 'INVESTOR',
+                invested: 100,
+                prefMultiple: 1,
+                participation: 'NONE',
+              },
+              {
+                id: 'b',
+                name: 'B',
+                kind: 'PREFERRED',
+                shares: bShares,
+                holder: 'OTHER',
+                invested: 50,
+                prefMultiple: 1,
+                participation: 'NONE',
+              },
             ],
             grants: [],
             poolAvailable: 0,
           })
           const actual = payoutsAt(post, exitValue)
           const reference = referencePayouts(post, exitValue)
-          for (const id of Object.keys(actual.byClass)) expect(actual.byClass[id]).toBeCloseTo(reference.byClass[id], 2)
+          for (const id of Object.keys(actual.byClass))
+            expect(actual.byClass[id]).toBeCloseTo(reference.byClass[id], 2)
         },
       ),
       { numRuns: 500 },

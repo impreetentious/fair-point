@@ -5,7 +5,7 @@ derivation: |
   PoolAvailable is fully diluted for pricing but receives $0 at exit; common gets all $1M.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 100, holder: FOUNDER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 100, holder: FOUNDER }]
     grants: []
     poolAvailable: 900
   exitValue: 1000000

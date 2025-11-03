@@ -12,7 +12,14 @@ input:
   baseCap: 10000000
   roundPps: 0.8
   safes:
-    - { id: mixed-guide, name: Cap and discount guide SAFE, amount: 1000000, kind: POST_MONEY, valuationCap: 20000000, discount: 0.25 }
+    - {
+        id: mixed-guide,
+        name: Cap and discount guide SAFE,
+        amount: 1000000,
+        kind: POST_MONEY,
+        valuationCap: 20000000,
+        discount: 0.25,
+      }
 expect:
   sharesBySafe: { mixed-guide: 1666666.6667 }
   routeBySafe: { mixed-guide: DISCOUNT }

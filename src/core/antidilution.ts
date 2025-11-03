@@ -15,6 +15,7 @@ export function adjustedConversionRatio(
   const nextPrice =
     cls.antiDilution === 'FULL_RATCHET'
       ? pps
-      : frozenConversionPrice * (broadBase + investment / frozenConversionPrice) / (broadBase + investment / pps)
+      : (frozenConversionPrice * (broadBase + investment / frozenConversionPrice)) /
+        (broadBase + investment / pps)
   return cls.originalIssuePrice / nextPrice
 }

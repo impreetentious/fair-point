@@ -15,23 +15,36 @@ import type {
 
 function asConvertedShares(table: CapTable): number {
   return (
-    table.classes.reduce((sum, cls) => sum + (cls.kind === 'PREFERRED' ? cls.shares * cls.conversionRatio : cls.shares), 0) +
+    table.classes.reduce(
+      (sum, cls) =>
+        sum + (cls.kind === 'PREFERRED' ? cls.shares * cls.conversionRatio : cls.shares),
+      0,
+    ) +
     table.grants.reduce((sum, grant) => sum + grant.options, 0) +
     table.poolAvailable +
     table.promisedOptions
   )
 }
 
-function participationFields(terms: RoundTerms): Pick<ShareClassPreferred, 'participation' | 'participationCapMultiple'> {
-  if (terms.participation === 'FULL') return { participation: 'FULL', participationCapMultiple: undefined }
-  if (terms.participation === 'CAP2') return { participation: 'CAPPED', participationCapMultiple: 2 }
-  if (terms.participation === 'CAP3') return { participation: 'CAPPED', participationCapMultiple: 3 }
+function participationFields(
+  terms: RoundTerms,
+): Pick<ShareClassPreferred, 'participation' | 'participationCapMultiple'> {
+  if (terms.participation === 'FULL')
+    return { participation: 'FULL', participationCapMultiple: undefined }
+  if (terms.participation === 'CAP2')
+    return { participation: 'CAPPED', participationCapMultiple: 2 }
+  if (terms.participation === 'CAP3')
+    return { participation: 'CAPPED', participationCapMultiple: 3 }
   return { participation: 'NONE', participationCapMultiple: undefined }
 }
 
 function preRoundBroadBase(pre: CapTable, totalSafeShares: number): number {
   return (
-    pre.classes.reduce((sum, cls) => sum + (cls.kind === 'PREFERRED' ? cls.shares * cls.conversionRatio : cls.shares), 0) +
+    pre.classes.reduce(
+      (sum, cls) =>
+        sum + (cls.kind === 'PREFERRED' ? cls.shares * cls.conversionRatio : cls.shares),
+      0,
+    ) +
     pre.grants.reduce((sum, grant) => sum + grant.options, 0) +
     totalSafeShares
   )
@@ -66,7 +79,12 @@ function applyPayToPlay(classes: ShareClass[], terms: RoundTerms): ShareClass[] 
   return result
 }
 
-function safeShadowClass(safe: Safe, shares: number, terms: RoundTerms, tier: number): ShareClassPreferred {
+function safeShadowClass(
+  safe: Safe,
+  shares: number,
+  terms: RoundTerms,
+  tier: number,
+): ShareClassPreferred {
   return {
     id: `safe-${safe.id}`,
     name: `SAFE: ${safe.name}`,
@@ -99,9 +117,12 @@ function buildPost(
   routeBySafe: Record<string, SafeRoute>,
 ): { post: CapTable; investorShares: number } {
   const preferred = current.filter((cls): cls is ShareClassPreferred => cls.kind === 'PREFERRED')
-  const tier = terms.seniority === 'SENIOR' ? 1 : Math.max(1, ...preferred.map((cls) => cls.seniorityTier), 1)
+  const tier =
+    terms.seniority === 'SENIOR' ? 1 : Math.max(1, ...preferred.map((cls) => cls.seniorityTier), 1)
   const existing = current.map((cls) =>
-    cls.kind === 'PREFERRED' && terms.seniority === 'SENIOR' ? { ...cls, seniorityTier: cls.seniorityTier + 1 } : cls,
+    cls.kind === 'PREFERRED' && terms.seniority === 'SENIOR'
+      ? { ...cls, seniorityTier: cls.seniorityTier + 1 }
+      : cls,
   )
   const shadowClasses = safes
     .filter((safe) => routeBySafe[safe.id] !== 'ROUND_PRICE')
@@ -179,7 +200,11 @@ export function constructRound(
       if (cls.kind !== 'PREFERRED' || cls.antiDilution === 'NONE') return cls
       const frozen = frozenConversionPrices.get(cls.id)!
       const ratio = adjustedConversionRatio(cls, solve.pps, terms.investment, broadBase, frozen)
-      if (Math.abs(ratio - cls.conversionRatio) <= 1e-9 * Math.max(1, Math.abs(cls.conversionRatio))) return cls
+      if (
+        Math.abs(ratio - cls.conversionRatio) <=
+        1e-9 * Math.max(1, Math.abs(cls.conversionRatio))
+      )
+        return cls
       changed = true
       return { ...cls, conversionRatio: ratio }
     })

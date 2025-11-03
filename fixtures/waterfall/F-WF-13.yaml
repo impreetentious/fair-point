@@ -6,7 +6,7 @@ derivation: |
   ITM at the resulting PPS, so its net payout is zero.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 1, holder: FOUNDER }]
     grants:
       - { id: low, options: 1, strike: 0, holder: FOUNDER }
       - { id: high, options: 1, strike: 90, holder: OTHER }

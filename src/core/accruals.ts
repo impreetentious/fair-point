@@ -1,7 +1,12 @@
 import type { CapTable, ShareClass, ShareClassPreferred } from './schema'
 
 /** Simple interest: principal × rate × years. Compound (annual): principal × ((1+rate)^years − 1). */
-export function accruedInterest(principal: number, rate: number, years: number, kind: 'SIMPLE' | 'COMPOUND'): number {
+export function accruedInterest(
+  principal: number,
+  rate: number,
+  years: number,
+  kind: 'SIMPLE' | 'COMPOUND',
+): number {
   if (years <= 0 || rate <= 0) return 0
   if (kind === 'SIMPLE') return principal * rate * years
   return principal * (Math.pow(1 + rate, years) - 1)

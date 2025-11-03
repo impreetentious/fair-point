@@ -5,11 +5,19 @@ derivation: |
   The existing 2M pool already exceeds the 10% post-round target, so V4 clamps P to 0.
 input:
   capTable:
-    classes: [ { id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER } ]
+    classes: [{ id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER }]
     grants: []
     poolAvailable: 2000000
   safes: []
-  terms: { preMoney: 10000000, investment: 1000000, poolTargetPost: 0.1, prefMultiple: 1, participation: NONE, seniority: PARI }
+  terms:
+    {
+      preMoney: 10000000,
+      investment: 1000000,
+      poolTargetPost: 0.1,
+      prefMultiple: 1,
+      participation: NONE,
+      seniority: PARI,
+    }
 expect:
   pps: 0.8333333333
   poolIncrease: 0

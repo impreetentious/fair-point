@@ -14,8 +14,20 @@ input:
   baseCap: 9550000
   roundPps: 1
   safes:
-    - { id: pre-guide, name: Pre-money guide SAFE, amount: 200000, kind: PRE_MONEY, valuationCap: 3800000 }
-    - { id: low-price, name: Low price SAFE, amount: 1116959, kind: POST_MONEY, valuationCap: 200000000 }
+    - {
+        id: pre-guide,
+        name: Pre-money guide SAFE,
+        amount: 200000,
+        kind: PRE_MONEY,
+        valuationCap: 3800000,
+      }
+    - {
+        id: low-price,
+        name: Low price SAFE,
+        amount: 1116959,
+        kind: POST_MONEY,
+        valuationCap: 200000000,
+      }
 expect:
   sharesBySafe: { pre-guide: 502631.5789, low-price: 1116959 }
   routeBySafe: { low-price: ROUND_PRICE }

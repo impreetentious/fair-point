@@ -8,7 +8,14 @@ function point(index: number, uF: number, uI: number): DealPoint {
   return {
     pkg: {
       index,
-      terms: { preMoney: 1, investment: 1, poolTargetPost: 0, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' },
+      terms: {
+        preMoney: 1,
+        investment: 1,
+        poolTargetPost: 0,
+        prefMultiple: 1,
+        participation: 'NONE',
+        seniority: 'PARI',
+      },
     },
     uF,
     uI,
@@ -23,7 +30,14 @@ function multiPoint(index: number, utilities: Record<string, number>): MultiPart
   return {
     pkg: {
       index,
-      terms: { preMoney: 1, investment: 1, poolTargetPost: 0, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' },
+      terms: {
+        preMoney: 1,
+        investment: 1,
+        poolTargetPost: 0,
+        prefMultiple: 1,
+        participation: 'NONE',
+        seniority: 'PARI',
+      },
     },
     utilities,
     metric: 'EV',
@@ -32,12 +46,19 @@ function multiPoint(index: number, utilities: Record<string, number>): MultiPart
 }
 
 const pointSets = fc
-  .array(fc.tuple(fc.integer({ min: 0, max: 500 }), fc.integer({ min: 0, max: 500 })), { minLength: 2, maxLength: 16 })
+  .array(fc.tuple(fc.integer({ min: 0, max: 500 }), fc.integer({ min: 0, max: 500 })), {
+    minLength: 2,
+    maxLength: 16,
+  })
   .map((pairs) => pairs.map(([uF, uI], index) => point(index, uF, uI)))
 
 const multiPointSets = fc
   .array(
-    fc.tuple(fc.integer({ min: 0, max: 500 }), fc.integer({ min: 0, max: 500 }), fc.integer({ min: 0, max: 500 })),
+    fc.tuple(
+      fc.integer({ min: 0, max: 500 }),
+      fc.integer({ min: 0, max: 500 }),
+      fc.integer({ min: 0, max: 500 }),
+    ),
     { minLength: 2, maxLength: 16 },
   )
   .map((triples) => triples.map(([a, b, c], index) => multiPoint(index, { A: a, B: b, C: c })))
@@ -50,9 +71,23 @@ function seriesADeal() {
   return DealFileSchema.parse({
     schemaVersion: '1.0.0',
     name: 'Series A clean',
-    pre: { classes: [{ id: 'common', name: 'Common', kind: 'COMMON', shares: 8_000_000, holder: 'FOUNDER' }], grants: [], poolAvailable: 0, promisedOptions: 0 },
+    pre: {
+      classes: [
+        { id: 'common', name: 'Common', kind: 'COMMON', shares: 8_000_000, holder: 'FOUNDER' },
+      ],
+      grants: [],
+      poolAvailable: 0,
+      promisedOptions: 0,
+    },
     safes: [],
-    terms: { preMoney: 20_000_000, investment: 5_000_000, poolTargetPost: 0.15, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' },
+    terms: {
+      preMoney: 20_000_000,
+      investment: 5_000_000,
+      poolTargetPost: 0.15,
+      prefMultiple: 1,
+      participation: 'NONE',
+      seniority: 'PARI',
+    },
     founderBeliefs: { p0: 0.35, p50: 80_000_000, p90: 600_000_000 },
     investorBeliefs: { p0: 0.35, p50: 80_000_000, p90: 600_000_000 },
     sharedBeliefs: true,
@@ -84,7 +119,14 @@ describe('bargaining engine', () => {
     const deal = seriesADeal()
     const pkg = enumerateDeals(deal.space)[0]
     const ev = evaluatePackage(deal.pre, deal.safes, pkg, deal.founderBeliefs, deal.investorBeliefs)
-    const ce = evaluatePackage(deal.pre, deal.safes, pkg, deal.founderBeliefs, deal.investorBeliefs, { gamma: 0.5, w0F: 250_000, w0I: 250_000 })
+    const ce = evaluatePackage(
+      deal.pre,
+      deal.safes,
+      pkg,
+      deal.founderBeliefs,
+      deal.investorBeliefs,
+      { gamma: 0.5, w0F: 250_000, w0I: 250_000 },
+    )
     expect(ev.metric).toBe('EV')
     expect(ce.metric).toBe('CE')
     expect(ev.uF).toBeGreaterThan(0)
@@ -102,7 +144,13 @@ describe('bargaining engine', () => {
         fc.integer({ min: -100, max: 100 }),
         (points, scaleF, scaleI, offsetF, offsetI) => {
           const original = analyze(points, disagreement)
-          const transformed = points.map((candidate) => point(candidate.pkg.index, candidate.uF * scaleF + offsetF, candidate.uI * scaleI + offsetI))
+          const transformed = points.map((candidate) =>
+            point(
+              candidate.pkg.index,
+              candidate.uF * scaleF + offsetF,
+              candidate.uI * scaleI + offsetI,
+            ),
+          )
           const transformedResult = analyze(transformed, { dF: offsetF, dI: offsetI })
           expect(transformedResult.nash).toBe(original.nash)
           expect(transformedResult.ks).toBe(original.ks)
@@ -114,12 +162,19 @@ describe('bargaining engine', () => {
 
   it('satisfies Nash discrete IIA over 200 randomized point deletions', () => {
     fc.assert(
-      fc.property(pointSets, fc.array(fc.boolean(), { minLength: 1, maxLength: 16 }), (points, keepFlags) => {
-        const original = analyze(points, disagreement)
-        if (original.nash === null) return
-        const reduced = points.filter((candidate, index) => candidate.pkg.index === original.nash || keepFlags[index % keepFlags.length])
-        expect(analyze(reduced, disagreement).nash).toBe(original.nash)
-      }),
+      fc.property(
+        pointSets,
+        fc.array(fc.boolean(), { minLength: 1, maxLength: 16 }),
+        (points, keepFlags) => {
+          const original = analyze(points, disagreement)
+          if (original.nash === null) return
+          const reduced = points.filter(
+            (candidate, index) =>
+              candidate.pkg.index === original.nash || keepFlags[index % keepFlags.length],
+          )
+          expect(analyze(reduced, disagreement).nash).toBe(original.nash)
+        },
+      ),
       { numRuns: 200 },
     )
   })
@@ -128,7 +183,10 @@ describe('bargaining engine', () => {
     fc.assert(
       fc.property(pointSets, (points) => {
         const result = analyze(points, disagreement)
-        const mirrored = analyze(points.map((candidate) => point(candidate.pkg.index, candidate.uI, candidate.uF)), disagreement)
+        const mirrored = analyze(
+          points.map((candidate) => point(candidate.pkg.index, candidate.uI, candidate.uF)),
+          disagreement,
+        )
         for (const selection of [result.nash, result.ks, result.egalitarian, result.utilitarian]) {
           expect(selection).not.toBeNull()
           expect(result.frontier).toContain(selection)
@@ -141,8 +199,19 @@ describe('bargaining engine', () => {
   })
 
   it('returns the exact single-package value-on-table result', () => {
-    const points = [point(0, 5, 5), point(1, 7, 7), point(2, 10, 5), point(3, 5, 12), point(4, 8, 8)]
-    expect(valueOnTable(analyze(points, disagreement), points[0])).toEqual({ headline: 7, gainF: 5, gainI: 7, dominating: [4, 1, 3] })
+    const points = [
+      point(0, 5, 5),
+      point(1, 7, 7),
+      point(2, 10, 5),
+      point(3, 5, 12),
+      point(4, 8, 8),
+    ]
+    expect(valueOnTable(analyze(points, disagreement), points[0])).toEqual({
+      headline: 7,
+      gainF: 5,
+      gainI: 7,
+      dominating: [4, 1, 3],
+    })
   })
 })
 
@@ -166,7 +235,9 @@ describe('n-party bargaining (§6.19 defining axioms)', () => {
               C: candidate.utilities.C * scaleC + offsetC,
             }),
           )
-          const transformedResult = analyzeN(transformed, { A: offsetA, B: offsetB, C: offsetC }, [...parties])
+          const transformedResult = analyzeN(transformed, { A: offsetA, B: offsetB, C: offsetC }, [
+            ...parties,
+          ])
           expect(transformedResult.nash).toBe(original.nash)
           expect(transformedResult.ks).toBe(original.ks)
         },
@@ -177,12 +248,19 @@ describe('n-party bargaining (§6.19 defining axioms)', () => {
 
   it('satisfies n-party Nash discrete IIA over 200 randomized point deletions', () => {
     fc.assert(
-      fc.property(multiPointSets, fc.array(fc.boolean(), { minLength: 1, maxLength: 16 }), (points, keepFlags) => {
-        const original = analyzeN(points, multiDisagreement, [...parties])
-        if (original.nash === null) return
-        const reduced = points.filter((candidate, index) => candidate.pkg.index === original.nash || keepFlags[index % keepFlags.length])
-        expect(analyzeN(reduced, multiDisagreement, [...parties]).nash).toBe(original.nash)
-      }),
+      fc.property(
+        multiPointSets,
+        fc.array(fc.boolean(), { minLength: 1, maxLength: 16 }),
+        (points, keepFlags) => {
+          const original = analyzeN(points, multiDisagreement, [...parties])
+          if (original.nash === null) return
+          const reduced = points.filter(
+            (candidate, index) =>
+              candidate.pkg.index === original.nash || keepFlags[index % keepFlags.length],
+          )
+          expect(analyzeN(reduced, multiDisagreement, [...parties]).nash).toBe(original.nash)
+        },
+      ),
       { numRuns: 200 },
     )
   })

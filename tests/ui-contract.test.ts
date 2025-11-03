@@ -30,7 +30,13 @@ describe('UI contract support', () => {
     expect(derived.preMoneyRange).toEqual([10_000_000, 40_000_000])
     expect(derived.preMoneySteps).toBe(9)
     expect(derived.pinnedInvestment).toBe(5_000_000)
-    const pinned = deriveDealSpace(deal.terms, derived, { preMoney: true, pools: true, multiples: false, participations: false, seniority: false })
+    const pinned = deriveDealSpace(deal.terms, derived, {
+      preMoney: true,
+      pools: true,
+      multiples: false,
+      participations: false,
+      seniority: false,
+    })
     expect(pinned.preMoneyRange).toEqual([20_000_000, 20_000_000])
     expect(pinned.preMoneySteps).toBe(1)
     expect(pinned.pools).toEqual([0.15])

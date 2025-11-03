@@ -7,8 +7,20 @@ import { convertSafes, solveSafes } from '../src/core/safes'
 describe('SAFE conversion and round construction', () => {
   it('uses the simultaneous post-money cap closed form', () => {
     const safes = [
-      SafeSchema.parse({ id: 'one', name: 'One', amount: 500_000, kind: 'POST_MONEY', valuationCap: 5_000_000 }),
-      SafeSchema.parse({ id: 'two', name: 'Two', amount: 250_000, kind: 'POST_MONEY', valuationCap: 10_000_000 }),
+      SafeSchema.parse({
+        id: 'one',
+        name: 'One',
+        amount: 500_000,
+        kind: 'POST_MONEY',
+        valuationCap: 5_000_000,
+      }),
+      SafeSchema.parse({
+        id: 'two',
+        name: 'Two',
+        amount: 250_000,
+        kind: 'POST_MONEY',
+        valuationCap: 10_000_000,
+      }),
     ]
     const result = convertSafes(10_000_000, safes, 1)
     expect(result.sharesBySafe.one).toBeCloseTo(1_142_857.1429, 4)
@@ -17,11 +29,20 @@ describe('SAFE conversion and round construction', () => {
 
   it('reproduces the locked pool shuffle PPS', () => {
     const pre = CapTableSchema.parse({
-      classes: [{ id: 'common', name: 'Common', kind: 'COMMON', shares: 8_500_000, holder: 'FOUNDER' }],
+      classes: [
+        { id: 'common', name: 'Common', kind: 'COMMON', shares: 8_500_000, holder: 'FOUNDER' },
+      ],
       grants: [{ id: 'options', options: 500_000, strike: 0, holder: 'FOUNDER' }],
       poolAvailable: 0,
     })
-    const terms = RoundTermsSchema.parse({ preMoney: 8_000_000, investment: 2_000_000, poolTargetPost: 0.1, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' })
+    const terms = RoundTermsSchema.parse({
+      preMoney: 8_000_000,
+      investment: 2_000_000,
+      poolTargetPost: 0.1,
+      prefMultiple: 1,
+      participation: 'NONE',
+      seniority: 'PARI',
+    })
     const result = constructRound(pre, [], terms)
     expect(result.diagnostics.pps).toBeCloseTo(7 / 9, 9)
     expect(result.diagnostics.investorPct).toBeCloseTo(0.2, 9)
@@ -29,8 +50,22 @@ describe('SAFE conversion and round construction', () => {
 
   it('bounds SAFE route switching at #SAFEs + 1 passes', () => {
     const safes = [
-      SafeSchema.parse({ id: 'a', name: 'A', amount: 1_000_000, kind: 'POST_MONEY', valuationCap: 10_000_000, discount: 0.5 }),
-      SafeSchema.parse({ id: 'b', name: 'B', amount: 500_000, kind: 'POST_MONEY', valuationCap: 20_000_000, discount: 0.2 }),
+      SafeSchema.parse({
+        id: 'a',
+        name: 'A',
+        amount: 1_000_000,
+        kind: 'POST_MONEY',
+        valuationCap: 10_000_000,
+        discount: 0.5,
+      }),
+      SafeSchema.parse({
+        id: 'b',
+        name: 'B',
+        amount: 500_000,
+        kind: 'POST_MONEY',
+        valuationCap: 20_000_000,
+        discount: 0.2,
+      }),
     ]
     const solved = solveSafes({
       baseCap: 10_000_000,
@@ -52,18 +87,43 @@ describe('SAFE conversion and round construction', () => {
         (commonShares, investment, poolTargetPost) => {
           const preMoney = commonShares
           const pre = CapTableSchema.parse({
-            classes: [{ id: 'common', name: 'Common', kind: 'COMMON', shares: commonShares, holder: 'FOUNDER' }],
+            classes: [
+              {
+                id: 'common',
+                name: 'Common',
+                kind: 'COMMON',
+                shares: commonShares,
+                holder: 'FOUNDER',
+              },
+            ],
             grants: [],
             poolAvailable: 0,
           })
-          const terms = RoundTermsSchema.parse({ preMoney, investment, poolTargetPost, prefMultiple: 1, participation: 'NONE', seniority: 'PARI' })
+          const terms = RoundTermsSchema.parse({
+            preMoney,
+            investment,
+            poolTargetPost,
+            prefMultiple: 1,
+            participation: 'NONE',
+            seniority: 'PARI',
+          })
           const round = constructRound(pre, [], terms)
           expect(round.diagnostics.investorPct).toBeCloseTo(investment / (preMoney + investment), 9)
 
-          const safes = [SafeSchema.parse({ id: 'cap', name: 'Cap', amount: 100_000, kind: 'POST_MONEY', valuationCap: 2_000_000 })]
+          const safes = [
+            SafeSchema.parse({
+              id: 'cap',
+              name: 'Cap',
+              amount: 100_000,
+              kind: 'POST_MONEY',
+              valuationCap: 2_000_000,
+            }),
+          ]
           const converted = convertSafes(commonShares, safes, 10)
           const f = 100_000 / 2_000_000
-          expect(converted.sharesBySafe.cap / (commonShares + converted.totalSafeShares)).toBeCloseTo(f, 12)
+          expect(
+            converted.sharesBySafe.cap / (commonShares + converted.totalSafeShares),
+          ).toBeCloseTo(f, 12)
         },
       ),
       { numRuns: 300 },

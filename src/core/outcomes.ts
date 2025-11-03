@@ -32,7 +32,11 @@ function expectedFromRegimes(allRegimes: Regime[], ids: string[], beliefs: Belie
       }),
       { m: 0, c: 0 },
     )
-    return sum + coefficient.m * partialExpectation(mu, sigma, regime.from, regime.to) + coefficient.c * intervalProb(mu, sigma, regime.from, regime.to)
+    return (
+      sum +
+      coefficient.m * partialExpectation(mu, sigma, regime.from, regime.to) +
+      coefficient.c * intervalProb(mu, sigma, regime.from, regime.to)
+    )
   }, 0)
   return (1 - beliefs.p0) * conditional
 }
@@ -41,7 +45,9 @@ function expectedFromRegimes(allRegimes: Regime[], ids: string[], beliefs: Belie
 export function expectedPayouts(post: CapTable, beliefs: Beliefs): HolderStats {
   const allRegimes = regimes(post)
   const entries = [...post.classes.map((cls) => cls.id), ...post.grants.map((grant) => grant.id)]
-  const ev = Object.fromEntries(entries.map((id) => [id, expectedFromRegimes(allRegimes, [id], beliefs)]))
+  const ev = Object.fromEntries(
+    entries.map((id) => [id, expectedFromRegimes(allRegimes, [id], beliefs)]),
+  )
   return {
     ev,
     party: {
@@ -53,7 +59,12 @@ export function expectedPayouts(post: CapTable, beliefs: Beliefs): HolderStats {
 }
 
 /** The payout quantile follows the exit quantile because all holder payouts are comonotonic. */
-export function payoutQuantile(post: CapTable, holderId: string, beliefs: Beliefs, p: number): number {
+export function payoutQuantile(
+  post: CapTable,
+  holderId: string,
+  beliefs: Beliefs,
+  p: number,
+): number {
   if (!(p >= 0 && p < 1)) throw new RangeError('payoutQuantile requires p in [0, 1)')
   if (p <= beliefs.p0) return 0
   return valueAt(payoutsAt(post, mixtureQuantile(beliefs, p)), idsForHolder(post, holderId))
@@ -69,7 +80,10 @@ export function regimeCoefficients(post: CapTable, holderId: string): Regime[] {
     ...regime,
     coeffs: {
       [holderId]: ids.reduce(
-        (sum, id) => ({ m: sum.m + (regime.coeffs[id]?.m ?? 0), c: sum.c + (regime.coeffs[id]?.c ?? 0) }),
+        (sum, id) => ({
+          m: sum.m + (regime.coeffs[id]?.m ?? 0),
+          c: sum.c + (regime.coeffs[id]?.c ?? 0),
+        }),
         { m: 0, c: 0 },
       ),
     },

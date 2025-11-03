@@ -39,7 +39,9 @@ export function screenReadiness(deal: DealFile): Record<ScreenId, Readiness> {
   if (post !== null) {
     try {
       const allRegimes = regimes(post.post)
-      const hasWarnings = post.warnings.length > 0 || allRegimes.some((regime) => regime.event.includes('unclassified'))
+      const hasWarnings =
+        post.warnings.length > 0 ||
+        allRegimes.some((regime) => regime.event.includes('unclassified'))
       waterfall = hasWarnings
         ? amber('Waterfall ready with warnings: one or more breakpoints are unclassified.')
         : green('Waterfall ready: regimes computed without warnings.')
@@ -50,7 +52,10 @@ export function screenReadiness(deal: DealFile): Record<ScreenId, Readiness> {
 
   let beliefs = green('Beliefs ready: both profiles fit cleanly.')
   try {
-    const warnings = [...fitLognormal(deal.founderBeliefs).warnings, ...fitLognormal(deal.investorBeliefs).warnings]
+    const warnings = [
+      ...fitLognormal(deal.founderBeliefs).warnings,
+      ...fitLognormal(deal.investorBeliefs).warnings,
+    ]
     if (warnings.length > 0) beliefs = amber(`Beliefs fit with warning: ${warnings[0]}`)
   } catch (error) {
     beliefs = red(error instanceof Error ? error.message : 'Belief profiles failed to fit.')
@@ -59,7 +64,16 @@ export function screenReadiness(deal: DealFile): Record<ScreenId, Readiness> {
   let frontier = red('Frontier analysis has not completed.')
   try {
     const points = enumerateDeals(deal.space).map((pkg) =>
-      evaluatePackage(deal.pre, deal.safes, pkg, deal.founderBeliefs, deal.investorBeliefs, deal.risk, deal.notes, deal.discounting),
+      evaluatePackage(
+        deal.pre,
+        deal.safes,
+        pkg,
+        deal.founderBeliefs,
+        deal.investorBeliefs,
+        deal.risk,
+        deal.notes,
+        deal.discounting,
+      ),
     )
     analyze(points, deal.disagreement)
     frontier = green('Frontier ready: ZOPA state is known.')

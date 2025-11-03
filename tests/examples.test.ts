@@ -14,7 +14,16 @@ describe('shipped example decks', () => {
       expect(allRegimes.length).toBeGreaterThan(0)
       expect(() => payoutsAt(round.post, 0)).not.toThrow()
       const packages = enumerateDeals(deal.space)
-      const points = packages.map((pkg) => evaluatePackage(deal.pre, deal.safes, pkg, deal.founderBeliefs, deal.investorBeliefs, deal.risk))
+      const points = packages.map((pkg) =>
+        evaluatePackage(
+          deal.pre,
+          deal.safes,
+          pkg,
+          deal.founderBeliefs,
+          deal.investorBeliefs,
+          deal.risk,
+        ),
+      )
       const result = analyze(points, deal.disagreement)
       expect(points).toHaveLength(585)
       expect(result.points).toHaveLength(585)

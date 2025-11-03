@@ -13,7 +13,9 @@ async function waitForServiceWorker(page: Page): Promise<void> {
   await page.waitForFunction(async () => {
     if (!('serviceWorker' in navigator)) return false
     const registration = await navigator.serviceWorker.getRegistration('./')
-    return registration?.active?.state === 'activated' || navigator.serviceWorker.controller !== null
+    return (
+      registration?.active?.state === 'activated' || navigator.serviceWorker.controller !== null
+    )
   })
   // Give the install handler time to finish precaching before we cut the network.
   await page.waitForTimeout(750)
@@ -21,13 +23,19 @@ async function waitForServiceWorker(page: Page): Promise<void> {
 
 async function assertAllScreens(page: Page): Promise<void> {
   for (const screen of SCREENS) {
-    await page.getByRole('navigation', { name: 'Workspace screens' }).getByRole('button', { name: screen.label }).click()
+    await page
+      .getByRole('navigation', { name: 'Workspace screens' })
+      .getByRole('button', { name: screen.label })
+      .click()
     await expect(page.getByRole('heading', { level: 2, name: screen.heading })).toBeVisible()
   }
 }
 
 test.describe('Phase 9 offline contract', () => {
-  test('service worker keeps all six screens alive with zero post-reload network hits', async ({ page, context }) => {
+  test('service worker keeps all six screens alive with zero post-reload network hits', async ({
+    page,
+    context,
+  }) => {
     await page.goto('./')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await waitForServiceWorker(page)
