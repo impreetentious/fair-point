@@ -134,7 +134,7 @@ export function WaterfallScreen() {
                         <XAxis dataKey="exit" tickFormatter={dollars} />
                         <YAxis tickFormatter={dollars} />
                         <Tooltip
-                          formatter={(value: number) => dollars(value)}
+                          formatter={(value) => dollars(Number(value))}
                           labelFormatter={(value) => dollars(Number(value))}
                         />
                         <Legend />

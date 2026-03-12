@@ -199,7 +199,7 @@ export function ReportScreen() {
                 <CartesianGrid />
                 <XAxis type="number" dataKey="uF" domain={[0, maxF]} hide />
                 <YAxis type="number" dataKey="uI" domain={[0, maxI]} hide />
-                <Tooltip formatter={(value: number) => dollars(value)} />
+                <Tooltip formatter={(value) => dollars(Number(value))} />
                 <ReferenceArea
                   x1={deal.disagreement.dF}
                   x2={maxF}

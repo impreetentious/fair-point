@@ -156,8 +156,8 @@ function BeliefCard({ party }: { party: 'founder' | 'investor' }) {
                   <YAxis yAxisId="left" tickFormatter={(value) => percent(Number(value))} />
                   <YAxis yAxisId="right" orientation="right" hide />
                   <Tooltip
-                    formatter={(value: number, name) =>
-                      name === 'density' ? value.toExponential(2) : percent(value)
+                    formatter={(value, name) =>
+                      name === 'density' ? Number(value).toExponential(2) : percent(Number(value))
                     }
                     labelFormatter={(value) => dollars(Number(value))}
                   />
