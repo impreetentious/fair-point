@@ -3,6 +3,7 @@ import { expectedPayouts } from './outcomes'
 import { constructRound } from './round'
 import { presentValue } from './discounting'
 import {
+  poolFeasible,
   RoundTermsSchema,
   type BargainResult,
   type Beliefs,
@@ -25,6 +26,9 @@ function linspace([lower, upper]: DealSpace['preMoneyRange'], steps: number): nu
   )
 }
 
+export type DealSkip = { index: number; reason: 'V1' | 'V3' }
+export type EnumeratedDeals = { packages: TermPackage[]; skipped: DealSkip[] }
+
 function validPair(
   multiple: RoundTerms['prefMultiple'],
   participation: RoundTerms['participation'],
@@ -35,9 +39,13 @@ function validPair(
   )
 }
 
-/** Enumerate the locked row-major 720-cell grid, retaining raw indices across invalid holes. */
-export function enumerateDeals(space: DealSpace): TermPackage[] {
+/**
+ * Enumerate the locked row-major grid, retaining raw indices and invalid-cell reasons.
+ * V1-invalid preference pairs and V3-infeasible pool cells are omitted before round construction.
+ */
+export function enumerateDealsWithReasons(space: DealSpace): EnumeratedDeals {
   const packages: TermPackage[] = []
+  const skipped: DealSkip[] = []
   let index = 0
   for (const preMoney of linspace(space.preMoneyRange, space.preMoneySteps)) {
     for (const poolTargetPost of space.pools) {
@@ -53,14 +61,28 @@ export function enumerateDeals(space: DealSpace): TermPackage[] {
           }
           const rawIndex = index
           index += 1
-          if (!validPair(prefMultiple, participation)) continue
-          if (!RoundTermsSchema.safeParse(terms).success) continue
+          if (
+            !validPair(prefMultiple, participation) ||
+            !RoundTermsSchema.safeParse(terms).success
+          ) {
+            skipped.push({ index: rawIndex, reason: 'V1' })
+            continue
+          }
+          if (!poolFeasible(terms)) {
+            skipped.push({ index: rawIndex, reason: 'V3' })
+            continue
+          }
           packages.push({ index: rawIndex, terms })
         }
       }
     }
   }
-  return packages
+  return { packages, skipped }
+}
+
+/** Enumerate the locked row-major grid, retaining raw indices across invalid holes. */
+export function enumerateDeals(space: DealSpace): TermPackage[] {
+  return enumerateDealsWithReasons(space).packages
 }
 
 /** Evaluate a concrete package with each party's own beliefs (or deterministic CE under CRRA). */

@@ -1,6 +1,12 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { analyze, enumerateDeals, evaluatePackage, valueOnTable } from '../src/core/bargain'
+import {
+  analyze,
+  enumerateDeals,
+  enumerateDealsWithReasons,
+  evaluatePackage,
+  valueOnTable,
+} from '../src/core/bargain'
 import { analyzeN } from '../src/core/bargain-n'
 import { DealFileSchema, type DealPoint, type MultiPartyDealPoint } from '../src/core/schema'
 
@@ -113,6 +119,26 @@ describe('bargaining engine', () => {
     expect(packages.some((pkg) => pkg.index === 9)).toBe(false)
     expect(packages.some((pkg) => pkg.index === 13)).toBe(false)
     expect(packages.some((pkg) => pkg.index === 14)).toBe(false)
+  })
+
+  it('records V3-infeasible frontier cells without changing raw package indices', () => {
+    const deal = seriesADeal()
+    const enumeration = enumerateDealsWithReasons({
+      ...deal.space,
+      preMoneyRange: [2_000_000, 2_000_000],
+      preMoneySteps: 1,
+      pinnedInvestment: 8_000_000,
+      pools: [0.2],
+      multiples: [1],
+      participations: ['NONE'],
+    })
+
+    expect(enumeration.packages).toEqual([])
+    expect(enumeration.skipped).toEqual([{ index: 0, reason: 'V3' }])
+    expect(analyze([], deal.disagreement)).toMatchObject({
+      zopa: false,
+      points: [],
+    })
   })
 
   it('evaluates EV and CE coordinates through the core pipeline', () => {

@@ -281,6 +281,15 @@ export const RoundTermsSchema = z
   })
 export type RoundTerms = z.output<typeof RoundTermsSchema>
 
+/** V3: the post-money option-pool target must leave at least 5% for existing holders. */
+export function poolFeasible(
+  terms: Pick<RoundTerms, 'preMoney' | 'investment' | 'poolTargetPost'>,
+): boolean {
+  if (terms.preMoney === undefined) return true
+  const r = (terms.preMoney + terms.investment) / terms.preMoney
+  return 1 - terms.poolTargetPost * r >= 0.05 - EPS_DECISION
+}
+
 export const BeliefsSchema = z
   .object({
     p0: finite.min(0).max(0.99),
