@@ -1,13 +1,13 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.14.4",
+  "version": "0.14.5",
   "type": "module",
   "engines": {
     "node": "22.22.x"
   },
   "scripts": {
-    "dev": "next dev -H 127.0.0.1",
+    "dev": "next dev -H 127.0.0.1 -p 4174",
     "build": "npm run typecheck && next build && node scripts/generate-sw.mjs",
     "preview": "serve -l 4173 out",
     "typecheck": "tsc --noEmit",
@@ -21,7 +21,8 @@
     "test:a11y": "node scripts/lighthouse-a11y.mjs",
     "budget:bundle": "node scripts/bundle-budget.mjs",
     "gates": "npm run budget:bundle && npm run test:e2e && npm run test:a11y",
-    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run fixtures"
+    "verify": "npm run check:version && npm run typecheck && npm run lint && npm run format:check && npm run test && npm run fixtures",
+    "check:version": "node scripts/check-version-coherence.mjs"
   },
   "dependencies": {
     "next": "16.2.3",
@@ -45,7 +46,7 @@
     "globals": "17.4.0",
     "js-yaml": "4.1.1",
     "lighthouse": "13.1.0",
-    "prettier": "3.8.1",
+    "prettier": "3.8.2",
     "serve": "14.2.6",
     "typescript": "5.7.3",
     "vitest": "3.2.4"

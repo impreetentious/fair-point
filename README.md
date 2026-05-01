@@ -60,7 +60,7 @@ npm ci
 npm run dev
 ```
 
-The dev server binds `127.0.0.1` — open `http://localhost:3000`.
+The dev server binds `127.0.0.1:4174`; preview serves the static export on `127.0.0.1:4173`.
 
 ## Verify
 
@@ -87,4 +87,4 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.14.4
+**Version:** v0.14.5
