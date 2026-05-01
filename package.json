@@ -1,7 +1,7 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.14.2",
+  "version": "0.14.3",
   "type": "module",
   "engines": {
     "node": "20.20.x"
@@ -11,7 +11,7 @@
     "build": "npm run typecheck && next build && node scripts/generate-sw.mjs",
     "preview": "serve -l 4173 out",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --passWithNoTests",
@@ -24,27 +24,29 @@
     "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run fixtures"
   },
   "dependencies": {
-    "next": "16.1.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "recharts": "3.7.0",
+    "next": "16.2.3",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "recharts": "3.8.1",
     "zod": "3.24.2",
     "zustand": "5.0.3"
   },
   "devDependencies": {
-    "@playwright/test": "1.58.2",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.59.1",
     "@types/js-yaml": "4.0.9",
     "@types/node": "20.17.24",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "@typescript-eslint/eslint-plugin": "8.27.0",
-    "@typescript-eslint/parser": "8.27.0",
-    "eslint": "8.57.1",
+    "@typescript-eslint/eslint-plugin": "8.58.1",
+    "@typescript-eslint/parser": "8.58.1",
+    "eslint": "10.2.0",
     "fast-check": "4.0.0",
+    "globals": "17.4.0",
     "js-yaml": "4.1.0",
     "lighthouse": "12.8.2",
     "prettier": "3.8.1",
-    "serve": "14.2.5",
+    "serve": "14.2.6",
     "typescript": "5.7.3",
     "vitest": "3.0.9"
   },

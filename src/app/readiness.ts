@@ -61,7 +61,7 @@ export function screenReadiness(deal: DealFile): Record<ScreenId, Readiness> {
     beliefs = red(error instanceof Error ? error.message : 'Belief profiles failed to fit.')
   }
 
-  let frontier = red('Frontier analysis has not completed.')
+  let frontier: Readiness
   try {
     const points = enumerateDeals(deal.space).map((pkg) =>
       evaluatePackage(

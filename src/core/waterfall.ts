@@ -367,7 +367,6 @@ export function payoutsAt(post: CapTable, exitValue: number): Payouts {
       const candidate = new Set(orderedGroups.slice(0, count).flatMap(([, ids]) => ids))
       const candidateResult = distribute(post, exitValue, candidate)
       if (isConsistentOptionPrefix(post, candidateResult, candidate)) {
-        exercised = candidate
         result = candidateResult
         break
       }

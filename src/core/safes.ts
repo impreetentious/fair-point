@@ -46,7 +46,7 @@ function solveFixedRoutes(
   const directPps = config.pricedPerShare
   let pps = directPps ?? config.preMoney! / config.baseCap
   let pool = 0
-  let sharesBySafe: Record<string, number> = {}
+  let sharesBySafe: Record<string, number>
   for (let iteration = 0; iteration < 200; iteration += 1) {
     const preMoney = config.safes.filter((safe) => safe.kind === 'PRE_MONEY')
     const postMoney = config.safes.filter((safe) => safe.kind === 'POST_MONEY')
