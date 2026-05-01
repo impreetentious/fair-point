@@ -1,5 +1,5 @@
-const PRECACHE = ['__FAIRPOINT_PRECACHE__']
-const CACHE_NAME = 'fairpoint-__FAIRPOINT_BUILD_HASH__'
+const PRECACHE = ['__PRECACHE__']
+const CACHE_NAME = '__PRODUCT_SLUG__-__BUILD_HASH__'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -17,7 +17,7 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key.startsWith('fairpoint-') && key !== CACHE_NAME)
+            .filter((key) => key.startsWith('__PRODUCT_SLUG__-') && key !== CACHE_NAME)
             .map((key) => caches.delete(key)),
         ),
       )

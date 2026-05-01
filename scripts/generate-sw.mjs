@@ -23,8 +23,13 @@ const emitted = walk(outDir)
 const precache = [...new Set(['./', './index.html', ...emitted])]
 const buildHash = createHash('sha256').update(precache.join('\n')).digest('hex').slice(0, 12)
 const template = readFileSync(join(root, 'scripts', 'sw.template.js'), 'utf8')
+const branding = readFileSync(join(root, 'src', 'app', 'branding.ts'), 'utf8')
+const productSlug = branding.match(/export const PRODUCT_SLUG = ['"]([^'"]+)['"]/u)?.[1]
+if (productSlug === undefined)
+  throw new Error('Could not read PRODUCT_SLUG from src/app/branding.ts')
 const source = template
-  .replace("['__FAIRPOINT_PRECACHE__']", JSON.stringify(precache))
-  .replace('__FAIRPOINT_BUILD_HASH__', buildHash)
+  .replace("['__PRECACHE__']", JSON.stringify(precache))
+  .replaceAll('__PRODUCT_SLUG__', productSlug)
+  .replace('__BUILD_HASH__', buildHash)
 writeFileSync(join(outDir, 'sw.js'), source)
 console.log(`sw.js: ${precache.length} precached files, build ${buildHash}`)

@@ -8,12 +8,16 @@ const read = (file) => readFileSync(path.join(root, file), 'utf8')
 const pkg = JSON.parse(read('package.json'))
 const version = pkg.version
 const errors = []
+const EXPECTED = {
+  nvmrc: '22.22.2',
+  engines: '22.22.x',
+  workflow: '.github/workflows/verify.yml',
+  ciNode: '22.22.x',
+}
 
 function markerVersion(file) {
   const source = read(file)
-  return source.match(
-    /\*\*(?:Release version|Portfolio Version|Product Version|Version):\*\*\s*`?v?([0-9]+\.[0-9]+\.[0-9]+)[^`\n]*/,
-  )?.[1]
+  return source.match(/\*\*Version:\*\*\s*`?v?([0-9]+\.[0-9]+\.[0-9]+)[^`\n]*/)?.[1]
 }
 
 if (!version) errors.push('package.json missing version')
@@ -26,23 +30,41 @@ if (existsSync(path.join(root, 'package-lock.json'))) {
   if (lock.packages?.['']?.version !== version) {
     errors.push(`package-lock packages[""].version ${lock.packages?.['']?.version} != ${version}`)
   }
+} else if (existsSync(path.join(root, 'pnpm-lock.yaml'))) {
+  const pnpmLock = read('pnpm-lock.yaml')
+  if (!/^\s{2}\.:\s*$/m.test(pnpmLock)) {
+    errors.push('pnpm-lock.yaml missing the root importer')
+  }
+} else {
+  errors.push('missing package-lock.json or pnpm-lock.yaml')
 }
 
+// README.md, package.json, and the lockfile root are the release-version surfaces.
+// Nothing else is gated: the build-time handover log is disposable by design, so no gate
+// may ever require its presence.
 for (const file of ['README.md']) {
   const found = markerVersion(file)
   if (!found) errors.push(`${file} missing **Version:** vX.Y.Z marker`)
   else if (found !== version) errors.push(`${file} version ${found} != package.json ${version}`)
 }
 
-if (pkg.name === 'fair-point') {
-  const nvm = read('.nvmrc').trim()
-  const workflow = read('.github/workflows/verify.yml')
-  const ciNode = workflow.match(/node-version:\s*['"]?([^'"\s]+)['"]?/)?.[1]
-  if (pkg.engines?.node !== '22.22.x') {
-    errors.push(`package.json engines.node ${pkg.engines?.node} != 22.22.x`)
+const nvm = read('.nvmrc').trim()
+if (nvm !== EXPECTED.nvmrc) errors.push(`.nvmrc ${nvm} != ${EXPECTED.nvmrc}`)
+if (pkg.engines?.node !== EXPECTED.engines) {
+  errors.push(`package.json engines.node ${pkg.engines?.node} != ${EXPECTED.engines}`)
+}
+
+const workflow = read(EXPECTED.workflow)
+const ciNodeFile = workflow.match(/^\s*node-version-file:\s*['"]?([^'"\s]+)['"]?\s*$/m)?.[1]
+if (ciNodeFile) {
+  if (ciNodeFile !== '.nvmrc') {
+    errors.push(`${EXPECTED.workflow} node-version-file ${ciNodeFile} != .nvmrc`)
   }
-  if (nvm !== '22.22.2') errors.push(`.nvmrc ${nvm} != 22.22.2`)
-  if (ciNode !== '22.22.x') errors.push(`verify.yml node-version ${ciNode ?? 'missing'} != 22.22.x`)
+} else {
+  const ciNode = workflow.match(/^\s*node-version:\s*['"]?([^'"\s]+)['"]?\s*$/m)?.[1]
+  if (ciNode !== EXPECTED.ciNode) {
+    errors.push(`${EXPECTED.workflow} node-version ${ciNode ?? 'missing'} != ${EXPECTED.ciNode}`)
+  }
 }
 
 if (errors.length) {

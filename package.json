@@ -1,7 +1,7 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.14.5",
+  "version": "0.15.0",
   "type": "module",
   "engines": {
     "node": "22.22.x"
@@ -14,9 +14,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run --passWithNoTests",
-    "fixtures": "vitest run tests/fixtures.test.ts --passWithNoTests",
-    "bench": "vitest run tests/bench.test.ts tests/pipeline-bench.test.ts --passWithNoTests",
+    "test": "vitest run",
+    "fixtures": "vitest run tests/fixtures.test.ts",
+    "bench": "vitest run tests/bench.test.ts tests/pipeline-bench.test.ts",
     "test:e2e": "playwright test",
     "test:a11y": "node scripts/lighthouse-a11y.mjs",
     "budget:bundle": "node scripts/bundle-budget.mjs",
@@ -65,5 +65,5 @@
   "bugs": {
     "url": "https://github.com/ItsMonarch04/fair-point/issues"
   },
-  "homepage": "https://github.com/ItsMonarch04/fair-point#"
+  "homepage": "https://github.com/ItsMonarch04/fair-point"
 }
