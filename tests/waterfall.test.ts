@@ -1,8 +1,14 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { CapTableSchema } from '../src/core/schema'
-import { regimes } from '../src/core/breakpoints'
+import { CapTableSchema, EPS_DECISION } from '../src/core/schema'
+import { generalRegimesForTest, regimes, simpleTwoClassRegimes } from '../src/core/breakpoints'
 import { payoutsAt } from '../src/core/waterfall'
+import {
+  arbitraryCapTable,
+  arbitraryCappedCapTable,
+  arbitraryGrantExerciseCapTable,
+  arbitrarySettlementCase,
+} from './generators'
 
 const capTable = CapTableSchema.parse({
   classes: [
@@ -24,6 +30,22 @@ const capTable = CapTableSchema.parse({
 })
 
 describe('waterfall', () => {
+  it('keeps the two-class fast path equal to the general regime walk', () => {
+    const fast = simpleTwoClassRegimes(capTable)!
+    const general = generalRegimesForTest(capTable)
+    expect(general).toHaveLength(fast.length)
+    for (const [index, regime] of fast.entries()) {
+      const actual = general[index]!
+      expect(actual.event).toBe(regime.event)
+      expect(actual.from).toBeCloseTo(regime.from, 2)
+      expect(actual.to).toBeCloseTo(regime.to, 2)
+      for (const id of Object.keys(regime.coeffs)) {
+        expect(actual.coeffs[id]!.m).toBeCloseTo(regime.coeffs[id]!.m, 8)
+        expect(actual.coeffs[id]!.c).toBeCloseTo(regime.coeffs[id]!.c, 2)
+      }
+    }
+  })
+
   it('reproduces the locked capped-participation regime table', () => {
     expect(payoutsAt(capTable, 20_000_000).byClass).toMatchObject({
       'series-a': 5_600_000,
@@ -45,81 +67,27 @@ describe('waterfall', () => {
 
   it('conserves value over 500 randomized cap tables', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 1, max: 1000 }),
-        fc.integer({ min: 1, max: 1000 }),
-        fc.integer({ min: 0, max: 100_000 }),
-        (commonShares, preferredShares, exitValue) => {
-          const post = CapTableSchema.parse({
-            classes: [
-              {
-                id: 'common',
-                name: 'Common',
-                kind: 'COMMON',
-                shares: commonShares,
-                holder: 'FOUNDER',
-              },
-              {
-                id: 'preferred',
-                name: 'Preferred',
-                kind: 'PREFERRED',
-                shares: preferredShares,
-                holder: 'INVESTOR',
-                invested: 100,
-                prefMultiple: 1,
-                participation: 'NONE',
-              },
-            ],
-            grants: [],
-            poolAvailable: 0,
-          })
-          const current = payoutsAt(post, exitValue)
-          const total =
-            Object.values(current.byClass).reduce((sum, value) => sum + value, 0) +
-            Object.values(current.byGrant).reduce((sum, value) => sum + value, 0)
-          expect(total).toBeCloseTo(exitValue, 7)
-        },
-      ),
+      fc.property(arbitrarySettlementCase, ({ post, exitValue }) => {
+        const current = payoutsAt(post, exitValue)
+        const total =
+          Object.values(current.byClass).reduce((sum, value) => sum + value, 0) +
+          Object.values(current.byGrant).reduce((sum, value) => sum + value, 0)
+        expect(total).toBeCloseTo(exitValue, 7)
+      }),
       { numRuns: 500 },
     )
   })
 
   it('keeps holder payouts monotonic over 300 randomized cap tables', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 1, max: 1000 }),
-        fc.integer({ min: 1, max: 1000 }),
-        fc.integer({ min: 0, max: 100_000 }),
-        (commonShares, preferredShares, exitValue) => {
-          const post = CapTableSchema.parse({
-            classes: [
-              {
-                id: 'common',
-                name: 'Common',
-                kind: 'COMMON',
-                shares: commonShares,
-                holder: 'FOUNDER',
-              },
-              {
-                id: 'preferred',
-                name: 'Preferred',
-                kind: 'PREFERRED',
-                shares: preferredShares,
-                holder: 'INVESTOR',
-                invested: 100,
-                prefMultiple: 1,
-                participation: 'NONE',
-              },
-            ],
-            grants: [],
-            poolAvailable: 0,
-          })
-          const current = payoutsAt(post, exitValue)
-          const later = payoutsAt(post, exitValue + 1)
-          for (const id of Object.keys(current.byClass))
-            expect(later.byClass[id]).toBeGreaterThanOrEqual(current.byClass[id] - 1e-8)
-        },
-      ),
+      fc.property(arbitrarySettlementCase, ({ post, exitValue }) => {
+        const current = payoutsAt(post, exitValue)
+        const later = payoutsAt(post, exitValue + 1)
+        for (const id of [...Object.keys(current.byClass), ...Object.keys(current.byGrant)])
+          expect(later.byClass[id] ?? later.byGrant[id] ?? 0).toBeGreaterThanOrEqual(
+            (current.byClass[id] ?? current.byGrant[id] ?? 0) - 1e-8,
+          )
+      }),
       { numRuns: 300 },
     )
   })
@@ -139,5 +107,90 @@ describe('waterfall', () => {
         )
       }
     }
+  })
+
+  it('matches generated regime lines across 50 general cap tables', () => {
+    fc.assert(
+      fc.property(arbitraryCapTable, (post) => {
+        const allRegimes = regimes(post)
+        const invested = post.classes.reduce(
+          (sum, cls) => sum + (cls.kind === 'PREFERRED' ? cls.invested : 0),
+          0,
+        )
+        for (let index = 0; index <= 24; index += 1) {
+          const exitValue = (20 * invested * index) / 24
+          const regime =
+            allRegimes.find(
+              (candidate) => exitValue >= candidate.from && exitValue < candidate.to,
+            ) ?? allRegimes.at(-1)!
+          const actual = payoutsAt(post, exitValue)
+          for (const [id, value] of Object.entries({ ...actual.byClass, ...actual.byGrant })) {
+            const estimate = regime.coeffs[id]!.m * exitValue + regime.coeffs[id]!.c
+            expect(Math.abs(value - estimate)).toBeLessThanOrEqual(
+              Math.max(0.05, 1e-8 * Math.abs(value)),
+            )
+          }
+        }
+      }),
+      { numRuns: 50, endOnFailure: true },
+    )
+  }, 30_000)
+
+  it('keeps the final regime affine across 200 general cap tables', () => {
+    fc.assert(
+      fc.property(arbitraryCapTable, (post) => {
+        const last = regimes(post).at(-1)!
+        const exitValue = Math.max(1, last.from * 10)
+        const actual = payoutsAt(post, exitValue)
+        for (const [id, value] of Object.entries({ ...actual.byClass, ...actual.byGrant })) {
+          const estimate = last.coeffs[id]!.m * exitValue + last.coeffs[id]!.c
+          expect(Math.abs(value - estimate)).toBeLessThanOrEqual(
+            Math.max(0.05, 1e-8 * Math.abs(value)),
+          )
+        }
+      }),
+      { numRuns: 200, endOnFailure: true },
+    )
+  }, 30_000)
+
+  it('keeps 40+ duplicate-strike grants exercise-consistent across 200 tables', () => {
+    fc.assert(
+      fc.property(
+        arbitraryGrantExerciseCapTable,
+        fc.integer({ min: 0, max: 20 }),
+        (post, multiple) => {
+          const invested = post.classes.reduce(
+            (sum, cls) => sum + (cls.kind === 'PREFERRED' ? cls.invested : 0),
+            0,
+          )
+          const actual = payoutsAt(post, invested * multiple)
+          expect(new Set(post.grants.map((grant) => grant.strike)).size).toBeLessThan(
+            post.grants.length,
+          )
+          for (const grant of post.grants) {
+            const shouldExercise = grant.strike < actual.perCommonShareProceeds - EPS_DECISION
+            expect(actual.byGrant[grant.id] > EPS_DECISION).toBe(shouldExercise)
+          }
+        },
+      ),
+      { numRuns: 200, endOnFailure: true },
+    )
+  })
+
+  it('settles every adversarial 2–4-class capped table across 200 cases', () => {
+    fc.assert(
+      fc.property(arbitraryCappedCapTable, fc.integer({ min: 0, max: 20 }), (post, multiple) => {
+        const invested = post.classes.reduce(
+          (sum, cls) => sum + (cls.kind === 'PREFERRED' ? cls.invested : 0),
+          0,
+        )
+        const exitValue = invested * multiple
+        const actual = payoutsAt(post, exitValue)
+        const total = Object.values(actual.byClass).reduce((sum, value) => sum + value, 0)
+        expect(total).toBeCloseTo(exitValue, 7)
+        expect(actual.warnings.some((warning) => warning.includes('NonConvergence'))).toBe(false)
+      }),
+      { numRuns: 200, endOnFailure: true },
+    )
   })
 })

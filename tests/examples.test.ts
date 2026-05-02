@@ -27,6 +27,7 @@ describe('shipped example decks', () => {
       const result = analyze(points, deal.disagreement)
       expect(points).toHaveLength(585)
       expect(result.points).toHaveLength(585)
+      expect({ zopa: result.zopa, nash: result.nash }).toMatchSnapshot()
     }, 30_000)
   }
 

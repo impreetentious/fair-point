@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`shipped example decks > loads and analyzes Seed with SAFEs 1`] = `
+{
+  "nash": 0,
+  "zopa": true,
+}
+`;
+
+exports[`shipped example decks > loads and analyzes Series A clean 1`] = `
+{
+  "nash": 79,
+  "zopa": true,
+}
+`;
+
+exports[`shipped example decks > loads and analyzes Series B stacked + down round 1`] = `
+{
+  "nash": 159,
+  "zopa": true,
+}
+`;

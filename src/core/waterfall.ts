@@ -3,6 +3,9 @@ import { preferenceClaim } from './accruals'
 
 type DirectSettlement = Payouts & { exercised: Set<string> }
 
+/** Test-only control for deterministically exercising the equilibrium enumeration fallback. */
+export type SettlementDevOptions = { equilibriumPassLimit?: number }
+
 function preferredClasses(post: CapTable): ShareClassPreferred[] {
   return post.classes
     .filter((cls): cls is ShareClassPreferred => cls.kind === 'PREFERRED')
@@ -161,11 +164,12 @@ function directWithEquilibrium(
   post: CapTable,
   distributable: number,
   exercised: Set<string>,
+  passLimit: number,
 ): DirectSettlement {
   const preferred = preferredClasses(post)
   const converted = new Set<string>()
   const changedSnapshots: Set<string>[] = []
-  for (let pass = 0; pass < 64; pass += 1) {
+  for (let pass = 0; pass < passLimit; pass += 1) {
     let changed = false
     const changedThisPass = new Set<string>()
     for (const cls of preferred) {
@@ -207,8 +211,12 @@ function directWithEquilibrium(
       (left, right) =>
         left.size - right.size || lexicographic(left).localeCompare(lexicographic(right)),
     )
-  if (consistent.length > 0)
-    return settleDirect(post, distributable, exercised, assignment(consistent[0]))
+  if (consistent.length > 0) {
+    const result = settleDirect(post, distributable, exercised, assignment(consistent[0]))
+    if (passLimit < 64)
+      result.warnings.push('conversion equilibrium: dev pass cap forced enumeration fallback')
+    return result
+  }
 
   const regret = (candidate: Set<string>) => {
     const chosen = assignment(candidate)
@@ -238,11 +246,16 @@ function directWithEquilibrium(
   return result
 }
 
-function distribute(post: CapTable, exitValue: number, exercised: Set<string>): DirectSettlement {
+function distribute(
+  post: CapTable,
+  exitValue: number,
+  exercised: Set<string>,
+  passLimit: number,
+): DirectSettlement {
   const strikeCash = post.grants
     .filter((grant) => exercised.has(grant.id))
     .reduce((sum, grant) => sum + grant.options * grant.strike, 0)
-  return directWithEquilibrium(post, exitValue + strikeCash, exercised)
+  return directWithEquilibrium(post, exitValue + strikeCash, exercised, passLimit)
 }
 
 function isConsistentOptionPrefix(
@@ -255,6 +268,18 @@ function isConsistentOptionPrefix(
       ? grant.strike < result.perCommonShareProceeds - EPS_DECISION
       : grant.strike >= result.perCommonShareProceeds - EPS_DECISION,
   )
+}
+
+function effectivePassLimit(options: SettlementDevOptions | undefined): number {
+  if (options?.equilibriumPassLimit === undefined || process.env.NODE_ENV === 'production')
+    return 64
+  if (
+    !Number.isInteger(options.equilibriumPassLimit) ||
+    options.equilibriumPassLimit < 1 ||
+    options.equilibriumPassLimit >= 64
+  )
+    throw new RangeError('equilibriumPassLimit must be an integer from 1 through 63')
+  return options.equilibriumPassLimit
 }
 
 /** Exact deterministic exit settlement with prefix-based option exercise and conversion equilibrium. */
@@ -344,9 +369,14 @@ function absorbRoundingResidual(
   result.byGrant[target]! += residual
 }
 
-export function payoutsAt(post: CapTable, exitValue: number): Payouts {
+export function payoutsAt(
+  post: CapTable,
+  exitValue: number,
+  options?: SettlementDevOptions,
+): Payouts {
   if (!(exitValue >= 0) || !Number.isFinite(exitValue))
     throw new RangeError('exitValue must be finite and nonnegative')
+  const passLimit = effectivePassLimit(options)
   const groups = new Map<number, string[]>()
   for (const grant of [...post.grants].sort(
     (left, right) => left.strike - right.strike || left.id.localeCompare(right.id),
@@ -357,15 +387,15 @@ export function payoutsAt(post: CapTable, exitValue: number): Payouts {
   let exercised = new Set<string>()
   for (const [strike, ids] of orderedGroups) {
     const trial = new Set([...exercised, ...ids])
-    const trialResult = distribute(post, exitValue, trial)
+    const trialResult = distribute(post, exitValue, trial, passLimit)
     if (strike < trialResult.perCommonShareProceeds - EPS_DECISION) exercised = trial
     else break
   }
-  let result = distribute(post, exitValue, exercised)
+  let result = distribute(post, exitValue, exercised, passLimit)
   if (!isConsistentOptionPrefix(post, result, exercised)) {
     for (let count = orderedGroups.length; count >= 0; count -= 1) {
       const candidate = new Set(orderedGroups.slice(0, count).flatMap(([, ids]) => ids))
-      const candidateResult = distribute(post, exitValue, candidate)
+      const candidateResult = distribute(post, exitValue, candidate, passLimit)
       if (isConsistentOptionPrefix(post, candidateResult, candidate)) {
         result = candidateResult
         break
