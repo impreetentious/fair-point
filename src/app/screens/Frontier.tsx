@@ -271,6 +271,8 @@ export function FrontierScreen() {
     )
   }
   const { result, value, current } = analysis
+  const ceMode = deal.risk !== null
+  const risk = deal.risk
   const selected = new Set(compare)
   const frontierSet = new Set(result.frontier)
   const frontierPoints = result.points
@@ -304,9 +306,9 @@ export function FrontierScreen() {
       <SpaceEditor space={deal.space} />
       <div className="field-grid">
         <label>
-          Founder BATNA
+          {ceMode ? 'Founder CE BATNA' : 'Founder BATNA'}
           <CommitNumber
-            label="Founder BATNA"
+            label={ceMode ? 'Founder certainty-equivalent BATNA' : 'Founder BATNA'}
             value={deal.disagreement.dF}
             min={0}
             step={1000}
@@ -319,14 +321,15 @@ export function FrontierScreen() {
             }
           />
           <span className="helper-copy">
-            Expected personal proceeds from your best alternative: another offer, bootstrapping, or
-            winding down.
+            {ceMode
+              ? 'Certainty-equivalent personal proceeds from your best alternative, using your CRRA baseline.'
+              : 'Expected personal proceeds from your best alternative: another offer, bootstrapping, or winding down.'}
           </span>
         </label>
         <label>
-          Investor BATNA
+          {ceMode ? 'Investor CE BATNA' : 'Investor BATNA'}
           <CommitNumber
-            label="Investor BATNA"
+            label={ceMode ? 'Investor certainty-equivalent BATNA' : 'Investor BATNA'}
             value={deal.disagreement.dI}
             min={0}
             step={1000}
@@ -339,8 +342,9 @@ export function FrontierScreen() {
             }
           />
           <span className="helper-copy">
-            Expected dollars from deploying this capital in your next-best opportunity (e.g., amount
-            x expected net multiple).
+            {ceMode
+              ? 'Certainty-equivalent dollars from the next-best deployment, using the investor CRRA baseline.'
+              : 'Expected dollars from deploying this capital in your next-best opportunity (e.g., amount x expected net multiple).'}
           </span>
         </label>
         <label className="toggle">
@@ -356,9 +360,32 @@ export function FrontierScreen() {
           />
           CRRA mode
         </label>
+        {risk !== null && (
+          <div aria-label="CRRA risk aversion" role="group">
+            <span className="helper-copy">Risk aversion γ</span>
+            {([0.5, 1] as const).map((gamma) => (
+              <button
+                className={risk.gamma === gamma ? 'segmented selected' : 'segmented'}
+                key={gamma}
+                onClick={() =>
+                  patchDeal((candidate) => ({
+                    ...candidate,
+                    risk: candidate.risk === null ? null : { ...candidate.risk, gamma },
+                  }))
+                }
+                type="button"
+              >
+                γ {gamma}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <p className="muted">
         Recomputed {result.points.length} valid packages in {analysis.elapsed.toFixed(1)} ms.{' '}
+        {analysis.skipped.filter((cell) => cell.reason === 'V3').length > 0 && (
+          <>{analysis.skipped.filter((cell) => cell.reason === 'V3').length} cells skipped (V3). </>
+        )}
         {result.metric === 'CE'
           ? 'Coordinates are certainty-equivalent dollars.'
           : 'Coordinates are expected dollars.'}

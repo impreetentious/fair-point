@@ -128,16 +128,32 @@ function buildPost(
     .filter((safe) => routeBySafe[safe.id] !== 'ROUND_PRICE')
     .map((safe) => safeShadowClass(safe, sharesBySafe[safe.id], terms, tier))
   const roundPriceSafes = safes.filter((safe) => routeBySafe[safe.id] === 'ROUND_PRICE')
-  const roundPriceAmount = roundPriceSafes.reduce((sum, safe) => sum + safe.amount, 0)
-  const roundPriceShares = roundPriceSafes.reduce((sum, safe) => sum + sharesBySafe[safe.id], 0)
+  const roundPriceTotals = (holder: 'INVESTOR' | 'OTHER') =>
+    roundPriceSafes
+      .filter((safe) => safe.holder === holder)
+      .reduce(
+        (total, safe) => ({
+          amount: total.amount + safe.amount,
+          shares: total.shares + sharesBySafe[safe.id],
+        }),
+        { amount: 0, shares: 0 },
+      )
+  const investorSafe = roundPriceTotals('INVESTOR')
+  const otherSafe = roundPriceTotals('OTHER')
   const investorShares = terms.investment / pps
-  const newRound: ShareClassPreferred = {
-    id: 'new-round',
-    name: 'New Round',
+  const newRoundClass = (
+    id: string,
+    name: string,
+    holder: 'INVESTOR' | 'OTHER',
+    shares: number,
+    invested: number,
+  ): ShareClassPreferred => ({
+    id,
+    name,
     kind: 'PREFERRED',
-    shares: investorShares + roundPriceShares,
-    holder: 'INVESTOR',
-    invested: terms.investment + roundPriceAmount,
+    shares,
+    holder,
+    invested,
     originalIssuePrice: pps,
     prefMultiple: terms.prefMultiple,
     ...participationFields(terms),
@@ -149,10 +165,27 @@ function buildPost(
     payToPlay: 'NONE',
     accruedDividends: 0,
     redemptionClaim: 0,
-  }
+  })
+  const newRound = newRoundClass(
+    'new-round',
+    'New Round',
+    'INVESTOR',
+    investorShares + investorSafe.shares,
+    terms.investment + investorSafe.amount,
+  )
+  const otherRound =
+    otherSafe.shares > 0
+      ? newRoundClass(
+          'new-round-other',
+          'New Round (other SAFE holders)',
+          'OTHER',
+          otherSafe.shares,
+          otherSafe.amount,
+        )
+      : null
   return {
     post: {
-      classes: [...existing, ...shadowClasses, newRound],
+      classes: [...existing, ...shadowClasses, newRound, ...(otherRound ? [otherRound] : [])],
       grants: pre.grants.map((grant) => ({ ...grant })),
       poolAvailable: pre.poolAvailable + poolIncrease,
       promisedOptions: pre.promisedOptions,
@@ -221,11 +254,20 @@ export function constructRound(
         solve.routeBySafe,
       )
       const fdPost = asConvertedShares(post)
+      const investorPct = investorShares / fdPost
+      const hasAntiDilution = settledClasses.some(
+        (cls) => cls.kind === 'PREFERRED' && cls.antiDilution !== 'NONE',
+      )
+      if (terms.preMoney !== undefined && converting.length === 0 && !hasAntiDilution) {
+        const expectedInvestorPct = terms.investment / (terms.preMoney + terms.investment)
+        if (Math.abs(investorPct - expectedInvestorPct) > 1e-9 * Math.max(1, expectedInvestorPct))
+          throw new Error('Round invariant failed: investor ownership must equal I / (V_pre + I)')
+      }
       return {
         post,
         diagnostics: {
           pps: solve.pps,
-          investorPct: investorShares / fdPost,
+          investorPct,
           poolIncrease: solve.poolIncrease,
           safeShares: solve.totalSafeShares,
           routeBySafe: solve.routeBySafe,

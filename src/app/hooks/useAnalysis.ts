@@ -1,5 +1,10 @@
 import { useMemo } from 'react'
-import { analyze, enumerateDeals, evaluatePackage, valueOnTable } from '../../core/bargain'
+import {
+  analyze,
+  enumerateDealsWithReasons,
+  evaluatePackage,
+  valueOnTable,
+} from '../../core/bargain'
 import { regimes } from '../../core/breakpoints'
 import { accrueForExit } from '../../core/accruals'
 import { payoutsAt } from '../../core/waterfall'
@@ -42,7 +47,8 @@ export function useFrontierAnalysis(deal: DealFile) {
   return useMemo(() => {
     const start = performance.now()
     try {
-      const packages = enumerateDeals(deal.space)
+      const enumeration = enumerateDealsWithReasons(deal.space)
+      const packages = enumeration.packages
       const points = packages.map((pkg) =>
         evaluatePackage(
           deal.pre,
@@ -70,6 +76,7 @@ export function useFrontierAnalysis(deal: DealFile) {
         result,
         current,
         value: valueOnTable(result, current),
+        skipped: enumeration.skipped,
         elapsed: performance.now() - start,
         error: null as string | null,
       }
@@ -78,6 +85,7 @@ export function useFrontierAnalysis(deal: DealFile) {
         result: null,
         current: null,
         value: null,
+        skipped: [],
         elapsed: performance.now() - start,
         error: error instanceof Error ? error.message : 'Frontier analysis failed',
       }

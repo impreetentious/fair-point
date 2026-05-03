@@ -1,8 +1,11 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { CapTableSchema, RoundTermsSchema, SafeSchema } from '../src/core/schema'
+import { BeliefsSchema, CapTableSchema, RoundTermsSchema, SafeSchema } from '../src/core/schema'
+import { expectedPayouts } from '../src/core/outcomes'
 import { constructRound } from '../src/core/round'
 import { convertSafes, solveSafes } from '../src/core/safes'
+import { conversionPrice } from '../src/core/antidilution'
+import { arbitraryDownRoundCase } from './generators'
 
 describe('SAFE conversion and round construction', () => {
   it('uses the simultaneous post-money cap closed form', () => {
@@ -78,6 +81,51 @@ describe('SAFE conversion and round construction', () => {
     expect(solved.iterations).toBeLessThanOrEqual(safes.length + 1)
   })
 
+  it('attributes a round-price SAFE to OTHER rather than the new investor', () => {
+    const pre = CapTableSchema.parse({
+      classes: [
+        { id: 'common', name: 'Common', kind: 'COMMON', shares: 10_000_000, holder: 'FOUNDER' },
+      ],
+      grants: [],
+      poolAvailable: 0,
+    })
+    const terms = RoundTermsSchema.parse({
+      pricedPerShare: 1,
+      investment: 2_000_000,
+      poolTargetPost: 0,
+      prefMultiple: 1,
+      participation: 'NONE',
+      seniority: 'PARI',
+    })
+    const safe = SafeSchema.parse({
+      id: 'third-party-safe',
+      name: 'Third-party SAFE',
+      amount: 1_000_000,
+      kind: 'POST_MONEY',
+      valuationCap: 100_000_000,
+      holder: 'OTHER',
+    })
+    const round = constructRound(pre, [safe], terms)
+
+    expect(round.diagnostics.routeBySafe['third-party-safe']).toBe('ROUND_PRICE')
+    expect(round.post.classes.find((cls) => cls.id === 'new-round')).toMatchObject({
+      holder: 'INVESTOR',
+      shares: 2_000_000,
+      invested: 2_000_000,
+    })
+    expect(round.post.classes.find((cls) => cls.id === 'new-round-other')).toMatchObject({
+      holder: 'OTHER',
+      shares: 1_000_000,
+      invested: 1_000_000,
+    })
+    const party = expectedPayouts(
+      round.post,
+      BeliefsSchema.parse({ p0: 0, p50: 50_000_000, p90: 100_000_000 }),
+    ).party
+    expect(party.other).toBeGreaterThan(0)
+    expect(party.investor).toBeCloseTo(party.other * 2, 8)
+  })
+
   it('preserves round and SAFE identities across randomized valid inputs', () => {
     fc.assert(
       fc.property(
@@ -127,6 +175,33 @@ describe('SAFE conversion and round construction', () => {
         },
       ),
       { numRuns: 300 },
+    )
+  })
+
+  it('never worsens an anti-dilution holder’s conversion price across 200 down rounds', () => {
+    fc.assert(
+      fc.property(arbitraryDownRoundCase, ({ pre, terms }) => {
+        const before = pre.classes.find((cls) => cls.id === 'legacy')!
+        if (before.kind !== 'PREFERRED') throw new Error('generator must create legacy preferred')
+        const result = constructRound(pre, [], RoundTermsSchema.parse(terms))
+        const after = result.post.classes.find((cls) => cls.id === 'legacy')!
+        if (after.kind !== 'PREFERRED') throw new Error('legacy preferred must remain preferred')
+        expect(result.diagnostics.pps).toBeLessThan(conversionPrice(before))
+        expect(after.conversionRatio).toBeGreaterThanOrEqual(before.conversionRatio)
+        expect(conversionPrice(after)).toBeLessThanOrEqual(conversionPrice(before))
+      }),
+      { numRuns: 200, endOnFailure: true },
+    )
+  })
+
+  it('converges the coupled anti-dilution PPS solve across 200 down rounds', () => {
+    fc.assert(
+      fc.property(arbitraryDownRoundCase, ({ pre, terms }) => {
+        const result = constructRound(pre, [], RoundTermsSchema.parse(terms))
+        expect(result.diagnostics.pps).toBeGreaterThan(0)
+        expect(Number.isFinite(result.diagnostics.pps)).toBe(true)
+      }),
+      { numRuns: 200, endOnFailure: true },
     )
   })
 })

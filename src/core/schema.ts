@@ -419,15 +419,12 @@ const DealFileBaseSchema = z
         message: 'V2: SAFE caps too low — conversion exceeds 95% of the company.',
       })
     }
-    if (deal.terms.preMoney !== undefined) {
-      const r = (deal.terms.preMoney + deal.terms.investment) / deal.terms.preMoney
-      if (1 - deal.terms.poolTargetPost * r < 0.05 - EPS_DECISION) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['terms', 'poolTargetPost'],
-          message: 'V3: pool target is infeasible at this pre-money valuation and investment.',
-        })
-      }
+    if (!poolFeasible(deal.terms)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['terms', 'poolTargetPost'],
+        message: 'V3: pool target is infeasible at this pre-money valuation and investment.',
+      })
     }
     const preferredCount = deal.pre.classes.filter((cls) => cls.kind === 'PREFERRED').length
     if (preferredCount + deal.safes.length + deal.notes.length + 1 > 20) {
