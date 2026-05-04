@@ -1,0 +1,45 @@
+id: F-WF-31
+kind: waterfall
+description: Development pass cap deterministically exercises conversion-equilibrium enumeration.
+derivation: |
+  This is the F-WF-30 symmetric CAP3 table at the same $40M exit. A development-only
+  one-pass cap stops Gauss-Seidel after both classes first flip to conversion, then
+  enumerates the two-class conversion set. The unique minimum-cardinality consistent
+  assignment is {a,b}, yielding the same all-converted $8M/$8M/$24M settlement. The
+  explicit warning proves this fixture took the enumeration fallback rather than a
+  second Gauss-Seidel pass. Production settlement always retains its 64-pass limit.
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 6000000, holder: FOUNDER }
+      - {
+          id: a,
+          name: A,
+          kind: PREFERRED,
+          shares: 2000000,
+          holder: INVESTOR,
+          invested: 2000000,
+          prefMultiple: 1,
+          participation: CAPPED,
+          participationCapMultiple: 3,
+        }
+      - {
+          id: b,
+          name: B,
+          kind: PREFERRED,
+          shares: 2000000,
+          holder: OTHER,
+          invested: 2000000,
+          prefMultiple: 1,
+          participation: CAPPED,
+          participationCapMultiple: 3,
+        }
+    grants: []
+    poolAvailable: 0
+  exitValue: 40000000
+  equilibriumPassLimit: 1
+expect:
+  payouts: { common: 24000000, a: 8000000, b: 8000000 }
+  pathTaken: { a: CONVERTED, b: CONVERTED }
+  warnings: ['conversion equilibrium: dev pass cap forced enumeration fallback']
+tolerance: 0.01

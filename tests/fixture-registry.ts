@@ -107,25 +107,33 @@ registerFixtureHandler('dist', (fixture) => {
   )
 })
 
-type WaterfallFixtureInput = { capTable: unknown; exitValue: number }
+type WaterfallFixtureInput = { capTable: unknown; exitValue: number; equilibriumPassLimit?: number }
 type WaterfallFixtureExpect = {
   payouts: Record<string, number>
   breakpoints?: number[]
   pathTaken?: Record<string, string>
   strikeCashPaid?: number
+  warnings?: string[]
 }
 
 registerFixtureHandler('waterfall', (fixture) => {
   const input = fixture.input as WaterfallFixtureInput
   const expected = fixture.expect as WaterfallFixtureExpect
   const post = CapTableSchema.parse(input.capTable)
-  const result = payoutsAt(post, input.exitValue)
+  const result = payoutsAt(
+    post,
+    input.exitValue,
+    input.equilibriumPassLimit === undefined
+      ? undefined
+      : { equilibriumPassLimit: input.equilibriumPassLimit },
+  )
   const values = { ...result.byClass, ...result.byGrant }
   const precision = Math.max(0, Math.floor(-Math.log10(fixture.tolerance ?? 0.01)))
   for (const [id, value] of Object.entries(expected.payouts))
     expect(values[id]).toBeCloseTo(value, precision)
   if (expected.strikeCashPaid !== undefined)
     expect(result.strikeCashPaid).toBeCloseTo(expected.strikeCashPaid, precision)
+  if (expected.warnings !== undefined) expect(result.warnings).toEqual(expected.warnings)
   if (expected.pathTaken !== undefined) {
     for (const [id, path] of Object.entries(expected.pathTaken))
       expect(result.pathTaken[id]).toBe(path)

@@ -1,0 +1,49 @@
+id: F-RND-09
+kind: round
+description: Series B deck's converged pre-money BWA down round.
+derivation: |
+  The deck starts with 8M common and 2M Series A shares at a $2.00 OIP. A $6M
+  senior round at a $18M pre-money valuation is priced below that OIP, so the
+  broad-based weighted-average adjustment feeds back into the priced share
+  count and pool solve. The fixed point is PPS=$1.4761180514, P=2,032,357.7759,
+  and Series A CR=1.0808944398. New-round shares remain exactly 25% of the
+  post-round fully diluted capitalization: $6M / ($18M + $6M).
+input:
+  capTable:
+    classes:
+      - { id: common, name: Common, kind: COMMON, shares: 8000000, holder: FOUNDER }
+      - {
+          id: series-a,
+          name: Series A,
+          kind: PREFERRED,
+          shares: 2000000,
+          holder: OTHER,
+          invested: 4000000,
+          originalIssuePrice: 2,
+          prefMultiple: 1,
+          participation: NONE,
+          seniorityTier: 2,
+          conversionRatio: 1,
+          antiDilution: BWA,
+        }
+    grants: []
+    poolAvailable: 0
+    promisedOptions: 0
+  safes: []
+  terms:
+    {
+      preMoney: 18000000,
+      investment: 6000000,
+      poolTargetPost: 0.125,
+      prefMultiple: 1,
+      participation: NONE,
+      seniority: SENIOR,
+    }
+expect:
+  pps: 1.476118051422805
+  investorPct: 0.25
+  poolIncrease: 2032357.7759301506
+  classes:
+    series-a: { conversionRatio: 1.0808944398253773 }
+    new-round: { shares: 4064715.5518603018, seniorityTier: 1 }
+tolerance: 0.000001

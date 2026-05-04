@@ -13,8 +13,9 @@ import {
   YAxis,
 } from 'recharts'
 import { PRODUCT_NAME, PRODUCT_SLUG } from '../branding'
+import { ChartFrame } from '../components/ChartFrame'
 import { dollars, percent, shares } from '../components/format'
-import { AllExplainers } from '../components/ExplainDrawer'
+import { AllExplainers, ExplainDrawer } from '../components/ExplainDrawer'
 import { payoutsAt } from '../../core/waterfall'
 import { useFrontierAnalysis, useWaterfallAnalysis } from '../hooks/useAnalysis'
 import { useDealStore } from '../state/store'
@@ -70,13 +71,19 @@ export function ReportScreen() {
   const finiteBreaks = regimes
     .map((regime) => regime.from)
     .filter((value) => Number.isFinite(value))
-  const chartRows =
+  const chartRows: Array<{ exit: number } & Record<string, number>> =
     round === null
       ? []
       : [...new Set([0, ...finiteBreaks, exitValue])]
           .sort((a, b) => a - b)
-          .map((exit) => ({ exit, ...payoutsAt(round.post, exit).byClass }))
-  const classIds = round?.post.classes.map((cls) => cls.id) ?? []
+          .map((exit) => {
+            const payouts = payoutsAt(round.post, exit)
+            return { exit, ...payouts.byClass, ...payouts.byGrant }
+          })
+  const payoutIds =
+    round === null
+      ? []
+      : [...round.post.classes.map((cls) => cls.id), ...round.post.grants.map((grant) => grant.id)]
   const result = frontier.result
   const current = frontier.current
   const frontierSet = new Set(result?.frontier ?? [])
@@ -102,6 +109,7 @@ export function ReportScreen() {
           <h2>Report</h2>
         </div>
         <div className="header-actions">
+          <ExplainDrawer screen="report" />
           <button type="button" className="quiet-button" onClick={() => window.print()}>
             Print
           </button>
@@ -128,27 +136,56 @@ export function ReportScreen() {
       <section>
         <h3>2. Waterfall snapshot</h3>
         {round !== null && (
-          <div className="report-chart">
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={chartRows}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="exit" hide />
-                <YAxis hide />
-                {finiteBreaks.map((value) => (
-                  <ReferenceLine key={value} x={value} stroke="#D55E00" strokeDasharray="4 3" />
-                ))}
-                {classIds.map((id, index) => (
-                  <Area
-                    key={id}
-                    dataKey={id}
-                    stackId="payout"
-                    fill={['#0072B2', '#E69F00', '#009E73', '#CC79A7'][index % 4]}
-                    stroke="none"
-                  />
-                ))}
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartFrame
+            title="Waterfall payout profile"
+            chart={
+              <div className="report-chart">
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart data={chartRows}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="exit" hide />
+                    <YAxis hide />
+                    {finiteBreaks.map((value) => (
+                      <ReferenceLine key={value} x={value} stroke="#D55E00" strokeDasharray="4 3" />
+                    ))}
+                    {payoutIds.map((id, index) => (
+                      <Area
+                        key={id}
+                        dataKey={id}
+                        stackId="payout"
+                        fill={['#0072B2', '#E69F00', '#009E73', '#CC79A7'][index % 4]}
+                        stroke="none"
+                      />
+                    ))}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            }
+            table={
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Exit</th>
+                      {payoutIds.map((id) => (
+                        <th key={id}>{id}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chartRows.map((row) => (
+                      <tr key={row.exit}>
+                        <td>{dollars(row.exit)}</td>
+                        {payoutIds.map((id) => (
+                          <td key={id}>{dollars(row[id] ?? 0)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            }
+          />
         )}
         <div className="badge-list">
           {regimes.map((regime) => (
@@ -193,54 +230,81 @@ export function ReportScreen() {
         {result === null || current === null ? (
           <p>Frontier unavailable.</p>
         ) : (
-          <div className="report-chart">
-            <ResponsiveContainer width="100%" height={200}>
-              <ComposedChart>
-                <CartesianGrid />
-                <XAxis type="number" dataKey="uF" domain={[0, maxF]} hide />
-                <YAxis type="number" dataKey="uI" domain={[0, maxI]} hide />
-                <Tooltip formatter={(value) => dollars(Number(value))} />
-                <ReferenceArea
-                  x1={deal.disagreement.dF}
-                  x2={maxF}
-                  y1={deal.disagreement.dI}
-                  y2={maxI}
-                  fill="#009E73"
-                  fillOpacity={0.08}
-                />
-                <ReferenceLine x={deal.disagreement.dF} stroke="#555" strokeDasharray="4 3" />
-                <ReferenceLine y={deal.disagreement.dI} stroke="#555" strokeDasharray="4 3" />
-                <Line
-                  data={frontierPoints}
-                  type="linear"
-                  dataKey="uI"
-                  stroke="#000"
-                  dot={false}
-                  isAnimationActive={false}
-                />
-                <Scatter data={result.points} fill="#56B4E9" />
-                <Scatter data={nash === null ? [] : [nash]} fill="#D55E00" />
-                <Scatter data={ks === null ? [] : [ks]} fill="#0072B2" />
-                <Scatter
-                  data={
-                    pointByIndex(result.points, result.egalitarian) === null
-                      ? []
-                      : [pointByIndex(result.points, result.egalitarian)!]
-                  }
-                  fill="#009E73"
-                />
-                <Scatter
-                  data={
-                    pointByIndex(result.points, result.utilitarian) === null
-                      ? []
-                      : [pointByIndex(result.points, result.utilitarian)!]
-                  }
-                  fill="#CC79A7"
-                />
-                <Scatter data={[current]} fill="#000" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartFrame
+            title="Utility frontier"
+            chart={
+              <div className="report-chart">
+                <ResponsiveContainer width="100%" height={200}>
+                  <ComposedChart>
+                    <CartesianGrid />
+                    <XAxis type="number" dataKey="uF" domain={[0, maxF]} hide />
+                    <YAxis type="number" dataKey="uI" domain={[0, maxI]} hide />
+                    <Tooltip formatter={(value) => dollars(Number(value))} />
+                    <ReferenceArea
+                      x1={deal.disagreement.dF}
+                      x2={maxF}
+                      y1={deal.disagreement.dI}
+                      y2={maxI}
+                      fill="#009E73"
+                      fillOpacity={0.08}
+                    />
+                    <ReferenceLine x={deal.disagreement.dF} stroke="#555" strokeDasharray="4 3" />
+                    <ReferenceLine y={deal.disagreement.dI} stroke="#555" strokeDasharray="4 3" />
+                    <Line
+                      data={frontierPoints}
+                      type="linear"
+                      dataKey="uI"
+                      stroke="#000"
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                    <Scatter data={result.points} fill="#56B4E9" />
+                    <Scatter data={nash === null ? [] : [nash]} fill="#D55E00" />
+                    <Scatter data={ks === null ? [] : [ks]} fill="#0072B2" />
+                    <Scatter
+                      data={
+                        pointByIndex(result.points, result.egalitarian) === null
+                          ? []
+                          : [pointByIndex(result.points, result.egalitarian)!]
+                      }
+                      fill="#009E73"
+                    />
+                    <Scatter
+                      data={
+                        pointByIndex(result.points, result.utilitarian) === null
+                          ? []
+                          : [pointByIndex(result.points, result.utilitarian)!]
+                      }
+                      fill="#CC79A7"
+                    />
+                    <Scatter data={[current]} fill="#000" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            }
+            table={
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Package</th>
+                      <th>Founder utility</th>
+                      <th>Investor utility</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.points.map((point) => (
+                      <tr key={point.pkg.index}>
+                        <td>#{point.pkg.index}</td>
+                        <td>{dollars(point.uF)}</td>
+                        <td>{dollars(point.uI)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            }
+          />
         )}
         <p>
           {result === null
