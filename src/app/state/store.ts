@@ -40,6 +40,18 @@ type Store = {
   ) => boolean
 }
 
+function isNewerSchemaVersion(raw: unknown): boolean {
+  if (raw === null || typeof raw !== 'object') return false
+  const version = (raw as { schemaVersion?: unknown }).schemaVersion
+  if (typeof version !== 'string' || !/^\d+\.\d+\.\d+$/u.test(version)) return false
+  const actual = version.split('.').map(Number)
+  const current = [1, 0, 0]
+  for (let index = 0; index < current.length; index += 1) {
+    if (actual[index] !== current[index]) return actual[index] > current[index]
+  }
+  return false
+}
+
 function parseAndUpdate(
   set: (partial: Partial<Store>) => void,
   raw: unknown,
@@ -52,7 +64,12 @@ function parseAndUpdate(
       validation: messages,
       importStatus:
         source === 'import'
-          ? { kind: 'error', message: messages[0] ?? 'Deal file is invalid.' }
+          ? {
+              kind: 'error',
+              message: isNewerSchemaVersion(raw)
+                ? 'This deal file was written by a newer version of Fairpoint.'
+                : (messages[0] ?? 'Deal file is invalid.'),
+            }
           : undefined,
     })
     return false

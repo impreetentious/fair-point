@@ -5,6 +5,7 @@ import { screenReadiness } from '../src/app/readiness'
 import { EXAMPLE_DECKS } from '../src/app/data/examples'
 import { constructRound } from '../src/core/round'
 import { DealFileSchema } from '../src/core/schema'
+import { useDealStore } from '../src/app/state/store'
 
 describe('UI contract support', () => {
   it('keeps direct dependency versions frozen exactly', () => {
@@ -56,5 +57,15 @@ describe('UI contract support', () => {
     const amber = screenReadiness(disputed)
     expect(amber.beliefs.state).toBe('amber')
     expect(amber.report.state).toBe('red')
+  })
+
+  it('gives imports from a newer schema version a version-specific message', () => {
+    const store = useDealStore.getState()
+    expect(store.replaceDeal({ schemaVersion: '1.0.1' }, 'import')).toBe(false)
+    expect(useDealStore.getState().importStatus).toEqual({
+      kind: 'error',
+      message: 'This deal file was written by a newer version of Fairpoint.',
+    })
+    useDealStore.getState().replaceDeal(EXAMPLE_DECKS[1].deal, 'example')
   })
 })
