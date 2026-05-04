@@ -98,16 +98,27 @@ export function RoundScreen() {
             />
           </label>
           <label>
-            Post-round pool target
+            Post-round pool target (%)
             <CommitNumber
-              label="Post-round pool target"
-              value={terms.poolTargetPost}
+              label="Post-round pool target (%)"
+              value={terms.poolTargetPost * 100}
               min={0}
-              max={0.4}
-              step={0.001}
-              decimals={3}
+              max={40}
+              step={0.1}
+              decimals={1}
               onCommit={(value) =>
-                value !== undefined && setTerms({ ...terms, poolTargetPost: value })
+                value !== undefined && setTerms({ ...terms, poolTargetPost: value / 100 })
+              }
+            />
+            <input
+              aria-label="Post-round pool target slider"
+              type="range"
+              min={5}
+              max={25}
+              step={0.1}
+              value={Math.min(25, Math.max(5, terms.poolTargetPost * 100))}
+              onChange={(event) =>
+                setTerms({ ...terms, poolTargetPost: Number(event.target.value) / 100 })
               }
             />
           </label>

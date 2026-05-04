@@ -86,17 +86,30 @@ function BeliefCard({ party }: { party: 'founder' | 'investor' }) {
   return (
     <article className="belief-card">
       <h3>{label} beliefs</h3>
+      <div className="preset-row">
+        <span>Illustrative defaults:</span>
+        {PRESETS.map((preset) => (
+          <button
+            key={preset.label}
+            type="button"
+            className="quiet-button"
+            onClick={() => setBeliefs(party, preset.beliefs)}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
       <div className="field-grid">
         <label>
-          Failure probability
+          Failure probability (%)
           <CommitNumber
-            label={`${label} failure probability`}
-            value={beliefs.p0}
+            label={`${label} failure probability (%)`}
+            value={beliefs.p0 * 100}
             min={0}
-            max={0.99}
-            step={0.001}
-            decimals={3}
-            onCommit={(value) => value !== undefined && commit('p0')(value)}
+            max={99}
+            step={0.1}
+            decimals={1}
+            onCommit={(value) => value !== undefined && commit('p0')(value / 100)}
           />
         </label>
         <label>
@@ -214,7 +227,6 @@ function BeliefCard({ party }: { party: 'founder' | 'investor' }) {
 export function BeliefsScreen() {
   const deal = useDealStore((state) => state.deal)
   const patchDeal = useDealStore((state) => state.patchDeal)
-  const setBeliefs = useDealStore((state) => state.setBeliefs)
   return (
     <section className="main-panel">
       <div className="section-heading">
@@ -243,19 +255,6 @@ export function BeliefsScreen() {
         />
         Use the same beliefs for both parties
       </label>
-      <div className="preset-row">
-        <span>Illustrative defaults — edit to your view:</span>
-        {PRESETS.map((preset) => (
-          <button
-            key={preset.label}
-            type="button"
-            className="quiet-button"
-            onClick={() => setBeliefs('founder', preset.beliefs)}
-          >
-            {preset.label}
-          </button>
-        ))}
-      </div>
       <div className="belief-grid">
         <BeliefCard party="founder" />
         <BeliefCard party="investor" />
