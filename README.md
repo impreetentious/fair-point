@@ -18,6 +18,8 @@ This product closes the gap with one structural insight: **a term package plus e
 2. **See the frontier.** Enter both parties' beliefs (P10/P50/P90 plus a failure probability) and hundreds of candidate term packages appear as a cloud in (founder EV, investor EV) space — the Pareto frontier lit up, Nash and Kalai–Smorodinsky (discrete) fair points flagged.
 3. **See the money on the table.** Pin the offer you actually received and read its exact joint surplus and ranked win-win alternatives. The bundled "Series A clean" example is already efficient under shared beliefs ($0 on the table); changing either party's beliefs, or pinning an offer that isn't on the candidate grid, makes the comparison live.
 
+5. **See past this round.** Several of the terms on a sheet are worth exactly nothing in a one-round model — anti-dilution cannot bite unless a later round prices lower, seniority has nothing to sit above. Attach two or three discrete follow-on branches and those terms acquire a price, with today's investor's dilution and pro-rata election shown branch by branch. The frontier and fair-point machinery run unchanged on the branch-weighted numbers.
+
 ## Who it's for
 
 1. **Founders** with a live or imminent term sheet (seed → Series B). The primary user.
@@ -46,6 +48,9 @@ This product closes the gap with one structural insight: **a term package plus e
 - **Two parties in the bargaining layer.** The frontier, fair points, and value-on-table are computed for a founder/investor pair; syndicate analysis is descriptive rather than a multi-party bargaining solution.
 - **KS monotonicity is not verified.** Bargaining solutions are property-tested against the axioms listed above; monotonicity is not meaningful on discrete point sets and is not claimed. Nash and KS solutions are labeled "discrete" in the UI for that reason.
 - **Beliefs are yours.** The engine is exact given the inputs. It has no market data, no comparables, and no opinion about whether your P50 exit is realistic.
+
+- **The next round is a sketch, not a forecast.** Follow-on branches are discrete states you name, with probabilities you set. That discreteness is what keeps the arithmetic exact — every branch is the same closed-form round mechanics composed with the same waterfall — but the branches themselves are assumptions, and the screen prices them rather than predicting them.
+- **A contingent term is priced, not drafted.** The ratchet is modelled as a state-dependent transfer above a threshold. Whether that structure survives contact with a lawyer, and how it interacts with the rest of the document, is outside the engine.
 
 ## Stack
 
@@ -87,4 +92,4 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.15.7
+**Version:** v0.15.8
