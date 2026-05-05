@@ -13,7 +13,8 @@ import type {
   ShareClassPreferred,
 } from './schema'
 
-function asConvertedShares(table: CapTable): number {
+/** Fully-diluted share count on the engine's own convention; the shadow round reuses it. */
+export function asConvertedShares(table: CapTable): number {
   return (
     table.classes.reduce(
       (sum, cls) =>

@@ -1,7 +1,7 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.15.6",
+  "version": "0.15.7",
   "type": "module",
   "engines": {
     "node": "22.22.x"
@@ -39,11 +39,11 @@
     "@types/node": "22.19.17",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "@typescript-eslint/eslint-plugin": "8.58.1",
-    "@typescript-eslint/parser": "8.58.1",
+    "@typescript-eslint/eslint-plugin": "8.58.2",
+    "@typescript-eslint/parser": "8.58.2",
     "eslint": "10.2.0",
     "fast-check": "4.0.0",
-    "globals": "17.4.0",
+    "globals": "17.5.0",
     "js-yaml": "4.1.1",
     "lighthouse": "13.1.0",
     "prettier": "3.8.2",
