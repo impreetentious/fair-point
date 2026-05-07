@@ -7,6 +7,7 @@ import { RoundScreen } from './screens/Round'
 import { WaterfallScreen } from './screens/Waterfall'
 import { BeliefsScreen } from './screens/Beliefs'
 import { FrontierScreen } from './screens/Frontier'
+import { LeverageScreen } from './screens/Leverage'
 import { ReportScreen } from './screens/Report'
 import { screenReadiness } from './readiness'
 import { SCREEN_IDS, type ScreenId, useDealStore } from './state/store'
@@ -17,6 +18,7 @@ const LABELS: Record<ScreenId, string> = {
   waterfall: 'Waterfall',
   beliefs: 'Beliefs',
   frontier: 'Frontier',
+  leverage: 'Leverage',
   report: 'Report',
 }
 
@@ -26,6 +28,7 @@ function ActiveScreen({ screen }: { screen: ScreenId }) {
   if (screen === 'waterfall') return <WaterfallScreen />
   if (screen === 'beliefs') return <BeliefsScreen />
   if (screen === 'frontier') return <FrontierScreen />
+  if (screen === 'leverage') return <LeverageScreen />
   return <ReportScreen />
 }
 

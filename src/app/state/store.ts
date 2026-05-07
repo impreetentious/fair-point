@@ -15,6 +15,7 @@ export const SCREEN_IDS = [
   'waterfall',
   'beliefs',
   'frontier',
+  'leverage',
   'report',
 ] as const
 export type ScreenId = (typeof SCREEN_IDS)[number]

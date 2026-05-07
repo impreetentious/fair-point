@@ -81,10 +81,15 @@ export function screenReadiness(deal: DealFile): Record<ScreenId, Readiness> {
     frontier = red(error instanceof Error ? error.message : 'Frontier analysis failed.')
   }
 
-  const prior = [cap, round, waterfall, beliefs, frontier]
+  const leverage =
+    frontier.state === 'green'
+      ? green('Leverage ready: term prices, belief ranking, and the next-round shadow all run.')
+      : red('Leverage waits for a frontier it can price against.')
+
+  const prior = [cap, round, waterfall, beliefs, frontier, leverage]
   const report = prior.every((item) => item.state === 'green')
     ? green('Report ready: all prior screens are green.')
     : red('Report waits for every prior screen to be green.')
 
-  return { 'cap-table': cap, round, waterfall, beliefs, frontier, report }
+  return { 'cap-table': cap, round, waterfall, beliefs, frontier, leverage, report }
 }

@@ -18,6 +18,7 @@ This product closes the gap with one structural insight: **a term package plus e
 2. **See the frontier.** Enter both parties' beliefs (P10/P50/P90 plus a failure probability) and hundreds of candidate term packages appear as a cloud in (founder EV, investor EV) space — the Pareto frontier lit up, Nash and Kalai–Smorodinsky (discrete) fair points flagged.
 3. **See the money on the table.** Pin the offer you actually received and read its exact joint surplus and ranked win-win alternatives. The bundled "Series A clean" example is already efficient under shared beliefs ($0 on the table); changing either party's beliefs, or pinning an offer that isn't on the candidate grid, makes the comparison live.
 
+4. **See what to say about it.** The frontier answers *which package*; the Leverage screen answers what you say in the room. Every term is priced one step at a time in expected dollars for both sides, with the pre-money that would undo each concession solved for and checked. A tornado ranks the four exit beliefs by how far each one alone moves the answer, so you know which diligence question is worth asking first. And where the two sides disagree about the exit, the disagreement is priced as tradeable material: a milestone ratchet pays in the states one side believes in and the other does not, so it can be worth more to you than it costs them.
 5. **See past this round.** Several of the terms on a sheet are worth exactly nothing in a one-round model — anti-dilution cannot bite unless a later round prices lower, seniority has nothing to sit above. Attach two or three discrete follow-on branches and those terms acquire a price, with today's investor's dilution and pro-rata election shown branch by branch. The frontier and fair-point machinery run unchanged on the branch-weighted numbers.
 
 ## Who it's for
@@ -38,7 +39,7 @@ This product closes the gap with one structural insight: **a term package plus e
 
 - An exact engine: round construction (pool shuffle, SAFE conversion, anti-dilution), liquidation waterfall with conversion equilibria, exact breakpoints, closed-form expected payouts, and the bargaining layer (ZOPA, frontier, Nash, Kalai–Smorodinsky, egalitarian, utilitarian, value-on-table).
 - Extensions beyond the two-party core: multi-party syndicate bargaining, employee-offer analysis, dividends and accruals, convertible notes, secondaries, 409A fair value, IRR/time-discounting, MFN clauses, and warrants.
-- Six screens: Cap Table, Round, Waterfall, Beliefs, Frontier (where the negotiation happens), and a printable one-page Report.
+- Seven screens: Cap Table, Round, Waterfall, Beliefs, Frontier (where the negotiation happens), Leverage (term prices, belief ranking, contingent terms, and the next-round shadow), and a printable one-page Report.
 - Three worked example decks, eight in-app explainers, a fixture suite of 80+ hand-derived tests, and export/import of deal files as versioned JSON.
 - A static, offline-capable build (service-worker-precached; survives a hard reload with the network offline) deployable on any static host (relative asset paths, no URL-path assumptions).
 
@@ -92,4 +93,4 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.15.8
+**Version:** v0.15.9
