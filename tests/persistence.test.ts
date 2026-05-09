@@ -28,8 +28,8 @@ describe('deal-file persistence', () => {
 })
 
 describe('explainers', () => {
-  it('ships all eight explainers and gives each a reachable screen', () => {
-    expect(EXPLAINERS).toHaveLength(8)
+  it('ships every explainer and gives each a reachable screen', () => {
+    expect(EXPLAINERS).toHaveLength(11)
     expect(
       EXPLAINERS.every(
         (explainer) =>

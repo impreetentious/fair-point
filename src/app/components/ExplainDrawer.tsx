@@ -4,6 +4,45 @@ type Explainer = { id: number; title: string; screens: string[]; bullets: string
 
 export const EXPLAINERS: Explainer[] = [
   {
+    id: 101,
+    title: 'How a term is priced',
+    screens: ['leverage'],
+    body: 'Every price on this screen is the existing package evaluation run on a package that differs in exactly one term, so a price is as exact as the waterfall is. The trade column solves for the pre-money that restores the founder to their starting expected value after a concession, by bisection on a quantity that is monotone in pre-money, and reports the residual so the solve can be seen to land rather than taken on faith. A step that would produce a package the schema rejects quotes the reason instead of a number.',
+    bullets: [
+      'A price is one term moved and everything else held.',
+      'The trade column solves for the compensating pre-money and shows its residual.',
+      'Illegal steps quote a reason, never a number.',
+      'Joint value is the sum of the two sides: positive means the step creates value.',
+      'Prices are quoted per unit of pre-money, per half-turn of preference, per pool point.',
+    ],
+  },
+  {
+    id: 102,
+    title: 'What a contingent term is for',
+    screens: ['leverage'],
+    body: 'Where the two sides disagree about the exit, a term that pays in one region of that distribution is worth more to the optimist than it costs the sceptic — so it creates joint value out of the disagreement itself rather than moving money between the parties. The ratchet here is priced from the same lognormal fit the payouts use: its value to each side is the partial expectation of the exit over the states above the threshold, under that side own beliefs. When the two sides agree, the value created is exactly zero and the screen says so.',
+    bullets: [
+      'Disagreement about the future is the one thing both sides can profitably bet on.',
+      'The ratchet pays above a threshold; each side prices that tail under its own beliefs.',
+      'Joint value is the founder value minus the investor cost.',
+      'Equal beliefs create exactly zero value — the screen never claims otherwise.',
+      'Candidate thresholds are the two sides’ own medians and upper quantiles, not a search.',
+    ],
+  },
+  {
+    id: 103,
+    title: 'Why a next round changes today\u2019s terms',
+    screens: ['leverage'],
+    body: 'Anti-dilution is structurally worthless in a single-round model: there is no later round whose price could be lower, so the protection can never bite. Seniority is the same — with nothing stacking above it there is nothing to be senior to. Attaching discrete follow-on branches gives those terms somewhere to act. Discreteness is what keeps the result exact: each branch composes the same closed-form round mechanics with the same piecewise-linear waterfall, so the weighted answer is a finite sum of exact quantities and no simulation is introduced.',
+    bullets: [
+      'Anti-dilution and seniority price at zero in one round, by construction.',
+      'Branches are discrete so the expectation stays a finite sum of closed forms.',
+      'Follow-on money is a third party except for the pro-rata slice today\u2019s investor takes.',
+      'The frontier and fair-point machinery run unchanged on branch-weighted values.',
+      'A branch that cannot be constructed is reported, never silently dropped from the weights.',
+    ],
+  },
+  {
     id: 1,
     title: 'Why the waterfall is piecewise-linear',
     screens: ['waterfall'],
