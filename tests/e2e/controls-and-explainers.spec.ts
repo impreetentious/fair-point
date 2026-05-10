@@ -11,7 +11,7 @@ test('exposes explainers, percent controls, per-party presets, and report tables
     page.getByRole('heading', { name: 'Preferences, participation, and caps' }),
   ).toBeVisible()
 
-  await navigation.getByRole('button', { name: 'Round' }).click()
+  await navigation.getByRole('button', { name: /^Round\b/ }).click()
   await page.getByLabel('Post-round pool target (%)').fill('20')
   await page.getByLabel('Post-round pool target (%)').press('Tab')
   await expect(page.getByLabel('Post-round pool target slider')).toHaveValue('20')

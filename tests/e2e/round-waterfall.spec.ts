@@ -4,7 +4,7 @@ test('constructs the round and updates the waterfall at a chosen exit', async ({
   await page.goto('./')
   const navigation = page.getByRole('navigation', { name: 'Workspace screens' })
 
-  await navigation.getByRole('button', { name: 'Round' }).click()
+  await navigation.getByRole('button', { name: /^Round\b/ }).click()
   await expect(page.getByText('Price per share')).toBeVisible()
 
   await navigation.getByRole('button', { name: 'Waterfall' }).click()

@@ -1,7 +1,7 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.15.10",
+  "version": "0.16.0",
   "type": "module",
   "engines": {
     "node": "22.22.x"
@@ -21,8 +21,9 @@
     "test:a11y": "node scripts/lighthouse-a11y.mjs",
     "budget:bundle": "node scripts/bundle-budget.mjs",
     "gates": "npm run budget:bundle && npm run test:e2e && npm run test:a11y",
-    "verify": "npm run check:version && npm run typecheck && npm run lint && npm run format:check && npm run test && npm run fixtures",
-    "check:version": "node scripts/check-version-coherence.mjs"
+    "verify": "npm run check:version && npm run typecheck && npm run check:citations && npm run lint && npm run format:check && npm run test && npm run fixtures",
+    "check:version": "node scripts/check-version-coherence.mjs",
+    "check:citations": "node scripts/check-citations.mjs"
   },
   "dependencies": {
     "next": "16.2.4",

@@ -25,7 +25,7 @@ async function assertAllScreens(page: Page): Promise<void> {
   for (const screen of SCREENS) {
     await page
       .getByRole('navigation', { name: 'Workspace screens' })
-      .getByRole('button', { name: screen.label })
+      .getByRole('button', { name: new RegExp(`^${screen.label}\\b`) })
       .click()
     await expect(page.getByRole('heading', { level: 2, name: screen.heading })).toBeVisible()
   }
