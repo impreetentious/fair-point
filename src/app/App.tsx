@@ -124,6 +124,7 @@ export function App() {
           <button
             key={id}
             type="button"
+            data-screen={id}
             className={screen === id ? 'nav-item active' : 'nav-item'}
             onClick={() => setScreen(id)}
           >

@@ -1,12 +1,15 @@
 import { expect, test, type Page, type Request } from '@playwright/test'
 
+// Keyed by `data-screen`, not by visible copy: each nav button's accessible
+// name is its readiness sentence plus its label, so a name-based locator breaks
+// whenever readiness prose changes.
 const SCREENS = [
-  { label: 'Cap Table', heading: 'Cap table' },
-  { label: 'Round', heading: 'Round' },
-  { label: 'Waterfall', heading: 'Waterfall' },
-  { label: 'Beliefs', heading: 'Beliefs' },
-  { label: 'Frontier', heading: 'Frontier' },
-  { label: 'Report', heading: 'Report' },
+  { id: 'cap-table', heading: 'Cap table' },
+  { id: 'round', heading: 'Round' },
+  { id: 'waterfall', heading: 'Waterfall' },
+  { id: 'beliefs', heading: 'Beliefs' },
+  { id: 'frontier', heading: 'Frontier' },
+  { id: 'report', heading: 'Report' },
 ] as const
 
 async function waitForServiceWorker(page: Page): Promise<void> {
@@ -25,7 +28,7 @@ async function assertAllScreens(page: Page): Promise<void> {
   for (const screen of SCREENS) {
     await page
       .getByRole('navigation', { name: 'Workspace screens' })
-      .getByRole('button', { name: new RegExp(`^${screen.label}\\b`) })
+      .locator(`[data-screen="${screen.id}"]`)
       .click()
     await expect(page.getByRole('heading', { level: 2, name: screen.heading })).toBeVisible()
   }

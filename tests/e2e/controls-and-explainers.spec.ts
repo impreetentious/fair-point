@@ -11,12 +11,12 @@ test('exposes explainers, percent controls, per-party presets, and report tables
     page.getByRole('heading', { name: 'Preferences, participation, and caps' }),
   ).toBeVisible()
 
-  await navigation.getByRole('button', { name: /^Round\b/ }).click()
+  await navigation.locator('[data-screen="round"]').click()
   await page.getByLabel('Post-round pool target (%)').fill('20')
   await page.getByLabel('Post-round pool target (%)').press('Tab')
   await expect(page.getByLabel('Post-round pool target slider')).toHaveValue('20')
 
-  await navigation.getByRole('button', { name: 'Beliefs' }).click()
+  await navigation.locator('[data-screen="beliefs"]').click()
   await page.getByLabel('Use the same beliefs for both parties').uncheck()
   await page.getByLabel('Founder failure probability (%)').fill('40')
   await page.getByLabel('Founder failure probability (%)').press('Tab')
@@ -28,7 +28,7 @@ test('exposes explainers, percent controls, per-party presets, and report tables
   await expect(page.getByLabel('Investor P50 if not zero')).toHaveValue('40000000')
   await expect(page.getByLabel('Founder failure probability (%)')).toHaveValue('40')
 
-  await navigation.getByRole('button', { name: 'Report' }).click()
+  await navigation.locator('[data-screen="report"]').click()
   await page.getByRole('button', { name: 'View as table' }).first().click()
   await expect(page.getByRole('columnheader', { name: 'Exit' })).toBeVisible()
 })

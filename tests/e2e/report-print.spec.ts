@@ -4,7 +4,7 @@ test('Series A report prints as exactly one A4 page', async ({ page }) => {
   await page.goto('./')
   await page
     .getByRole('navigation', { name: 'Workspace screens' })
-    .getByRole('button', { name: 'Report' })
+    .locator('[data-screen="report"]')
     .click()
   await expect(page.getByRole('heading', { level: 2, name: 'Report' })).toBeVisible()
 
