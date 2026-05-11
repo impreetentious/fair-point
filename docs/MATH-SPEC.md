@@ -1,4 +1,4 @@
-# Fairpoint — Math Specification
+# Fairpoint — Math Specification (LOCKED)
 
 The normative mathematics for this repository: the round-construction pipeline, SAFE conversion as
 a single global solve, the pool shuffle and PPS closed form, anti-dilution, the exit waterfall,
@@ -6,44 +6,39 @@ numerics and distributions, closed-form outcome statistics, utilities and BATNAs
 layer, the employee-offer analyzer, warrants, pay-to-play, dividends, redemption, convertible
 notes, MFN, secondary sales, IRR/time-discounting, multi-party syndicate bargaining, and 409A.
 
-This is the normative description of the implemented mathematics. Source comments cite it as
-`docs/MATH-SPEC.md §X`; keep section numbers stable or update every reference with
-`npm run check:citations`.
+**This document is authoritative and permanent.** Source comments cite it by section number as
+`docs/MATH-SPEC.md §X`; where a source comment and this document disagree, this document wins until an
+owner ruling says otherwise. Section numbering is contract — renumbering a section breaks every
+citation that points at it.
 
 ---
 
-Conventions: dollars and shares are float64; `ln 0 = −∞`, `Φ(−∞)=0`, `Φ(+∞)=1`; settlement decisions use `EPS_DECISION = 1e-6` absolute on dollars unless stated. Fixture assertions use `max($0.01, 1e-8 × |expected|)`.
+Conventions: dollars and shares are float64; `ln 0 = −∞`, `Φ(−∞)=0`, `Φ(+∞)=1`; comparisons in this section use `EPS_DECISION = 1e-6` absolute on dollars unless stated. Fixture-assertion tolerance is D16's separate policy (do not conflate — see D16).
 
-### 6.1 Round construction pipeline (`constructRound`) — fixed order, single global solve
+### 6.1 Round construction pipeline (`constructRound`) — locked order, single global solve
 
 Given pre-round `CapTable`, `Safe[]`, `RoundTerms {V_pre or pricedPerShare, I, t, prefMultiple, participation, seniority}`, compute the following as ONE coupled fixed point (§6.2 gives the closed form; §6.4.2 layers anti-dilution around it):
 
 1. **BaseCap** = all outstanding common shares + existing preferred as-converted (`shares × conversionRatio`) + issued option shares (all grants, regardless of strike) + `poolAvailable` (pre-existing) + `promisedOptions`. _(New-round pool increase `P` and new-money investor shares `N` are excluded — they are what §6.2/§6.3 solve for.)_
 2. **Global SAFE + pool + PPS solve** (§6.2). Every SAFE's route (cap / discount / round-price) is chosen jointly with total SAFE shares `T`, pool increase `P`, and PPS. Pre-money and post-money SAFEs are solved together; new-round pool increase `P` and `T` co-determine the ownership base (see §6.2 addendum: post-money base includes ALL converting securities). Converted SAFEs become new preferred classes per §6.2.4.
 3. Given the solved `T` and `P`, `A = BaseCap + T`. (Same identity as before, now applied to the solved `T`.)
-4. **PPS** = `V_pre / (A + P)` in `preMoney` mode, or the supplied `pricedPerShare` in direct-PPS mode (V12; pool step is skipped in direct-PPS mode per §6.3 addendum). **New investor shares** `N = I / PPS`. **New round class:** PREFERRED, holder=INVESTOR, invested = I, OIP = PPS, multiple/participation from terms, `seniorityTier` = 1 if `seniority='SENIOR'` (existing tiers shift +1); else PARI, meaning "join the most junior existing preferred tier" (i.e., `seniorityTier = max(existing tiers, 1)`). The new class's tier is computed **here** (from `seniority` and existing tiers), before §6.2.4 needs to stamp it onto converted SAFEs.
-5. **Anti-dilution** (§6.4) for protected existing preferred if `PPS < currentConversionPrice` — may trigger the fixed-point re-solve. The anti-dilution loop wraps steps 2–4: any BWA/FULL_RATCHET adjustment updates existing preferred `conversionRatio`, which changes BaseCap, which re-enters §6.2/§6.3. `CP1` is frozen at its pre-round value across all iterations.
-6. Emit post-round `CapTable` + diagnostics `{pps, investorPct = N/FD_post, poolIncrease = P, safeShares}` + invariant check: **in `preMoney` mode**, with no SAFEs and no anti-dilution, `investorPct` must equal `I/(V_pre+I)` to 1e-9 relative. Under the fixed-point identity, `investorPct = I/V_post` also holds in `preMoney` mode _with_ anti-dilution — because `PPS = V_pre/(A+P)` and `N = I/PPS` give `N/(A+P+N) = I/(V_pre+I)` identically. In `pricedPerShare` mode this V_pre-derived invariant is skipped (V_pre is not an input); `investorPct` is `N/FD_post` on the supplied PPS.
+4. **PPS** = `V_pre / (A + P)` in `preMoney` mode, or the supplied `pricedPerShare` in direct-PPS mode (V12; pool step is skipped in direct-PPS mode per §6.3 addendum). **New investor shares** `N = I / PPS`. **New round class:** PREFERRED, holder=INVESTOR, invested = I, OIP = PPS, multiple/participation from terms, `seniorityTier` = 1 if `seniority='SENIOR'` (existing tiers shift +1); else PARI, meaning "join the most junior existing preferred tier" (i.e., `seniorityTier = max(existing tiers, 1)`) — T-23. The new class's tier is computed **here** (from `seniority` and existing tiers), before §6.2.4 needs to stamp it onto converted SAFEs.
+5. **Anti-dilution** (§6.4) for protected existing preferred if `PPS < currentConversionPrice` — may trigger the fixed-point re-solve. The anti-dilution loop wraps steps 2–4: any BWA/FULL_RATCHET adjustment updates existing preferred `conversionRatio`, which changes BaseCap, which re-enters §6.2/§6.3. `CP1` is frozen at its pre-round value across all iterations (T-05).
+6. Emit post-round `CapTable` + diagnostics `{pps, investorPct = N/FD_post, poolIncrease = P, safeShares}` + invariant check: **in `preMoney` mode**, with no SAFEs and no anti-dilution, `investorPct` must equal `I/(V_pre+I)` to 1e-9 relative. **Under the fixed-point identity** (see T-05), `investorPct = I/V_post` also holds in `preMoney` mode _with_ anti-dilution — because `PPS = V_pre/(A+P)` and `N = I/PPS` give `N/(A+P+N) = I/(V_pre+I)` identically. In `pricedPerShare` mode this V_pre-derived invariant is skipped (V_pre is not an input); `investorPct` is `N/FD_post` on the supplied PPS.
 
 ### 6.2 SAFE conversion (`safes.ts`) — global solve, no two-pass
 
-#### 6.2.0 Route menu (per SAFE)
-
-Post-money SAFEs convert into shares at the route giving **max shares** among:
+**6.2.0 Route menu (per SAFE, LOCKED).** Post-money SAFEs convert into shares at the route giving **max shares** among:
 
 - **Cap route:** the simultaneous closed form of §6.2.2.
 - **Discount route:** `amount_i / ((1 − discount_i) × PPS)` (only when the SAFE has a discount).
-- **Round-price route:** `amount_i / PPS` (participates for **every** post-money SAFE — cap-only, discount-only, cap-and-discount — because the YC guide's low-priced-round conversion can beat cap or discount when the round prices below the SAFE price).
+- **Round-price route:** `amount_i / PPS` (participates for **every** post-money SAFE — cap-only, discount-only, cap-and-discount — because the YC guide's low-priced-round conversion always beats cap or discount when the round prices below the SAFE price; T-01(c)).
 
 Pre-money SAFEs (§6.2.1) use their own price rule (cap vs. discount), not this three-way max.
 
-#### 6.2.1 Pre-money SAFE
+**6.2.1 Pre-money SAFE** (note-like): conversion price = `min(capPrice, discountPrice)` where **`capPrice = valuationCap / (BaseCap + P)`** (cap taken over the pre-money capitalization _including_ the new round's pool increase — the original pre-money safe's Company Capitalization is defined to include that increase; T-01 fix 4) and `discountPrice = (1 − discount) × PPS`. Missing term ⇒ the other governs (V14). Shares = `amount / price`. Pre-money SAFE shares are included in `T` (§6.1 step 2), and their entry into `A`, `P`, and PPS is solved jointly with the post-money SAFE route selection (§6.2.3).
 
-Conversion price = `min(capPrice, discountPrice)` where **`capPrice = valuationCap / (BaseCap + P)`** (cap taken over the pre-money capitalization _including_ the new round's pool increase) and `discountPrice = (1 − discount) × PPS`. Missing term ⇒ the other governs (V14). Shares = `amount / price`. Pre-money SAFE shares are included in `T` (§6.1 step 2), and their entry into `A`, `P`, and PPS is solved jointly with the post-money SAFE route selection (§6.2.3).
-
-#### 6.2.2 YC post-money SAFE — simultaneous closed form (cap route)
-
-Each post-money SAFE `i` has locked ownership fraction `f_i = amount_i / valuationCap_i` of the post-SAFE, pre-new-money capitalization. Let `s = Σ_{i ∈ CAP_ROUTE} f_i` (validation V2 requires `Σ_all f_i ≤ 0.95`) and let `T_other` = the sum of shares from every non-cap-route converting security in this financing (pre-money SAFEs, discount-route post-money SAFEs, round-price-route post-money SAFEs). The cap-route shares satisfy
+**6.2.2 YC post-money SAFE — simultaneous closed form (cap route).** Each post-money SAFE `i` has locked ownership fraction `f_i = amount_i / valuationCap_i` of the post-SAFE, pre-new-money capitalization. Let `s = Σ_{i ∈ CAP_ROUTE} f_i` (validation V2 requires `Σ_all f_i ≤ 0.95`) and let `T_other` = the sum of shares from every non-cap-route converting security in this financing (pre-money SAFEs, discount-route post-money SAFEs, round-price-route post-money SAFEs). The cap-route shares satisfy
 
 ```
 shares_i        = f_i × (BaseCap + T_other + Σ_{j∈CAP_ROUTE} shares_j)
@@ -56,11 +51,11 @@ which yields
 shares_i             = f_i × (BaseCap + T_other) / (1 − s)
 ```
 
-_(This closed form generalizes the "pure post-money" case where `T_other = 0`: same denominator `1 − s`, base is `BaseCap + T_other` instead of `BaseCap`. Ownership identity holds exactly: `shares_i / (BaseCap + T_other + Σ_{cap-route} shares) = `f_i``.)\*
+_(This closed form generalizes the "pure post-money" case where `T_other = 0`: same denominator `1 − s`, base is `BaseCap + T_other` instead of `BaseCap`. Ownership identity holds exactly: `shares_i / (BaseCap + T_other + Σ_{cap-route} shares) = f_i`.)_
 
-#### 6.2.3 Global solve — routes, total SAFE shares `T`, pool increase `P`, PPS
+**6.2.3 Global solve — routes, total SAFE shares `T`, pool increase `P`, PPS (replaces the old two-pass rule).**
 
-Under a fixed route assignment, `solveFixedRoutes` iterates the coupled SAFE, pool, and PPS equations to their numerical fixed point:
+The old two-pass rule is deleted. Under any fixed route assignment, `T`, `P`, and PPS are the solution to a **linear system**:
 
 - Cap-route shares (as above) are affine in `(BaseCap + T_other)`; `T_other` is the sum of pre-money-SAFE shares + discount-route + round-price-route shares.
 - Discount-route shares `s_i^{disc} = amount_i / ((1 − discount_i) × PPS)` are affine in `1/PPS`.
@@ -71,18 +66,17 @@ Under a fixed route assignment, `solveFixedRoutes` iterates the coupled SAFE, po
 
 Solve procedure:
 
-1. **Initialize routes.** Prefer the cap route when a cap exists, otherwise discount, otherwise round price.
-2. **Solve fixed routes.** Start from the supplied PPS or `V_pre / BaseCap`. Recompute pre-money SAFE shares, non-cap post-money shares, simultaneous cap-route shares, pool increase, and PPS until both PPS and pool stabilize. Direct-PPS mode keeps the supplied price and skips the pool increase. The fixed-route loop is bounded at 200 iterations and throws `NonConvergence` if it does not stabilize.
-3. **Re-evaluate route optimality.** For each post-money SAFE, solve each available route while the other route assignments stay fixed, then retain the route yielding the most shares.
-4. Repeat the route pass until no route changes; bound it at `#SAFEs + 1` passes.
+1. **Initialize** every post-money SAFE to its cap route; every pre-money SAFE to whichever price rule is defined; solve the resulting linear system for `T`, `P`, PPS (closed form). _(In `pricedPerShare` mode, skip `P` per §6.3 addendum: use `P = 0` in the solve; PPS is the input; `T` still solves the SAFE linear system.)_
+2. **Re-evaluate route optimality at the solved PPS.** For each post-money SAFE, compute the three-way max (§6.2.0). If any SAFE's optimal route ≠ its current route, **switch it** (route switches are monotone toward _more_ shares, hence lower PPS, hence never revert) and re-solve.
+3. Repeat until no route switches; bound iterations at `#SAFEs + 1` (guaranteed by the monotonicity). Assert `iterations ≤ #SAFEs + 1` in dev mode.
 
-_(Why a global solve is required: with BaseCap 10M, V_pre \$10M, no pool, and one \$1M SAFE at a \$20M post-money cap plus 20% discount, successive two-pass estimates continue moving. The fixed point is **1,428,571.43 shares, PPS \$0.875, discount route wins**. F-SAFE-04 covers the corresponding round-and-pool case.)_
+_(Independent no-pool counterexample validating the deletion of the "two passes suffice" rule: BaseCap 10M, V_pre $10M, no pool, one $1M SAFE @ $20M post cap + 20% discount. Two-pass: pass 1 gives 526,315.79 sh, PPS 0.95; pass 2 gives 1,315,789.47 sh, PPS 0.883721; a third pass would give 1,414,473.7 sh — the old dev assert fires on valid input. Global solve: **1,428,571.43 sh, PPS $0.875, discount route wins__. This is distinct from F-SAFE-04 below, which adds a $2.5M round and a 10% target pool.)_
 
-#### 6.2.4 Converted SAFE class — shadow-series rule
-
-Cap-route and discount-route post-money SAFEs and pre-money SAFEs convert into a **shadow series**: `kind = PREFERRED`, `holder =` the SAFE's `holder` flag (default OTHER; INVESTOR when the user marks a SAFE as the lead investor's), `invested = amount`, `shares =` the solved-share count, `originalIssuePrice = amount / shares` (so `capMultiple × invested` is the correct participation cap basis under V11), **`prefMultiple`, `participation`, `participationCapMultiple`, `seniorityTier` inherited from the new round's class** (the tier is the one §6.1 step 4 computed _before_ SAFE conversion completes — the tier is data of the round, not of the SAFE), `antiDilution = 'NONE'`, `conversionRatio = 1`.
+**6.2.4 Converted SAFE class (D12) — shadow-series rule.** Cap-route and discount-route post-money SAFEs and pre-money SAFEs convert into a **shadow series**: `kind = PREFERRED`, `holder =` the SAFE's `holder` flag (default OTHER; INVESTOR when the user marks a SAFE as the lead investor's), `invested = amount`, `shares =` the solved-share count, `originalIssuePrice = amount / shares` (so `capMultiple × invested` is the correct participation cap basis per D9/V11), **`prefMultiple`, `participation`, `participationCapMultiple`, `seniorityTier` inherited from the new round's class** (the tier is the one §6.1 step 4 computed _before_ SAFE conversion completes — the tier is data of the round, not of the SAFE), `antiDilution = 'NONE'`, `conversionRatio = 1`.
 
 **Round-price-route** post-money SAFEs (that is, whichever SAFEs came out of §6.2.0 with the round-price max — a low-priced round where cap and discount are both dominated) instead convert into the **new round's class directly** (Standard Preferred, per the guide: "using the new-money price per share, cap not applied"). Operationally that means merging their shares into the new investor class's `shares`, adding their `amount` into the new class's `invested`, and — for `holder` — leaving the SAFE's share of the merged class as OTHER unless the SAFE's `holder = INVESTOR`, in which case they simply join the same class as the lead. _(Merging is the guide-faithful behavior; splitting the round-price-route SAFEs into per-SAFE classes is equivalent for waterfall math but bloats V7's class count.)_
+
+The old §6.2.4 clause "1× non-participating" is deleted.
 
 ### 6.3 Pool shuffle + PPS closed form
 
@@ -97,15 +91,13 @@ FD_post = A + P + N
 
 _Derivation:_ PPS = V_pre/(A+P); N = I(A+P)/V_pre so FD_post = (A+P)(1 + I/V_pre) = (A+P)·r. Pool condition (poolAvail + P)/FD_post = t ⇒ poolAvail + P = t·r·(A+P) ⇒ P as above. Validation V3 requires `1 − t·r ≥ 0.05`.
 
-**Direct-PPS mode (`pricedPerShare`) addendum.** When `RoundTerms.pricedPerShare` is supplied instead of `preMoney`: skip the pool-shuffle solve entirely — set `P = 0` (or, equivalently, leave the existing pool at `poolAvail` and emit `poolIncrease = 0` in diagnostics). Rationale: the user is modeling a signed deal at a known per-share price, not solving for one. `V3` is skipped (no `V_pre`). Diagnostics: `pps = the supplied price`; `N = I/pps`; `investorPct = N/FD_post` with `FD_post = A + N`; `poolIncrease = 0`. All `V_pre`-derived invariants (§6.1 step 6) are skipped in this mode.
+**Direct-PPS mode (`pricedPerShare`) addendum (T-05).** When `RoundTerms.pricedPerShare` is supplied instead of `preMoney`: skip the pool-shuffle solve entirely — set `P = 0` (or, equivalently, leave the existing pool at `poolAvail` and emit `poolIncrease = 0` in diagnostics). Rationale: the user is modeling a signed deal at a known per-share price, not solving for one. `V3` is skipped (no `V_pre`). Diagnostics: `pps = the supplied price`; `N = I/pps`; `investorPct = N/FD_post` with `FD_post = A + N`; `poolIncrease = 0`. All `V_pre`-derived invariants (§6.1 step 6) are skipped in this mode.
 
-**Worked check (fixture F-RND-01):** A = 9,000,000 (common 8.5M + issued options 0.5M), poolAvail = 0, V_pre = \$8,000,000, I = \$2,000,000, t = 0.10 ⇒ r = 1.25; P = 1,125,000/0.875 = **1,285,714.2857**; PPS = 8,000,000/10,285,714.2857 = **7/9 ≈ 0.7777778**; N = **2,571,428.5714**; FD_post = **12,857,142.857**; pool% = 10.0000%; investor% = 20.0000% = I/V_post. ✓
+**Worked check (fixture F-RND-01):** A = 9,000,000 (common 8.5M + issued options 0.5M), poolAvail = 0, V_pre = $8,000,000, I = $2,000,000, t = 0.10 ⇒ r = 1.25; P = 1,125,000/0.875 = **1,285,714.2857**; PPS = 8,000,000/10,285,714.2857 = **7/9 ≈ 0.7777778**; N = **2,571,428.5714**; FD_post = **12,857,142.857**; pool% = 10.0000%; investor% = 20.0000% = I/V_post. ✓
 
 ### 6.4 Anti-dilution (`antidilution.ts`)
 
-#### 6.4.1 Broad-based weighted average
-
-Using the NVCA Model COI (2020 revision, section 4.4.4), for each protected class with pre-round conversion price `CP1` when the new round's `PPS < CP1`:
+**6.4.1 Broad-based weighted average (NVCA Model COI, 2020 revision, §4.4.4 — T-22):** for each protected class with pre-round conversion price `CP1` when the new round's `PPS < CP1`:
 
 ```
 CP2 = CP1 × (A_bb + B) / (A_bb + C)
@@ -124,32 +116,28 @@ A_bb = "Common Stock Deemed Outstanding immediately prior to the new issue" per 
 newConversionRatio = originalIssuePrice / CP2
 ```
 
-`CP1` is **frozen** at its pre-round value across every fixed-point iteration; it is `originalIssuePrice / conversionRatio_pre-round` for the protected class, computed once and cached. Adjusted ratios change as-converted shares in the waterfall and in FD. FULL_RATCHET: `CP2 = PPS`, same ratio update.
+`CP1` is **frozen** at its pre-round value across every fixed-point iteration (T-05); it is `originalIssuePrice / conversionRatio_pre-round` for the protected class, computed once and cached. Adjusted ratios change as-converted shares in the waterfall and in FD. FULL_RATCHET: `CP2 = PPS`, same ratio update.
 
 _(Note: some negotiated variants include the reserved pool inside the base; those are out of scope — the engine implements the NVCA base as specified above.)_
 
-#### 6.4.2 Self-consistent PPS
-
-When the price is derived from V_pre and a protected class adjusts, its `conversionRatio` grows, which grows `BaseCap`, which triggers a full re-entry into the §6.2 global solve — SAFE shares, pool `P`, PPS all re-solve consistently. Outer iteration:
+**6.4.2 Self-consistent PPS — layered around §6.2's global solve (T-01, T-05).** When the price is derived from V_pre and a protected class adjusts, its `conversionRatio` grows, which grows `BaseCap`, which triggers a full re-entry into the §6.2 global solve — SAFE shares, pool `P`, PPS all re-solve consistently. Outer iteration:
 
 1. Compute BaseCap with current preferred `conversionRatio`s.
 2. Run §6.2 global solve → `T`, `P`, PPS.
 3. For each protected class with BWA / FULL_RATCHET and `PPS < CP1`, compute `CP2` and update `conversionRatio = OIP / CP2` (using frozen `CP1`).
 4. If any `conversionRatio` changed by more than `1e-9` relative, go to 1.
 
-Convergence: `|PPS_{k+1} − PPS_k| < 1e-9 × PPS_k` (or, equivalently, all `conversionRatio`s stable at 1e-9 relative), max **50 iterations**; throw `NonConvergence` after. Property tests assert convergence across randomized down rounds.
+Convergence: `|PPS_{k+1} − PPS_k| < 1e-9 × PPS_k` (or, equivalently, all `conversionRatio`s stable at 1e-9 relative), max **50 iterations**; throw `NonConvergence` after — surfaced as a validation error; property test §7.4 asserts convergence across the random battery.
 
 When the user supplies PPS directly (`pricedPerShare` mode), apply §6.4.1 **once** and skip the outer loop — the direct-PPS mode is not self-consistent, matching what the legal document does; fixture F-RND-03's `pricedPerShare` variant uses this path. Diagnostics semantics in `pricedPerShare` mode are as §6.3's direct-PPS addendum specifies.
 
-**Identity under the fixed point:** `PPS = V_pre/(A+P)` and `N = I/PPS` give `N/(A+P+N) = I/(V_pre+I) = I/V_post` _identically_, regardless of how much anti-dilution inflates the as-converted count of protected preferred classes. In `preMoney` mode, self-consistent anti-dilution therefore transfers value from **common** (whose per-share stake is diluted by the protected class's growing conversion ratio) to the **protected preferred**, and leaves the new investor's percentage untouched at `I/V_post`.
+**Identity under the fixed point (T-05, worth remembering):** `PPS = V_pre/(A+P)` and `N = I/PPS` give `N/(A+P+N) = I/(V_pre+I) = I/V_post` _identically_, regardless of how much anti-dilution inflates the as-converted count of protected preferred classes. In `preMoney` mode, self-consistent anti-dilution therefore transfers value from **common** (whose per-share stake is diluted by the protected class's growing conversion ratio) to the **protected preferred**, and leaves the new investor's percentage untouched at `I/V_post`. This is a feature and is the correct behavior of self-consistent pricing; see explainer 6/7.
 
-### 6.5 Waterfall at exit (`payoutsAt`) — deterministic settlement
+### 6.5 Waterfall at exit (`payoutsAt`) — exact, deterministic
 
-Inputs: post-round `CapTable`, exit value `E ≥ 0`. Output: `$` per class and per option grant. Unissued pool receives $0.
+Inputs: post-round `CapTable`, exit value `E ≥ 0`. Output: `$` per class and per option grant. Unissued pool receives $0 (D11).
 
-#### 6.5.1 Structure — ascending-strike prefix option-exercise
-
-The algorithm preserves the invariant **`pps_common > every exercised strike`** — hence net grant payouts `(pps_common − strike) × options ≥ 0` by construction, per the net-payout convention (§6.5.3 note).
+**6.5.1 Structure — ascending-strike prefix option-exercise (T-03).** The old "add every ITM grant simultaneously, never un-exercise" loop is replaced. The new algorithm preserves the invariant **`pps_common > every exercised strike`** — hence net grant payouts `(pps_common − strike) × options ≥ 0` by construction, per the locked net-payout convention (§6.5.3 note).
 
 ```
 payoutsAt(post, E):
@@ -171,7 +159,7 @@ payoutsAt(post, E):
   Edist = E + Σ_{γ ∈ exercised} γ.options · γ.strike
   result = settleWithConversion(post, Edist, exercised)
 
-  # Final consistency check:
+  # Final consistency check (LOCKED — this is the invariant, not a smell test):
   pps_final = result.perCommonShareProceeds
   assert every γ ∈ exercised has γ.strike < pps_final − EPS_DECISION
   assert every γ ∉ exercised has γ.strike ≥ pps_final − EPS_DECISION
@@ -182,13 +170,11 @@ payoutsAt(post, E):
   return result
 ```
 
-Iteration bound = `#strikeGroups + 1` (each iteration commits at most one group; the last iteration verifies "no more ITM"). Property tests cover 40+ grant tables with duplicate strikes and assert the consistency conditions, nonnegative net payouts, and conservation.
+Iteration bound = `#strikeGroups + 1` (each iteration commits at most one group; the last iteration verifies "no more ITM"), not the old `32`. Property test §7.4: over ≥ 40-grant tables with duplicate strikes, the consistency conditions hold, net payouts are ≥ 0, and conservation holds.
 
-**Counterexample (fixture F-WF):** 1 common share; E = \$100; grant g1 = 1 option @ \$90 (holder OTHER); grant g2 = 100 options @ \$0 (holder FOUNDER). Exercising both simultaneously would give `Edist = 190 / 102 shares = $1.8627/sh`, and g1's net payout `(1.8627 − 90) × 1 < 0` — a violation. The algorithm exercises **only g2** (cheapest strike, \$0 < the resulting `pps`); adding g1 next would require `$90 < pps`, which fails, so g1 stays unexercised. Result: `pps = 100/101 = $0.9900990`, `common = $0.9900990`, `g2 net = $99.0099`, `g1 net = 0`.
+**Counterexample validating the change (fixture F-WF, T-03):** 1 common share; E = $100; grant g1 = 1 option @ $90 (holder OTHER); grant g2 = 100 options @ $0 (holder FOUNDER). The old algorithm would exercise both simultaneously (both "ITM" at initial `pps = $100`), giving `Edist = 190 / 102 shares = $1.8627/sh`, and g1's net payout `(1.8627 − 90) × 1 < 0` — a violation. The new algorithm exercises **only g2** (cheapest strike, $0 < the resulting `pps`); adding g1 next would require `$90 < pps`, which fails, so g1 stays unexercised. Result: `pps = 100/101 = $0.9900990`, `common = $0.9900990`, `g2 net = $99.0099`, `g1 net = 0`.
 
-#### 6.5.2 Conversion equilibrium
-
-The engine first runs a bounded Gauss–Seidel loop, then scopes exhaustive fallback to the oscillating set.
+**6.5.2 Conversion equilibrium (D24, T-18, T-21).** The Gauss–Seidel loop unchanged; the fallback and its scope are tightened.
 
 ```
 settleWithConversion(post, Edist, exercised):
@@ -204,7 +190,7 @@ settleWithConversion(post, Edist, exercised):
     push snapshot of conv to history (keep last 2)
     if !changed: return settle(conv)
 
-  # FALLBACK — scoped to the oscillating set:
+  # FALLBACK — scoped to the OSCILLATING SET (T-21):
   oscillating = { cls : cls's decision changed across the last two snapshots }
   frozen      = preferredClasses \ oscillating       # their action = their last-pass decision
   if |oscillating| > 8: throw NonConvergence         # V7 in its scoped form
@@ -215,7 +201,7 @@ settleWithConversion(post, Edist, exercised):
     pick S* = argmin |S| over consistent; ties → lexicographically smallest id set
     return settle(S* ∪ (frozen ∩ conv))
 
-  # No consistent subset — apply the min-regret rule:
+  # No consistent subset — apply the min-regret rule (T-18):
   #   regret(S) = Σ_{cls ∈ oscillating} max(0, payout_other_action(cls | S) − payout_assigned(cls | S))
   # Pick S* = argmin regret; ties → smaller |S| → lexicographically smallest id set.
   S* = argmin regret over all subsets of oscillating
@@ -224,13 +210,13 @@ settleWithConversion(post, Edist, exercised):
   return result
 ```
 
-Property tests over adversarial 2–4-class capped tables assert `settleWithConversion` always returns and conservation holds under both fallback branches. Payout continuity in `E` is **not** guaranteed at min-regret boundaries; the regime walk's bisection recovery (§6.5.6 step 3) handles the resulting kink.
+Property test §7.4 [200 runs] over adversarial 2–4-class capped tables asserts `settleWithConversion` always returns and conservation holds under both fallback branches. Payout continuity in `E` is **not** guaranteed at min-regret boundaries; the regime walk's midpoint bisection recovery (§6.5.6 step 3, T-19) is what handles the resulting kink.
 
-#### 6.5.3 `settle(conv)` — the deterministic split
+**6.5.3 `settle(conv)` — the deterministic split:**
 
 ```
 remaining = Edist
-# Preferences, by tier:
+# Preferences, by tier (D10):
 for tier in ascending order:
   claims = { c : PREFERRED, c ∉ conv, c.tier = tier → prefAmount_c = prefMultiple_c × invested_c }
   paid   = min(remaining, Σ prefAmount)
@@ -241,7 +227,7 @@ members = commonShares(all COMMON classes)
         ∪ convertedPreferred(c ∈ conv: shares_c × conversionRatio_c)
         ∪ exercisedOptionShares
         ∪ participants { c ∉ conv : participation = FULL or CAPPED, as-converted shares }
-# Cap water-filling (V11: cap on TOTAL return, basis = capMultiple × invested per class):
+# Cap water-filling (D9 / V11: cap on TOTAL return, basis = capMultiple × invested per class):
 active = members
 loop ≤ |members|+1:
   allocate remaining pro-rata by shares among active
@@ -250,26 +236,22 @@ loop ≤ |members|+1:
   for c ∈ newlyCapped: pay exactly (capMultiple_c × invested_c − prefReceived_c);
                        remove c from active; remaining reduces only by the capped payments; re-loop
 perCommonShareProceeds = residual allocation per as-converted share (0 if remaining = 0)
-CONSERVATION (assert): | Σ all gross payouts − Edist | < max($0.01, 1e-8 × |Edist|)
-strikeCashPaid = Σ_{γ ∈ exercised} γ.options × γ.strike
+CONSERVATION (assert): | Σ all gross payouts − Edist | < max($0.01, 1e-8 × |Edist|)   # D16
+strikeCashPaid = Σ_{γ ∈ exercised} γ.options × γ.strike                                 # T-16
 ```
 
-**Cap basis (V11).** The participation cap is **`capMultiple × invested`** per class, inclusive of preference. `OIP = invested/shares` when both are supplied, so `capMultiple × invested = capMultiple × OIP × shares`; the two descriptions coincide on well-formed input.
+**Cap basis (LOCKED per V11, T-12 #6).** The participation cap is **`capMultiple × invested`** per class (per-class total, inclusive of preference — D9). D9's "×OIP per share" wording has been superseded by V11; `OIP = invested/shares` when both are supplied (V11 refinement), so `capMultiple × invested = capMultiple × OIP × shares`, and the two descriptions coincide on well-formed input — but `capMultiple × invested` is the primary reference the engine uses.
 
-**Option payout convention.** The _gross_ allocation to an exercised grant is `perCommonShareProceeds × options`; the _reported_ per-grant payout (in `Payouts.byGrant`, regimes, and all expected values) is **net of strike**: `(perCommonShareProceeds − strike) × options ≥ 0`. By construction of §6.5.1's prefix loop, `perCommonShareProceeds > strike` for every exercised grant, so the net payout is `≥ 0` as a **guaranteed invariant**. The conservation assertion above uses **gross** allocations against `Edist`, which includes the strike cash the grants paid in. Under this convention:
+**Option payout convention (LOCKED).** The _gross_ allocation to an exercised grant is `perCommonShareProceeds × options`; the _reported_ per-grant payout (in `Payouts.byGrant`, regimes, and all expected values) is **net of strike**: `(perCommonShareProceeds − strike) × options ≥ 0`. By construction of §6.5.1's prefix loop, `perCommonShareProceeds > strike` for every exercised grant, so the net payout is `≥ 0` as a **guaranteed invariant** (not an assumption). The conservation assertion above uses **gross** allocations against `Edist`, which includes the strike cash the grants paid in. Under this convention:
 
 - `Σ Payouts.byClass + Σ Payouts.byGrant = E` (i.e., `Σ (net payouts as reported) = E`), because `Σ gross = Σ byClass + (Σ byGrant + strikeCashPaid) = Edist = E + strikeCashPaid`.
-- `Payouts.strikeCashPaid` surfaces the gross-vs-net gap for the UI, so the Waterfall screen's conservation readout is **"Σ payouts = E ✓"** in the net convention, and a secondary line optionally shows the gross reconciliation `Σ gross = E + strike cash paid`.
+- `Payouts.strikeCashPaid` (new field, T-16) surfaces the gross-vs-net gap for the UI, so the Waterfall screen's conservation readout is **"Σ payouts = E ✓"** in the net convention, and a secondary line optionally shows the gross reconciliation `Σ gross = E + strike cash paid`.
 
 Net payouts remain piecewise-linear in E, so regimes and closed forms apply unchanged.
 
-#### 6.5.4 Conversion values
+**6.5.4 Conversion values:** a converted class forfeits preference and participates as common with `shares × conversionRatio`. The Gauss–Seidel comparison in 6.5.2 uses full recomputes of `settle` — no shortcuts.
 
-A converted class forfeits preference and participates as common with `shares × conversionRatio`. The Gauss–Seidel comparison in §6.5.2 uses full recomputes of `settle` — no shortcuts.
-
-#### 6.5.5 Known regimes worked example (fixture F-WF-02)
-
-Common 8,000,000 sh (FOUNDER); Series A 2,000,000 sh, invested \$2,000,000, OIP \$1.00, 1×, PARTICIPATING CAPPED 3× (cap = \$6,000,000 total), tier 1 (INVESTOR). No options, no pool.
+**6.5.5 Known regimes worked example (fixture F-WF-02):** Common 8,000,000 sh (FOUNDER); Series A 2,000,000 sh, invested $2,000,000, OIP $1.00, 1×, PARTICIPATING CAPPED 3× (cap = $6,000,000 total), tier 1 (INVESTOR). No options, no pool.
 
 | E range    | Series A       | Common    | Event at right edge                             |
 | ---------- | -------------- | --------- | ----------------------------------------------- |
@@ -278,36 +260,31 @@ Common 8,000,000 sh (FOUNDER); Series A 2,000,000 sh, invested \$2,000,000, OIP 
 | [22M, 30M] | 6M             | E − 6M    | conversion parity: 0.2E = 6M ⇒ E = 30,000,000   |
 | [30M, ∞)   | 0.2E           | 0.8E      | —                                               |
 
-Spot values (assert within the fixture tolerance): E=20M → A 5.6M, C 14.4M; E=25M → A 6.0M, C 19.0M; E=40M → A 8.0M, C 32.0M. Breakpoints {2,000,000; 22,000,000; 30,000,000}.
+Spot values (assert within D16 tolerance): E=20M → A 5.6M, C 14.4M; E=25M → A 6.0M, C 19.0M; E=40M → A 8.0M, C 32.0M. Breakpoints {2,000,000; 22,000,000; 30,000,000}.
 
-#### 6.5.6 Numerical breakpoints (`regimes`) — the regime walk
+**6.5.6 Exact breakpoints (`regimes`) — the regime walk:**
 
-Payouts are piecewise-linear in E. `regimes(post: CapTable)` takes only the cap table — beliefs and display-only slider bounds are not inputs. Walk from E = 0:
+Payouts are exactly piecewise-linear in E. `regimes(post: CapTable)` takes only the cap table — beliefs, `V_post`, and any display-only exit ceiling are **not** inputs (T-02 removed the belief-dependent termination). Walk from E = 0:
 
-1. At current regime start `E0`, derive per-holder `(m, c)` from finite differences immediately to the right. Grow the probe while half-step and third-step samples remain on the same line; shrink it when a transition is too close. The internal discriminator stays materially below the public fixture tolerance so tiny ownership fractions cannot hide real slope changes.
-2. Build conservative candidate events from cumulative preference claims, preference fills, participation caps, converted-share parity, option strikes, and settlement-state transitions. The search is bounded by a capitalization-derived upper estimate that includes accrued preference and redemption claims.
-3. Verify candidates against both settlement state and the fitted line. Independently binary-search for the first line deviation; this recovers interactions and min-regret boundaries that have no closed-form candidate. A recovered event without a known label is reported as **"regime change (unclassified)"**.
-4. Once every preference is filled, each preferred class is converted or fully participating, and every grant is exercised, append the terminal `[E0, ∞)` regime. A deterministic iteration backstop rejects a non-converging walk.
-5. Dense-grid and randomized tests compare every regime line with direct `payoutsAt` settlement under the fixture tolerance. A separate property asserts that the final regime remains affine when probed at `10 ×` its last breakpoint.
+1. At current regime start `E0`, probe `payoutsAt` at `E0 + Δ` and `E0 + 2Δ` (Δ = $1). If the two probes imply different slopes, bisect Δ until consistent (a kink sat inside Δ). Two consistent probes give **exact** per-holder coefficients `(m, c)` — linear interpolation inside a linear regime is exact, not approximate.
+2. Build candidate next-event values of E, each a linear equation using current-regime state: (a) next tier fill: `E = (Σ prefAmounts of tiers ≤ k) − strikeCash`; (b) each CAPPED class: `m_c·E + c_c = cap_c` when `m_c > 0`; (c) each unconverted class: parity `payoutConverted_c(E) = payoutPreferred_c(E)` using probed coefficients of the flipped-set hypothetical (probe `settleWithConversion` with the class's conversion forced, at the same two points); (d) each unexercised grant: `perCommonShareProceeds(E) = strike`.
+3. Next breakpoint candidate `B` = smallest candidate > `E0 + $0.001`. **Verify with midpoint bisection recovery (T-19):** before committing the regime `[E0, B)`, probe `payoutsAt` at the midpoint `(E0 + B)/2`. If the midpoint payout differs from the fitted line `m · E + c` (from step 1) by more than D16's tolerance (`max($0.01, 1e-8 × |expected|)`), an unclassified kink sits inside `[E0, B)` — bisect `[E0, B)` to locate it to within $0.001, insert it as a breakpoint with event label **"regime change (unclassified)"**, and continue the walk from there. Otherwise, verify the tentative `B` by probing just past it (coefficients must change; if not, discard candidate and take the next). Append regime `[E0, B)`, set `E0 = B`, repeat. Assert (dev mode) total _unclassified_ breakpoints per walk ≤ 2 (they should be rare; the label makes them visible rather than fatal — they arise from unenumerated event classes like T-18's min-regret boundaries).
+4. **Termination — every event type is one-shot per object (T-02).** A tier fills once, a cap binds once, a class converts once, a grant exercises once — so the set of finite candidates is finite and monotonically shrinks. Walk **until no finite verified candidate remains**; the final regime is `[E0, ∞)`. Assert regime count ≤ `4·(#classes + #grants) + #tiers + 8` (backstop). _(There is no belief-dependent `E_max` in the engine any more — the display-only exit ceiling used by the Waterfall slider lives in §8.3.)_
+5. **Cross-check test (Phase 2):** dense grid of 2,001 points over `[0, max(E_max_display, 2 × largest breakpoint)]` — piecewise evaluation from regimes vs direct `payoutsAt`, max abs diff ≤ D16 tolerance. (`E_max_display` is defined in §8.3.)
+6. **Property test — final-regime slope (T-02 counterexample as a locked fixture).** For a cap table with `common = 100,000,000 sh` + `preferred = 1,000,000 sh, invested = $1,000,000, prefMultiple 1×, participation NONE, CR = 1, tier 1`, `regimes` must contain a regime boundary at **E = 101,000,000**, and the final regime's slope for the preferred class = **1/101 per preferred share** (i.e., the conversion parity kink is not truncated). A property test asserts, on random tables, that the last regime's coefficients equal the slopes of `payoutsAt` probed at `10 × (last breakpoint)`.
 
 ### 6.6 Numerics & distributions
 
-#### 6.6.1 Lognormal fit (`fitLognormal`)
+**6.6.1 Lognormal fit** (`fitLognormal`): `μ = ln p50`. If both p10, p90: `σ = (ln p90 − ln p10)/(2·z90)`; push warning "beliefs not lognormal-consistent" if `|exp((ln p10 + ln p90)/2) − p50| > 0.10·p50`. If only p90: `σ = (ln p90 − ln p50)/z90`. `z90 = 1.2815515655446004`. Require σ > 0.
 
-`μ = ln p50`. If both p10, p90: `σ = (ln p90 − ln p10)/(2·z90)`; push warning "beliefs not lognormal-consistent" if `|exp((ln p10 + ln p90)/2) − p50| > 0.10·p50`. If only p90: `σ = (ln p90 − ln p50)/z90`. `z90 = 1.2815515655446004`. Require σ > 0 and `μ + σ²/2 ≤ ln(Number.MAX_VALUE)` so the fitted mean is representable.
-
-#### 6.6.2 Partial moments
-
-For X ~ LN(μ,σ), with `α = (ln a − μ)/σ`, `β = (ln b − μ)/σ`:
+**6.6.2 Partial moments** for X ~ LN(μ,σ), with `α = (ln a − μ)/σ`, `β = (ln b − μ)/σ`:
 
 ```
 intervalProb(a,b)       = Φ(β) − Φ(α)
 partialExpectation(a,b) = exp(μ + σ²/2) · [ Φ(β − σ) − Φ(α − σ) ]      # = E[X·1{a<X≤b}]
 ```
 
-#### 6.6.3 Φ (erfc-based double-precision rational)
-
-Compute `Φ(x) = 0.5 · erfc(−x / √2)` using a hand-rolled double-precision `erfc` implementation with |ε| ≤ 1e-13 absolute. Reference: W. J. Cody, "Rational Chebyshev approximations for the error function," _Math. Comp._ 23 (1969), pp. 631–637 — the canonical piecewise rational approximation used by libm and NAG. Layout (region boundaries and coefficient counts as published in Cody's Table II):
+**6.6.3 Φ (erfc-based double-precision rational, Cody 1969, |ε| ≤ 1e-13 absolute).** Compute `Φ(x) = 0.5 · erfc(−x / √2)` using a hand-rolled double-precision `erfc` implementation. Reference: W. J. Cody, "Rational Chebyshev approximations for the error function," _Math. Comp._ 23 (1969), pp. 631–637 — the canonical piecewise rational approximation used by libm and NAG. Layout (region boundaries and coefficient counts as published in Cody's Table II):
 
 - For `|x| ≤ 0.46875`: use the rational for `erf(x)` and set `erfc(x) = 1 − erf(x)`.
 - For `0.46875 < |x| ≤ 4.0`: use the rational for `erfc(x)` directly.
@@ -371,11 +348,9 @@ d = [ 7.784695709041462e-03,  3.224671290700398e-01,  2.445134137142996e+00,
       3.754408661907416e+00]
 ```
 
-**Hardcoded z-table (unit tests for both functions):** p ∈ {.05, .10, .25, .50, .75, .90, .95} → z ∈ {−1.6448536269514722, −1.2815515655446004, −0.6744897501960817, 0, 0.6744897501960817, 1.2815515655446004, 1.6448536269514722}. Assert `|phiInv(p) − z| < 1e-8` (Acklam's 1.15e-9 relative bound; Φ⁻¹ feeds quantile display and `Q_E(p)`, not fixture-asserted expectations) and `|phi(z) − p| < 1e-12`.
+**Hardcoded z-table (unit tests for both functions):** p ∈ {.05, .10, .25, .50, .75, .90, .95} → z ∈ {−1.6448536269514722, −1.2815515655446004, −0.6744897501960817, 0, 0.6744897501960817, 1.2815515655446004, 1.6448536269514722}. Assert `|phiInv(p) − z| < 1e-8` (Acklam's 1.15e-9 relative bound; T-24 note: Φ⁻¹ feeds only quantile display and `Q_E(p)`, not fixture-asserted expectations) and `|phi(z) − p| < 1e-12` (Cody-erfc; tightened from 1e-7 per T-24 so the z-table is not a false-positive filter for the tolerance policy).
 
-#### 6.6.4 PRNG
-
-The test oracle uses mulberry32:
+**6.6.4 PRNG:** mulberry32 (implement verbatim):
 
 ```ts
 export function mulberry32(seed: number): () => number {
@@ -391,45 +366,45 @@ export function mulberry32(seed: number): () => number {
 
 Normals via Box–Muller on consecutive uniforms `u1 = max(u, 1e-12)`, `u2`; emit `√(−2 ln u1)·cos(2πu2)` then `√(−2 ln u1)·sin(2πu2)`, in that order. Determinism test: seed 1, first 5 uniforms snapshot-asserted.
 
-### 6.7 Analytic outcome statistics (`outcomes.ts`)
+### 6.7 Closed-form outcome statistics (`outcomes.ts`)
 
-For holder h with regimes `{(B_k, B_{k+1}, m_k, c_k)}` and beliefs `{p0, μ, σ}`:
+For holder h with regimes `{(B_k, B_{k+1}, m_k, c_k)}` and beliefs `{p0, μ, σ}` (mixture D4):
 
 ```
 E[payout_h] = p0·0 + (1−p0) · Σ_k [ m_k·partialExpectation(B_k, B_{k+1}) + c_k·intervalProb(B_k, B_{k+1}) ]
 ```
 
-Payout quantile (payouts are monotone nondecreasing in E — property-tested): `Q_h(p) = payoutsAt(post, Q_E(p))[h]` where `Q_E(p) = 0` if `p ≤ p0`, else `exp(μ + σ·phiInv((p − p0)/(1 − p0)))`. Party-level quantiles sum the party's classes and grants at the same `Q_E(p)` under the shared exit outcome.
+Payout quantile (payouts are monotone nondecreasing in E — property-tested): `Q_h(p) = payoutsAt(post, Q_E(p))[h]` where `Q_E(p) = 0` if `p ≤ p0`, else `exp(μ + σ·phiInv((p − p0)/(1 − p0)))`. Party-level quantiles sum the party's classes and grants at the same `Q_E(p)` (comonotonicity — §4.3 holder-id semantics).
 
-**Party attribution:** `uF` = Σ E[payout] over classes and grants with `holder = FOUNDER`; `uI` = Σ over `holder = INVESTOR`. `OTHER` holders (prior investors, converted SAFEs by default, employee options) are fully modeled in the waterfall but excluded from both bargaining utilities.
+**Party attribution (LOCKED):** `uF` = Σ E[payout] over classes and grants with `holder = FOUNDER`; `uI` = Σ over `holder = INVESTOR`. `OTHER` holders (prior investors, converted SAFEs by default, employee options) are fully modeled in the waterfall but excluded from both bargaining utilities.
 
 ### 6.8 Utilities, BATNAs, optional risk mode
 
-Default utility = expected dollars under the party's **own** belief profile. Cross-belief columns `uF_underI`, `uI_underF` are computed by swapping profiles and appear as the Frontier table's bet columns. BATNAs are user scalars in the active metric — dollars in EV mode, **certainty-equivalent dollars in CE (CRRA) mode** so `uF/dF/uI/dI` share units; the Frontier BATNA inputs are labeled accordingly.
+Default utility = expected dollars under the party's **own** belief profile (D5, D6). Cross-belief columns `uF_underI`, `uI_underF` are computed by swapping profiles (used by the Frontier table's bet columns — §8.5). BATNAs are user scalars (D7) in the active metric — dollars in EV mode, **certainty-equivalent dollars in CE (CRRA) mode** so `uF/dF/uI/dI` share units; the Frontier BATNA inputs are labeled accordingly. Helper copy locked: founder — "Expected personal proceeds from your best alternative: another offer, bootstrapping, or winding down."; investor — "Expected dollars from deploying this capital in your next-best opportunity (e.g., amount × expected net multiple)."
 
-**CRRA mode (off by default) — bargaining coordinates and computation.**
+**CRRA mode (off by default) — bargaining coordinates and computation (T-09).**
 
 - **Coordinates.** `uF` and `uI` on `DealPoint` are the party's **certainty equivalent in dollars** under the CRRA(γ, w0) preference over `(payout + w0)`. Nash and KS are affine-invariant so they select the same argmax whether ranked on `U` or `CE`; egalitarian and utilitarian are not scale-invariant, and they are ranked on **CE dollars** so their comparisons are dollar-vs-dollar across parties. One explainer sentence (explainer 7) notes the `w0` dependence caveat: egalitarian/utilitarian comparisons across parties presume both parties chose comparable `w0`.
-- **Computation — deterministic quadrature, not MC.** For each package and party, given regimes `{(B_k, B_{k+1}, m_k, c_k)}` and beliefs `{p0, μ, σ}`: per regime `[B_k, B_{k+1})`, evaluate `∫_{q ∈ [q_k, q_{k+1}]} u(m_k · Q_LN(q) + c_k + w0) dq` by fixed **64-node Gauss–Legendre** in probability space, where `q_k = Φ_LN(B_k)` and `Q_LN` is the lognormal quantile. The `p0` mass is handled only by the outer mixture: `(1 − p0) · Σ_k ∫ + p0 · u(w0)`. Invert `U` to `CE` via the standard CRRA transform (below). The default grid requires roughly 750,000 utility evaluations per recompute and is covered by the executable pipeline budget.
-- **Monte Carlo remains an independent oracle and inspector readout.** `crraUtility(...)` returns `{ u, se, ce }` from a seeded simulation; its certainty equivalent must agree with deterministic quadrature within `4 · se_ce` in the CRRA fixture below.
+- **Computation — deterministic quadrature, not MC (LOCKED for the frontier).** For each package and party, given regimes `{(B_k, B_{k+1}, m_k, c_k)}` and beliefs `{p0, μ, σ}`: per regime `[B_k, B_{k+1})`, evaluate `∫_{q ∈ [q_k, q_{k+1}]} u(m_k · Q_LN(q) + c_k + w0) dq` by fixed **64-node Gauss–Legendre** in probability space, where `q_k = Φ_LN(B_k)` and `Q_LN` is the lognormal quantile. The `p0` mass is handled only by the outer mixture: `(1 − p0) · Σ_k ∫ + p0 · u(w0)`. Invert `U` to `CE` via the standard CRRA transform (below). Budget: ~ 585 packages × 2 parties × (avg regimes ≈ 5–8) × 64 evaluations ≈ ~750k `u` evaluations per recompute — fits the § 4.4 CRRA-on budget.
+- **MC survives only as (i) the dual-engine test check (§7.3) and (ii) the per-package "± SE" inspector badge that surfaces when the user opens a package.** `crraUtility(...)` still returns `{ u, se, ce }` (see §4.3), with `u/se` from MC at D17's CRRA sample count `n = 100,000, seed = 0xC0FFEE`, and `ce` derived either from MC (the badge path) or from the quadrature `U` (the frontier path); the two ce values must agree within `4 · se_ce` in the CRRA fixture below.
 
-**CRRA transform:** `U = E[((x + w0)^{1−γ} − 1)/(1−γ)]` (γ = 0.5) or `E[ln(x + w0)]` (γ = 1); certainty equivalent `CE = (U · (1−γ) + 1)^{1/(1−γ)} − w0` (γ ≠ 1) or `CE = exp(U) − w0` (γ = 1); MC-error propagation `se_CE ≈ se_U · (CE + w0)^γ`. The Frontier CRRA badge shows "± $x MC error" only when MC is what backed the computation (the inspector); the frontier itself is deterministic and displays no ± band.
+**CRRA transform (LOCKED):** `U = E[((x + w0)^{1−γ} − 1)/(1−γ)]` (γ = 0.5) or `E[ln(x + w0)]` (γ = 1); certainty equivalent `CE = (U · (1−γ) + 1)^{1/(1−γ)} − w0` (γ ≠ 1) or `CE = exp(U) − w0` (γ = 1); MC-error propagation `se_CE ≈ se_U · (CE + w0)^γ`. The Frontier CRRA badge shows "± $x MC error" only when MC is what backed the computation (the inspector); the frontier itself is deterministic and displays no ± band.
 
-**Fixture F-BRG-CRRA-01.** For one specified package and belief profile with γ = 0.5 and w0 = $250k, the CE computed by 64-node quadrature and the CE computed by MC at n = 200,000 (seed 42) must agree within `4 · se_CE`.
+**Fixture (T-09).** F-BRG-CRRA-01: one specified package + one belief profile + γ = 0.5, w0 = $250k; the CE computed by 64-node quadrature and the CE computed by MC at n = 200,000 (seed 42) must agree within `4 · se_CE`.
 
 ### 6.9 Bargaining layer (`bargain.ts`)
 
-#### 6.9.1 Enumeration & indexing
+#### 6.9.1 Enumeration & indexing (LOCKED — reproducible package IDs, T-06)
 
-1. **Loop order (outer→inner):** `preMoney` → _(investment = `space.pinnedInvestment`, copied from the current offer; no loop dimension)_ → `pools` → `multiples` → `participations`. Every emitted `TermPackage.terms.investment` is this pinned value. This is the row-major dimension order the grid `index` is assigned over.
+1. **Loop order (outer→inner):** `preMoney` → _(investment = `space.pinnedInvestment`, copied from the current offer per D2/T-04; no loop dimension)_ → `pools` → `multiples` → `participations`. Every emitted `TermPackage.terms.investment` is this pinned value. This is the row-major dimension order the grid `index` is assigned over.
 2. **Ranges are inclusive linspace.** `preMoneySteps = 1` → the range's **lower bound** (this convention also applies for any future single-step range).
-3. **Indices are assigned over the raw grid**, including holes from V1-invalid `(multiple, participation)` pairs. This makes indices stable and hole-tolerant across deal-space edits.
-4. **V1-invalid combinations** are skipped with a recorded reason and no `DealPoint` emitted; their raw index is preserved so subsequent packages keep their expected numbers. **V3 failures** are also skipped with a recorded reason. **V4** (existing pool exceeds target) clamps `P` to 0 with a warning and keeps the package in the grid.
-5. Default raw grid = `9 × 5 × 4 × 4 = 720`; 3 of 16 `(multiple, participation)` pairs are V1-invalid, so **valid = 585**.
+3. **Indices are assigned over the RAW grid**, including holes from V1-invalid `(multiple, participation)` pairs. This makes indices stable, hole-tolerant, and reproducible across sessions and dev-space edits.
+4. **V1-invalid combinations** (see D3 validity table) are **skipped with a recorded reason** and no `DealPoint` emitted; their raw index is preserved so subsequent packages keep their expected numbers. **V3 failures** are also skipped with a recorded reason. **V4** (existing pool exceeds target) _clamps `P` to 0 with a warning_ and the package **stays in the grid** — V4 is a warning, not a skip reason, per §5 V4.
+5. Default raw grid = `9 × 5 × 4 × 4 = 720`; 3 of 16 `(multiple, participation)` pairs are V1-invalid, so **valid = 585**. All package-count claims elsewhere in this document reference 585 (or the number the shipped default produces, if the team ever changes D3).
 
 #### 6.9.2 Evaluate
 
-Each valid package: `constructRound` → `accrueForExit(yearsToExit)` → `regimes` → `expectedPayouts` under each profile → `DealPoint`. Under CRRA (§6.8), expected payouts are replaced by 64-node Gauss–Legendre quadrature; `DealPoint.metric = 'CE'` in that case, `'EV'` otherwise. Optional discounting is applied after EV or CE is computed.
+Each valid package: `constructRound` → `regimes` → `expectedPayouts` under each profile → `DealPoint`. Under CRRA (§6.8), the closed-form step is replaced by the 64-node Gauss–Legendre quadrature (§6.8); `DealPoint.metric = 'CE'` in that case, `'EV'` otherwise.
 
 #### 6.9.3 IR set
 
@@ -441,21 +416,21 @@ Sort by `(uF desc, uI desc, index asc)`; keep a point iff its `uI` strictly exce
 
 #### 6.9.5 Nash
 
-Argmax over IR of `(uF − dF)(uI − dI)`. **Tie-break:** max gain-product → lowest package index. Both keys are invariant under per-axis positive affine maps.
+Argmax over IR of `(uF − dF)(uI − dI)`. **Tie-break (D23):** max gain-product → lowest package index. _(Both keys are invariant under per-axis positive affine maps.)_
 
 #### 6.9.6 Kalai–Smorodinsky (discrete)
 
-Discrete surrogate for the classical Kalai–Smorodinsky (1975): ideal `I_F = max uF`, `I_I = max uI` over IR; maximize `min((uF−dF)/(I_F−dF), (uI−dI)/(I_I−dI))` over the discrete cloud. This is _not_ the classical KS solution (which lives on the ideal-line segment for compact convex sets) — it is the maximin-normalized-gain point on a finite non-convex set, labeled **"Kalai–Smorodinsky (discrete)"** in the UI. If either denominator is 0, fall back to Nash with a note. **Tie-break:** max min-normalized-gain → max gain-product → lowest index.
+Discrete surrogate for the classical Kalai–Smorodinsky (1975): ideal `I_F = max uF`, `I_I = max uI` over IR; maximize `min((uF−dF)/(I_F−dF), (uI−dI)/(I_I−dI))` over the discrete cloud. This is _not_ the classical KS solution (which lives on the ideal-line segment for compact convex sets) — it's the maximin-normalized-gain point on a finite non-convex set, labeled **"Kalai–Smorodinsky (discrete)"** everywhere the user sees it (see glossary, explainer 7, F-BRG). If either denominator is 0, fall back to Nash with a note. **Tie-break (D23):** max min-normalized-gain → max gain-product → lowest index. Both keys are invariant under per-axis positive affine maps.
 
 #### 6.9.7 Egalitarian & utilitarian
 
-**Egalitarian:** argmax `min(uF − dF, uI − dI)`. **Tie-break:** max sum of gains → lowest index. The sum tie-break guarantees the Pareto-membership property picks a frontier member when two points tie on the minimum gain.
+**Egalitarian:** argmax `min(uF − dF, uI − dI)`. **Tie-break (D23):** max sum of gains → lowest index. (The sum tie-break guarantees the Pareto-membership property picks a frontier member: if two points tie on `min`, the one with higher sum lies on the frontier or below it, and the tie ordering plus §6.9.4's collapse handles equal pairs.)
 
-**Utilitarian:** argmax `(uF−dF) + (uI−dI)`. **Tie-break:** max gain-product → lowest index. When profiles differ, the sum is labeled **"perceived total surplus"** in the UI because it sums utilities under different probability measures.
+**Utilitarian:** argmax `(uF−dF) + (uI−dI)`. **Tie-break (D23):** max gain-product → lowest index. When profiles differ, the sum is labeled **"perceived total surplus"** in the UI (it sums across different measures; explainer 7 covers why that is a bet, not a free lunch).
 
-The F-BRG divide-the-dollar utilitarian answer `x = 1` from an x=0/x=1 tie is what the max-gain-product tie-break resolves: `(0·100) = 0` vs `(√1)·(100−1) = 99`.
+_(The F-BRG divide-the-dollar utilitarian answer `x = 1` from x=0/x=1 tie is what the "max gain-product" tie-break resolves: `(0·100) = 0` vs `(√1)·(100−1) = 99`; F-BRG-04 cites this D23 rule.)_
 
-#### 6.9.8 Value on the table
+#### 6.9.8 Value on the table (T-10)
 
 For a current offer `c` (evaluated at its exact terms — even off-grid — into a `DealPoint`), define the **eligible dominating set**
 
@@ -465,11 +440,11 @@ D = { d ∈ points ∩ IR : uF(d) ≥ uF(c) − ε ∧ uI(d) ≥ uI(c) − ε �
 
 Return:
 
-- **`headline`** (the hero scalar, single-package joint surplus): `headline = max(0, max_{d ∈ D} [ (uF(d) − uF(c)) + (uI(d) − uI(c)) ])`. This is a scalar attainable by one package, so the hero copy "$X on the table" is a statement about a specific package — not a sum of two different-package maxima.
+- **`headline`** (the hero scalar, single-package joint surplus): `headline = max_{d ∈ D} [ (uF(d) − uF(c)) + (uI(d) − uI(c)) ]` (0 if `D = ∅`). This is a scalar attainable by one package, so the hero copy "$X on the table" is a statement about a specific package — not a sum of two different-package maxima.
 - **`gainF` / `gainI`** (per-party ceilings, labeled "best case for you / for them (usually different packages)"): `gainF = max(0, max_{d ∈ D, uI(d) ≥ uI(c)} uF(d) − uF(c))`, symmetric for `gainI`.
 - **`dominating`** (up to 3 package indices): `D` ranked by `min(ΔuF, ΔuI) desc → (ΔuF + ΔuI) desc → index asc`, top 3.
 
-`BargainResult.points` carries the evaluated set in index order so the utility deltas can be computed directly.
+Requires `DealPoint`-level access to compute utility deltas; `BargainResult.points` (see §4.3) carries the evaluated set in index order.
 
 ### 6.10 Employee offer analyzer (`employee-offer.ts`)
 
@@ -481,7 +456,7 @@ Given pre-round `CapTable`, optional `Safe[]`, `RoundTerms`, a candidate `Option
 4. Reuse `expectedPayouts` / `payoutQuantile` / `payoutValue` for the grant id.
 5. `surplusVsCash = presentValue(EV) − cashAlternative` under optional `discounting`.
 
-No new settlement physics — the grant is an ordinary cash-exercise instrument.
+No new settlement physics — the grant is an ordinary cash-exercise instrument (D11).
 
 ### 6.11 Warrants
 
@@ -489,7 +464,7 @@ No new settlement physics — the grant is an ordinary cash-exercise instrument.
 
 ### 6.12 Pay-to-play
 
-Preferred may carry `payToPlay: 'NONE' | 'TO_COMMON'`. `RoundTerms.payToPlayParticipants` lists eligible class ids meeting their obligation; unknown or ineligible ids are rejected. Before the priced round, any `TO_COMMON` preferred **not** listed converts to a COMMON class with `shares × conversionRatio` and loses preference rights.
+Preferred may carry `payToPlay: 'NONE' | 'TO_COMMON'`. `RoundTerms.payToPlayParticipants` lists class ids meeting their obligation. Before the priced round, any `TO_COMMON` preferred **not** listed converts to a COMMON class with `shares × conversionRatio` and loses preference rights.
 
 ### 6.13 Dividends
 
@@ -500,7 +475,7 @@ Given `yearsToExit = T ≥ 0`:
 - CUMULATIVE: `accrued = invested × ((1+rate)^T − 1)`
 - NONE or rate=0 or T=0: `accrued = 0`
 
-`accrueForExit` requires a finite nonnegative clock and stamps `accruedDividends`. An accrual or preference claim outside the finite float64 range is rejected. Preference claim = `prefMultiple × invested + accruedDividends` (before redemption max — §6.14).
+`accrueForExit` stamps `accruedDividends`. Preference claim = `prefMultiple × invested + accruedDividends` (before redemption max — §6.14).
 
 ### 6.14 Redemption rights
 
@@ -515,17 +490,17 @@ Notes project to **pre-money SAFE**-shaped instruments with `amount = accrued` a
 
 ### 6.16 MFN on SAFEs (`mfn.ts`)
 
-Before `solveSafes`, `applyMfn(safes)`: for each SAFE with `mfn: true`, set `valuationCap = min(cohort caps)` (when any defined) and `discount = max(cohort discounts)` (when any defined). Non-MFN SAFEs are unchanged. Convertible notes are appended only after this rewrite and never join the MFN cohort. See the [YC SAFE documents](https://www.ycombinator.com/documents) for the instrument context.
+Before `solveSafes`, `applyMfn(safes)`: for each SAFE with `mfn: true`, set `valuationCap = min(cohort caps)` (when any defined) and `discount = max(cohort discounts)` (when any defined). Non-MFN SAFEs unchanged. Citation framing: YC SAFE MFN side-letter practice (`https://www.ycombinator.com/documents`, retrieved 2025-01-14).
 
 ### 6.17 Secondary sales (`secondary.ts`)
 
-`applySecondary(pre, sale)` moves COMMON `shares` from `sellerClassId` to a distinct buyer COMMON class. Proceeds = `shares × pricePerShare` go to the seller — **not** the company. An existing buyer class must already have the declared buyer holder; preferred transfers and ambiguous re-attribution are rejected. Total share count and schema validity are preserved.
+`applySecondary(pre, sale)` moves `shares` from `sellerClassId` to a buyer COMMON class. Proceeds = `shares × pricePerShare` go to the seller — **not** the company. Total share count is conserved.
 
 ### 6.18 IRR / time-discounting (`discounting.ts`)
 
 Opt-in only. `DealFile.discounting: { annualRate, yearsToExit } | null`.
 `DF = 1 / (1 + annualRate)^yearsToExit` (DF = 1 if null, rate=0, or years=0).
-`evaluatePackage` and the employee analyzer multiply dollar utilities by DF when set. The default remains undiscounted exit proceeds.
+`evaluatePackage` and the employee analyzer multiply dollar utilities by DF when set. **Default remains undiscounted exit proceeds (D15).**
 
 ### 6.19 Multi-party syndicate bargaining (`bargain-n.ts`)
 
@@ -535,17 +510,11 @@ The discrete cloud **does** support n≥2. `analyzeN(points, disagreement, party
 - Nash: argmax `∏(u_i − d_i)` (Nash 1950 n-person product)
 - KS (discrete): argmax `min_i (u_i−d_i)/(I_i−d_i)` with `I_i = max_IR u_i`
 - Egalitarian: argmax `min_i (u_i − d_i)`; Utilitarian: argmax `Σ(u_i − d_i)`
-  Tie-breaks generalize the two-party rules (axiom key → gain-product → lowest index; egalitarian uses sum as secondary).
-  Exact utility duplicates collapse to the lowest package index. The product UI continues to use the two-party analyzer. Label KS as **"Kalai–Smorodinsky (discrete)"**.
+  Tie-breaks generalize D23 (axiom key → gain-product → lowest index; egalitarian uses sum as secondary).
+  Two-party `analyze` is unchanged (D1 UI default). Label KS as **"Kalai–Smorodinsky (discrete)"**.
 
 ### 6.20 409A / fair-value (`fairvalue.ts`)
 
-Educational estimate only: `fairValuePerShare = preferredPps × percentOfPreferred` (default 0.30). Method `PERCENT_OF_PREFERRED_PPS`. Not an appraisal. See the [IRS nonqualified deferred compensation audit technique guide](https://www.irs.gov/businesses/corporations/nonqualified-deferred-compensation-audit-technique-guide) for regulatory context.
-
-### 6.21 Next-round shadow (`next-round.ts`)
-
-`evaluateShadow` constructs the current round, then composes it with each discrete follow-on branch. Branch probabilities must be finite, nonnegative, uniquely identified, and nonempty; non-unit totals are normalized. Follow-on money is assigned to OTHER except for the current investor's optional pro-rata slice.
-
-Each successful branch is accrued to `yearsToExit`, evaluated under both belief profiles, and carries ownership diagnostics. In EV mode the branch dollar values are probability-weighted directly. In CRRA mode expected utilities are probability-weighted first and the aggregate is converted back to a certainty equivalent; averaging branch certainty equivalents would understate branch risk. A failed branch remains visible with its normalized probability and error. The aggregate `DealPoint` is withheld until **every** branch constructs, so failed probability mass is never silently discarded or redistributed among successful branches. `shadowTermPrice` likewise refuses to quote a comparison while either branch set is incomplete.
+Educational estimate only: `fairValuePerShare = preferredPps × percentOfPreferred` (default 0.30). Method `PERCENT_OF_PREFERRED_PPS`. Not an appraisal. Citation framing: IRS IRC §409A audit technique guide (`https://www.irs.gov/businesses/corporations/nonqualified-deferred-compensation-audit-technique-guide`, retrieved 2025-01-14).
 
 ---

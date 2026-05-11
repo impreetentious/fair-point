@@ -16,7 +16,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `npx --yes serve -l ${PORT} out`,
+    command: `npx --yes serve -l ${PORT} --config ../serve.json out`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

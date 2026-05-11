@@ -83,6 +83,8 @@ npm run preview    # serves out/ at http://localhost:4173
 
 `out/` uses relative asset paths and assumes nothing about its URL path, so it serves from any static host, including a subdirectory. There is no hosted instance.
 
+Whatever host you use should send the response headers documented in [docs/STATIC-HOST-HEADERS.md](docs/STATIC-HOST-HEADERS.md). `vercel.json` applies them on Vercel and `serve.json` applies the same policy to `npm run preview` and to the Playwright web server, so the offline contract is tested under the real policy. `npm run check:csp` fails if the two host configs and the document ever disagree.
+
 ## License
 
 MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
@@ -91,4 +93,4 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.16.1
+**Version:** v0.16.2
