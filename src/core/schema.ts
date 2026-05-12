@@ -313,6 +313,22 @@ export const BeliefsSchema = z
         message: 'V5: p10 must be less than p50, which must be less than p90',
       })
     }
+    if (beliefs.p50 < beliefs.p90 && (beliefs.p10 === undefined || beliefs.p10 < beliefs.p50)) {
+      const z90 = 1.2815515655446004
+      const mu = Math.log(beliefs.p50)
+      const sigma =
+        beliefs.p10 === undefined
+          ? (Math.log(beliefs.p90) - mu) / z90
+          : (Math.log(beliefs.p90) - Math.log(beliefs.p10)) / (2 * z90)
+      const logMean = mu + (sigma * sigma) / 2
+      if (!Number.isFinite(logMean) || logMean > Math.log(Number.MAX_VALUE)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['p90'],
+          message: 'V5: fitted lognormal mean exceeds the numeric range',
+        })
+      }
+    }
   })
 export type Beliefs = z.output<typeof BeliefsSchema>
 
@@ -351,7 +367,7 @@ const DealSpaceInputSchema = z
     }
   })
 
-export const DisagreementSchema = z.object({ dF: nonNegative, dI: nonNegative }).strict()
+const DisagreementSchema = z.object({ dF: nonNegative, dI: nonNegative }).strict()
 export type Disagreement = z.output<typeof DisagreementSchema>
 
 const RiskSchema = z
@@ -377,7 +393,7 @@ const DealUiSchema = z
   })
   .default({})
 
-/** Opt-in time-discounting. Absent/null ⇒ undiscounted exit proceeds (D15 default). §6.18 */
+/** Opt-in time-discounting. Absent/null ⇒ undiscounted exit proceeds. §6.18 */
 export const DiscountingSchema = z
   .object({
     annualRate: nonNegative,
@@ -401,12 +417,29 @@ const DealFileBaseSchema = z
     space: DealSpaceInputSchema,
     risk: RiskSchema.nullable().optional(),
     ui: DealUiSchema,
-    /** Clock used for dividend accrual, note interest, redemption eligibility, and optional IRR. */
+    /** Clock used for dividend accrual and redemption eligibility. Notes carry their own clock. */
     yearsToExit: nonNegative.default(0),
     discounting: DiscountingSchema.nullable().optional(),
   })
   .strict()
   .superRefine((deal, ctx) => {
+    const instrumentIds = new Set<string>()
+    for (const [kind, instruments] of [
+      ['safes', deal.safes],
+      ['notes', deal.notes],
+    ] as const) {
+      for (let index = 0; index < instruments.length; index += 1) {
+        const id = instruments[index].id
+        if (instrumentIds.has(id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [kind, index, 'id'],
+            message: `V9: duplicate convertible instrument id '${id}'`,
+          })
+        }
+        instrumentIds.add(id)
+      }
+    }
     const postMoneySafes = deal.safes.filter((safe) => safe.kind === 'POST_MONEY')
     const fractionSum = postMoneySafes.reduce(
       (sum, safe) => sum + (safe.valuationCap === undefined ? 0 : safe.amount / safe.valuationCap),

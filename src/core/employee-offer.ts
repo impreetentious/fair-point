@@ -2,6 +2,7 @@ import { expectedPayouts, payoutQuantile, payoutValue } from './outcomes'
 import { constructRound } from './round'
 import { accrueForExit } from './accruals'
 import { presentValue } from './discounting'
+import { CapTableSchema } from './schema'
 import type {
   Beliefs,
   CapTable,
@@ -56,11 +57,11 @@ export function analyzeEmployeeOffer(input: EmployeeOfferInput): EmployeeOfferRe
   if (input.grant.options > round.post.poolAvailable + 1e-9) {
     throw new Error('Offer exceeds available post-round option pool')
   }
-  const withGrant: CapTable = {
+  const withGrant = CapTableSchema.parse({
     ...round.post,
     grants: [...round.post.grants, input.grant],
     poolAvailable: round.post.poolAvailable - input.grant.options,
-  }
+  })
   const settled = accrueForExit(withGrant, input.yearsToExit ?? 0)
   const stats = expectedPayouts(settled, input.beliefs)
   const rawEv = stats.ev[input.grant.id] ?? 0

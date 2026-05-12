@@ -71,7 +71,7 @@ function invalid(mutator: (deal: RawDeal) => void): void {
   expect(DealFileSchema.safeParse(deal).success).toBe(false)
 }
 
-describe('V1–V16 schema contract', () => {
+describe('schema validation contract', () => {
   it('normalizes every V16 default and the documented pinned investment assumption', () => {
     const parsed = DealFileSchema.parse(validDeal())
     const preferred = parsed.pre.classes.find((candidate) => candidate.id === 'series-a')
@@ -119,6 +119,9 @@ describe('V1–V16 schema contract', () => {
       deal.founderBeliefs = { p0: 0.2, p10: 25, p50: 20, p90: 60 }
     })
     invalid((deal) => {
+      deal.founderBeliefs = { p0: 0.2, p50: 1, p90: Number.MAX_VALUE }
+    })
+    invalid((deal) => {
       deal.pre.classes = [
         { id: 'common', name: 'Common', kind: 'COMMON', shares: 1, holder: 'FOUNDER' },
         ...Array.from({ length: 20 }, (_, index) => ({
@@ -164,6 +167,20 @@ describe('V1–V16 schema contract', () => {
     })
     invalid((deal) => {
       deal.pre.promisedOptions = -1
+    })
+    invalid((deal) => {
+      deal.safes = [{ id: 'same', name: 'SAFE', amount: 1, kind: 'PRE_MONEY', valuationCap: 10 }]
+      ;(deal as RawDeal & { notes: RawRecord[] }).notes = [
+        {
+          id: 'same',
+          name: 'Note',
+          principal: 1,
+          interestRate: 0,
+          interestKind: 'SIMPLE',
+          accrualYears: 0,
+          valuationCap: 10,
+        },
+      ]
     })
   })
 

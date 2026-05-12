@@ -1,11 +1,11 @@
 id: F-SAFE-06
 kind: round
-disputed: true
-description: Two post-money SAFE routes are solved globally rather than by two passes.
+description: Two post-money SAFE routes are solved globally to a shared fixed point.
 derivation: |
   A=$1M at a $10M cap plus 50% discount and B=$843,750 at an $8.4375M cap plus
   10% discount are evaluated together at the derived round PPS; the fixture asserts the
-  global solution's deterministic numeric snapshot.
+  simultaneous solution: A takes its 50% discount, B takes its 10% cap ownership,
+  and the derived round PPS is $0.70.
 input:
   capTable:
     classes: [{ id: common, name: Common, kind: COMMON, shares: 10000000, holder: FOUNDER }]
@@ -24,6 +24,6 @@ input:
       seniority: PARI,
     }
 expect:
-  pps: 0.7063
-  safeShares: 4160000
-tolerance: 0.1
+  pps: 0.7
+  safeShares: 4285714.285714286
+tolerance: 0.001

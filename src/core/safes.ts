@@ -146,6 +146,9 @@ function maxRoute(
 
 /** Joint SAFE route + pool + PPS solve used by round construction. */
 export function solveSafes(config: SafeSolveConfig): SafeSolve {
+  if (new Set(config.safes.map((safe) => safe.id)).size !== config.safes.length) {
+    throw new Error('V9: SAFE ids must be unique')
+  }
   const routes = Object.fromEntries(
     config.safes.map((safe) => [safe.id, initialRoute(safe)]),
   ) as Record<string, SafeRoute>

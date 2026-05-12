@@ -1,4 +1,4 @@
-import type { CapTable, SecondarySale, ShareClass } from './schema'
+import { CapTableSchema, type CapTable, type SecondarySale, type ShareClass } from './schema'
 
 /**
  * Apply a secondary share sale (§6.17).
@@ -14,6 +14,12 @@ export function applySecondary(
 ): { post: CapTable; proceeds: number } {
   const seller = pre.classes.find((cls) => cls.id === sale.sellerClassId)
   if (seller === undefined) throw new Error(`Unknown seller class '${sale.sellerClassId}'`)
+  if (seller.kind !== 'COMMON') {
+    throw new Error('Secondary sales can transfer COMMON shares only')
+  }
+  if (sale.buyerClassId === sale.sellerClassId) {
+    throw new Error('Secondary buyer and seller classes must differ')
+  }
   if (seller.shares + 1e-12 < sale.shares)
     throw new Error(`Seller '${sale.sellerClassId}' lacks ${sale.shares} shares`)
 
@@ -28,7 +34,10 @@ export function applySecondary(
     }
     if (sale.buyerClassId !== undefined && cls.id === sale.buyerClassId) {
       if (cls.kind !== 'COMMON') throw new Error('Secondary buyer class must be COMMON')
-      classes.push({ ...cls, shares: cls.shares + sale.shares, holder: sale.buyerHolder })
+      if (cls.holder !== sale.buyerHolder) {
+        throw new Error('Secondary buyer class holder does not match buyerHolder')
+      }
+      classes.push({ ...cls, shares: cls.shares + sale.shares })
       buyerFound = true
       continue
     }
@@ -52,7 +61,7 @@ export function applySecondary(
     })
   }
   return {
-    post: { ...pre, classes },
+    post: CapTableSchema.parse({ ...pre, classes }),
     proceeds,
   }
 }

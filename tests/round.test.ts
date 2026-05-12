@@ -1,11 +1,19 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { BeliefsSchema, CapTableSchema, RoundTermsSchema, SafeSchema } from '../src/core/schema'
+import {
+  BeliefsSchema,
+  CapTableSchema,
+  ConvertibleNoteSchema,
+  RoundTermsSchema,
+  SafeSchema,
+  SecondarySaleSchema,
+} from '../src/core/schema'
 import { expectedPayouts } from '../src/core/outcomes'
 import { constructRound } from '../src/core/round'
 import { convertSafes, solveSafes } from '../src/core/safes'
 import { conversionPrice } from '../src/core/antidilution'
 import { arbitraryDownRoundCase } from './generators'
+import { applySecondary } from '../src/core/secondary'
 
 describe('SAFE conversion and round construction', () => {
   it('uses the simultaneous post-money cap closed form', () => {
@@ -126,6 +134,87 @@ describe('SAFE conversion and round construction', () => {
     expect(party.investor).toBeCloseTo(party.other * 2, 8)
   })
 
+  it('does not let a convertible note rewrite an MFN SAFE', () => {
+    const pre = CapTableSchema.parse({
+      classes: [
+        { id: 'common', name: 'Common', kind: 'COMMON', shares: 10_000_000, holder: 'FOUNDER' },
+      ],
+      grants: [],
+      poolAvailable: 0,
+    })
+    const terms = RoundTermsSchema.parse({
+      pricedPerShare: 1,
+      investment: 1_000_000,
+      poolTargetPost: 0,
+      prefMultiple: 1,
+      participation: 'NONE',
+      seniority: 'PARI',
+    })
+    const safe = SafeSchema.parse({
+      id: 'mfn',
+      name: 'MFN SAFE',
+      amount: 1_000_000,
+      kind: 'PRE_MONEY',
+      valuationCap: 20_000_000,
+      discount: 0.1,
+      mfn: true,
+    })
+    const note = ConvertibleNoteSchema.parse({
+      id: 'note',
+      name: 'Note',
+      principal: 1_000_000,
+      interestRate: 0,
+      interestKind: 'SIMPLE',
+      accrualYears: 0,
+      valuationCap: 1_000_000,
+    })
+    const result = constructRound(pre, [safe], terms, [note])
+    expect(result.diagnostics.sharesBySafe.mfn).toBeCloseTo(1_000_000 / 0.9, 6)
+    expect(result.diagnostics.sharesBySafe.note).toBeCloseTo(10_000_000, 6)
+  })
+
+  it('rejects an unknown pay-to-play participant instead of converting on a typo', () => {
+    const pre = CapTableSchema.parse({
+      classes: [
+        { id: 'common', name: 'Common', kind: 'COMMON', shares: 10, holder: 'FOUNDER' },
+        {
+          id: 'legacy',
+          name: 'Legacy',
+          kind: 'PREFERRED',
+          shares: 1,
+          holder: 'OTHER',
+          invested: 1,
+          prefMultiple: 1,
+          participation: 'NONE',
+          payToPlay: 'TO_COMMON',
+        },
+      ],
+      grants: [],
+      poolAvailable: 0,
+    })
+    const terms = RoundTermsSchema.parse({
+      preMoney: 10,
+      investment: 1,
+      poolTargetPost: 0,
+      prefMultiple: 1,
+      participation: 'NONE',
+      seniority: 'PARI',
+      payToPlayParticipants: ['legcay'],
+    })
+    expect(() => constructRound(pre, [], terms)).toThrow(/pay-to-play participant/u)
+  })
+
+  it('rejects duplicate SAFE ids before keyed conversion results can overwrite', () => {
+    const safe = SafeSchema.parse({
+      id: 'duplicate',
+      name: 'Duplicate',
+      amount: 1,
+      kind: 'PRE_MONEY',
+      valuationCap: 10,
+    })
+    expect(() => convertSafes(100, [safe, safe], 1)).toThrow(/unique/u)
+  })
+
   it('preserves round and SAFE identities across randomized valid inputs', () => {
     fc.assert(
       fc.property(
@@ -203,5 +292,69 @@ describe('SAFE conversion and round construction', () => {
       }),
       { numRuns: 200, endOnFailure: true },
     )
+  })
+})
+
+describe('secondary sales', () => {
+  const pre = CapTableSchema.parse({
+    classes: [
+      { id: 'founder', name: 'Founder', kind: 'COMMON', shares: 90, holder: 'FOUNDER' },
+      { id: 'buyer', name: 'Buyer', kind: 'COMMON', shares: 10, holder: 'OTHER' },
+      {
+        id: 'preferred',
+        name: 'Preferred',
+        kind: 'PREFERRED',
+        shares: 10,
+        holder: 'INVESTOR',
+        invested: 10,
+        prefMultiple: 1,
+        participation: 'NONE',
+      },
+    ],
+    grants: [],
+    poolAvailable: 0,
+  })
+
+  it('moves common shares without changing capitalization', () => {
+    const sale = SecondarySaleSchema.parse({
+      id: 'sale',
+      sellerClassId: 'founder',
+      shares: 5,
+      pricePerShare: 2,
+      buyerHolder: 'OTHER',
+      buyerClassId: 'buyer',
+    })
+    const result = applySecondary(pre, sale)
+    expect(result.proceeds).toBe(10)
+    expect(result.post.classes.reduce((sum, cls) => sum + cls.shares, 0)).toBe(110)
+    expect(result.post.classes.find((cls) => cls.id === 'buyer')?.shares).toBe(15)
+  })
+
+  it('rejects preferred transfers and ambiguous buyer attribution', () => {
+    expect(() =>
+      applySecondary(
+        pre,
+        SecondarySaleSchema.parse({
+          id: 'preferred-sale',
+          sellerClassId: 'preferred',
+          shares: 1,
+          pricePerShare: 1,
+          buyerHolder: 'OTHER',
+        }),
+      ),
+    ).toThrow(/COMMON/u)
+    expect(() =>
+      applySecondary(
+        pre,
+        SecondarySaleSchema.parse({
+          id: 'wrong-holder',
+          sellerClassId: 'founder',
+          shares: 1,
+          pricePerShare: 1,
+          buyerHolder: 'FOUNDER',
+          buyerClassId: 'buyer',
+        }),
+      ),
+    ).toThrow(/holder/u)
   })
 })

@@ -2,15 +2,16 @@ import { adjustedConversionRatio, conversionPrice } from './antidilution'
 import { applyMfn } from './mfn'
 import { noteAsPreMoneySafe } from './notes'
 import { solveSafes, type SafeRoute } from './safes'
-import type {
-  CapTable,
-  ConvertibleNote,
-  RoundResult,
-  RoundTerms,
-  Safe,
-  ShareClass,
-  ShareClassCommon,
-  ShareClassPreferred,
+import {
+  CapTableSchema,
+  type CapTable,
+  type ConvertibleNote,
+  type RoundResult,
+  type RoundTerms,
+  type Safe,
+  type ShareClass,
+  type ShareClassCommon,
+  type ShareClassPreferred,
 } from './schema'
 
 /** Fully-diluted share count on the engine's own convention; the shadow round reuses it. */
@@ -62,6 +63,12 @@ function cloneClasses(classes: ShareClass[]): ShareClass[] {
  */
 function applyPayToPlay(classes: ShareClass[], terms: RoundTerms): ShareClass[] {
   const participants = new Set(terms.payToPlayParticipants ?? [])
+  for (const id of participants) {
+    const participant = classes.find((cls) => cls.id === id)
+    if (participant?.kind !== 'PREFERRED' || participant.payToPlay !== 'TO_COMMON') {
+      throw new Error(`Unknown or ineligible pay-to-play participant '${id}'`)
+    }
+  }
   const result: ShareClass[] = []
   for (const cls of classes) {
     if (cls.kind !== 'PREFERRED' || cls.payToPlay !== 'TO_COMMON' || participants.has(cls.id)) {
@@ -185,12 +192,12 @@ function buildPost(
         )
       : null
   return {
-    post: {
+    post: CapTableSchema.parse({
       classes: [...existing, ...shadowClasses, newRound, ...(otherRound ? [otherRound] : [])],
       grants: pre.grants.map((grant) => ({ ...grant })),
       poolAvailable: pre.poolAvailable + poolIncrease,
       promisedOptions: pre.promisedOptions,
-    },
+    }),
     investorShares,
   }
 }
@@ -203,7 +210,9 @@ export function constructRound(
   notes: ConvertibleNote[] = [],
 ): RoundResult {
   const noteSafes = notes.map(noteAsPreMoneySafe)
-  const converting = applyMfn([...safes, ...noteSafes])
+  // MFN is a SAFE-side-letter concept. Convertible notes keep their authored
+  // cap and discount instead of donating those terms to an unrelated MFN SAFE.
+  const converting = [...applyMfn(safes), ...noteSafes]
   let current = applyPayToPlay(cloneClasses(pre.classes), terms)
   const frozenConversionPrices = new Map(
     current
