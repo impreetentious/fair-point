@@ -1,7 +1,7 @@
 import type { Beliefs, LognormalFit } from './schema'
 import { phi, phiInv } from './numerics'
 
-export const Z90 = 1.2815515655446004
+const Z90 = 1.2815515655446004
 
 export function fitLognormal(q: { p10?: number; p50: number; p90?: number }): LognormalFit {
   if (!(q.p50 > 0) || !(q.p90 !== undefined && q.p90 > q.p50)) {
@@ -17,6 +17,10 @@ export function fitLognormal(q: { p10?: number; p50: number; p90?: number }): Lo
       : (Math.log(q.p90) - Math.log(q.p10)) / (2 * Z90)
   if (!(sigma > 0) || !Number.isFinite(sigma))
     throw new RangeError('lognormal sigma must be positive')
+  const logMean = mu + (sigma * sigma) / 2
+  if (!Number.isFinite(logMean) || logMean > Math.log(Number.MAX_VALUE)) {
+    throw new RangeError('lognormal mean exceeds the numeric range')
+  }
   const warnings: string[] = []
   if (q.p10 !== undefined) {
     const impliedMedian = Math.exp((Math.log(q.p10) + Math.log(q.p90)) / 2)

@@ -41,7 +41,7 @@ function expectedFromRegimes(allRegimes: Regime[], ids: string[], beliefs: Belie
   return (1 - beliefs.p0) * conditional
 }
 
-/** Closed-form expected payout statistics over exact waterfall regimes. */
+/** Analytic expected payout statistics over the recovered piecewise-linear waterfall regimes. */
 export function expectedPayouts(post: CapTable, beliefs: Beliefs): HolderStats {
   const allRegimes = regimes(post)
   const entries = [...post.classes.map((cls) => cls.id), ...post.grants.map((grant) => grant.id)]

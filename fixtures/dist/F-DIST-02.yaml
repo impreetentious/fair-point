@@ -3,7 +3,7 @@ kind: dist
 description: P10/P50/P90 fit records a consistency warning when the median conflicts.
 derivation: |
   sigma = [ln(400) - ln(50)] / (2 * z90). The implied median sqrt(50 * 400)
-  differs from 100 by more than 10%, so the locked warning is emitted.
+  differs from 100 by more than 10%, so the consistency warning is emitted.
 input:
   operation: fit
   values: { p10: 50, p50: 100, p90: 400 }

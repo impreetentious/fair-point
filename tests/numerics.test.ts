@@ -1,6 +1,6 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { intervalProb, partialExpectation } from '../src/core/distributions'
+import { fitLognormal, intervalProb, partialExpectation } from '../src/core/distributions'
 import { mulberry32, normals, phi, phiInv } from '../src/core/numerics'
 
 describe('numerics', () => {
@@ -64,6 +64,12 @@ describe('numerics', () => {
         },
       ),
       { numRuns: 100 },
+    )
+  })
+
+  it('rejects finite quantiles whose fitted mean would overflow', () => {
+    expect(() => fitLognormal({ p50: 1, p90: Number.MAX_VALUE })).toThrow(
+      'lognormal mean exceeds the numeric range',
     )
   })
 })

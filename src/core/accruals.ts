@@ -30,14 +30,22 @@ function redemptionClaim(cls: ShareClassPreferred, years: number): number {
  * See §6.13 / §6.14.
  */
 export function accrueForExit(post: CapTable, yearsToExit: number): CapTable {
+  if (!Number.isFinite(yearsToExit) || yearsToExit < 0) {
+    throw new RangeError('yearsToExit must be finite and nonnegative')
+  }
   return {
     ...post,
     classes: post.classes.map((cls: ShareClass) => {
       if (cls.kind !== 'PREFERRED') return cls
+      const accruedDividends = dividendAccrual(cls, yearsToExit)
+      const claim = redemptionClaim(cls, yearsToExit)
+      if (!Number.isFinite(accruedDividends) || !Number.isFinite(claim)) {
+        throw new RangeError(`Accrual exceeds the numeric range for class '${cls.id}'`)
+      }
       return {
         ...cls,
-        accruedDividends: dividendAccrual(cls, yearsToExit),
-        redemptionClaim: redemptionClaim(cls, yearsToExit),
+        accruedDividends,
+        redemptionClaim: claim,
       }
     }),
   }
@@ -46,5 +54,9 @@ export function accrueForExit(post: CapTable, yearsToExit: number): CapTable {
 /** Liquidation preference dollars for a preferred class after accruals are stamped. */
 export function preferenceClaim(cls: ShareClassPreferred): number {
   const stacked = cls.prefMultiple * cls.invested + (cls.accruedDividends ?? 0)
-  return Math.max(stacked, cls.redemptionClaim ?? 0)
+  const claim = Math.max(stacked, cls.redemptionClaim ?? 0)
+  if (!Number.isFinite(claim)) {
+    throw new RangeError(`Preference claim exceeds the numeric range for class '${cls.id}'`)
+  }
+  return claim
 }

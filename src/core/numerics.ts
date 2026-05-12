@@ -158,7 +158,3 @@ export function normals(seed: number): () => number {
     return radius * Math.cos(angle)
   }
 }
-
-export function near(actual: number, expected: number, tolerance = 1e-9): boolean {
-  return Math.abs(actual - expected) <= tolerance
-}
