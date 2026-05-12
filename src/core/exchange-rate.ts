@@ -33,7 +33,11 @@ import {
  */
 
 export type ExchangeTermId =
-  'preMoney' | 'prefMultiple' | 'participation' | 'poolTargetPost' | 'investment'
+  | 'preMoney'
+  | 'prefMultiple'
+  | 'participation'
+  | 'poolTargetPost'
+  | 'investment'
 
 export interface ExchangeRateRow {
   term: ExchangeTermId

@@ -51,7 +51,7 @@ which yields
 shares_i             = f_i × (BaseCap + T_other) / (1 − s)
 ```
 
-_(This closed form generalizes the "pure post-money" case where `T_other = 0`: same denominator `1 − s`, base is `BaseCap + T_other` instead of `BaseCap`. Ownership identity holds exactly: `shares_i / (BaseCap + T_other + Σ_{cap-route} shares) = f_i`.)_
+_(This closed form generalizes the "pure post-money" case where `T_other = 0`: same denominator `1 − s`, base is `BaseCap + T_other` instead of `BaseCap`. Ownership identity holds exactly: `shares_i / (BaseCap + T_other + Σ_{cap-route} shares) = f*i`.)*
 
 **6.2.3 Global solve — routes, total SAFE shares `T`, pool increase `P`, PPS (replaces the old two-pass rule).**
 
@@ -70,7 +70,7 @@ Solve procedure:
 2. **Re-evaluate route optimality at the solved PPS.** For each post-money SAFE, compute the three-way max (§6.2.0). If any SAFE's optimal route ≠ its current route, **switch it** (route switches are monotone toward _more_ shares, hence lower PPS, hence never revert) and re-solve.
 3. Repeat until no route switches; bound iterations at `#SAFEs + 1` (guaranteed by the monotonicity). Assert `iterations ≤ #SAFEs + 1` in dev mode.
 
-_(Independent no-pool counterexample validating the deletion of the "two passes suffice" rule: BaseCap 10M, V_pre $10M, no pool, one $1M SAFE @ $20M post cap + 20% discount. Two-pass: pass 1 gives 526,315.79 sh, PPS 0.95; pass 2 gives 1,315,789.47 sh, PPS 0.883721; a third pass would give 1,414,473.7 sh — the old dev assert fires on valid input. Global solve: **1,428,571.43 sh, PPS $0.875, discount route wins__. This is distinct from F-SAFE-04 below, which adds a $2.5M round and a 10% target pool.)_
+_(Independent no-pool counterexample validating the deletion of the "two passes suffice" rule: BaseCap 10M, V_pre $10M, no pool, one $1M SAFE @ $20M post cap + 20% discount. Two-pass: pass 1 gives 526,315.79 sh, PPS 0.95; pass 2 gives 1,315,789.47 sh, PPS 0.883721; a third pass would give 1,414,473.7 sh — the old dev assert fires on valid input. Global solve: \*\*1,428,571.43 sh, PPS $0.875, discount route wins\_\_. This is distinct from F-SAFE-04 below, which adds a $2.5M round and a 10% target pool.)_
 
 **6.2.4 Converted SAFE class (D12) — shadow-series rule.** Cap-route and discount-route post-money SAFEs and pre-money SAFEs convert into a **shadow series**: `kind = PREFERRED`, `holder =` the SAFE's `holder` flag (default OTHER; INVESTOR when the user marks a SAFE as the lead investor's), `invested = amount`, `shares =` the solved-share count, `originalIssuePrice = amount / shares` (so `capMultiple × invested` is the correct participation cap basis per D9/V11), **`prefMultiple`, `participation`, `participationCapMultiple`, `seniorityTier` inherited from the new round's class** (the tier is the one §6.1 step 4 computed _before_ SAFE conversion completes — the tier is data of the round, not of the SAFE), `antiDilution = 'NONE'`, `conversionRatio = 1`.
 

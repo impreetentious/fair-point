@@ -85,6 +85,8 @@ npm run preview    # serves out/ at http://localhost:4173
 
 Whatever host you use should send the response headers documented in [docs/STATIC-HOST-HEADERS.md](docs/STATIC-HOST-HEADERS.md). `vercel.json` applies them on Vercel and `serve.json` applies the same policy to `npm run preview` and to the Playwright web server, so the offline contract is tested under the real policy. `npm run check:csp` fails if the two host configs and the document ever disagree.
 
+The GitHub remote is authoritative and carries the only pipeline; `.github/workflows/verify.yml` runs every gate. The GitLab remote is a backup mirror kept in sync, deliberately without a `.gitlab-ci.yml` — there is no second publication target to gate, and a mirrored pipeline would only create a second place for gate drift.
+
 ## License
 
 MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
@@ -93,4 +95,4 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.16.2
+**Version:** v0.17.0
