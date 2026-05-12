@@ -39,13 +39,17 @@ if (existsSync(path.join(root, 'package-lock.json'))) {
   errors.push('missing package-lock.json or pnpm-lock.yaml')
 }
 
-// README.md, package.json, and the lockfile root are the release-version surfaces.
-// Nothing else is gated: the build-time handover log is disposable by design, so no gate
-// may ever require its presence.
 for (const file of ['README.md']) {
   const found = markerVersion(file)
   if (!found) errors.push(`${file} missing **Version:** vX.Y.Z marker`)
   else if (found !== version) errors.push(`${file} version ${found} != package.json ${version}`)
+}
+
+const brandingVersion = read('src/app/branding.ts').match(
+  /export const PRODUCT_VERSION = ['"]([0-9]+\.[0-9]+\.[0-9]+)['"]/u,
+)?.[1]
+if (brandingVersion !== version) {
+  errors.push(`src/app/branding.ts PRODUCT_VERSION ${brandingVersion ?? 'missing'} != ${version}`)
 }
 
 const nvm = read('.nvmrc').trim()

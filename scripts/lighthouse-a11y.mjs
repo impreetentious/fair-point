@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 /**
- * Automates §13 DoD / Phase 8 a11y gate: Lighthouse accessibility score ≥ 90
- * against the static export on port 4173 (law 10 — never bind reserved ports).
+ * Enforces a Lighthouse accessibility score of at least 90 against the static export.
  */
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { setTimeout as delay } from 'node:timers/promises'
+import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const lighthouse = require('lighthouse').default ?? require('lighthouse')
 const chromeLauncher = require('chrome-launcher')
 
 const PORT = 4173
-const URL = `http://127.0.0.1:${PORT}/`
+const TARGET_URL = `http://127.0.0.1:${PORT}/`
 const THRESHOLD = 90
+const servePath = fileURLToPath(new URL('../node_modules/serve/build/main.js', import.meta.url))
 
 async function waitForServer(url, attempts = 40) {
   for (let i = 0; i < attempts; i += 1) {
@@ -28,18 +29,30 @@ async function waitForServer(url, attempts = 40) {
   throw new Error(`Static export did not become ready at ${url}`)
 }
 
-const server = spawn('npx', ['--yes', 'serve', '-l', String(PORT), 'out'], {
-  stdio: ['ignore', 'pipe', 'pipe'],
-  env: process.env,
-})
+const server = spawn(
+  process.execPath,
+  [
+    servePath,
+    '-l',
+    `tcp://127.0.0.1:${PORT}`,
+    '--no-port-switching',
+    '--config',
+    '../serve.json',
+    'out',
+  ],
+  {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: process.env,
+  },
+)
 
 let chrome
 try {
-  await waitForServer(URL)
+  await waitForServer(TARGET_URL)
   chrome = await chromeLauncher.launch({
     chromeFlags: ['--headless', '--no-sandbox', '--disable-gpu'],
   })
-  const result = await lighthouse(URL, {
+  const result = await lighthouse(TARGET_URL, {
     port: chrome.port,
     output: 'json',
     onlyCategories: ['accessibility'],

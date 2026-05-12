@@ -5,18 +5,23 @@ import globals from 'globals'
 
 export default [
   {
-    ignores: [
-      'dist',
-      'node_modules',
-      '.next',
-      'out',
-      'test-results',
-      'next-env.d.ts',
-      // Mirrors the previous `--ext .ts,.tsx`: only TypeScript sources are linted.
-      '**/*.js',
-      '**/*.cjs',
-      '**/*.mjs',
-    ],
+    ignores: ['dist', 'node_modules', '.next', 'out', 'test-results', 'next-env.d.ts'],
+  },
+  {
+    files: ['**/*.js', '**/*.cjs', '**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+    },
+    rules: js.configs.recommended.rules,
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    files: ['scripts/sw.template.js'],
+    languageOptions: { globals: globals.serviceworker },
   },
   {
     files: ['**/*.ts', '**/*.tsx'],

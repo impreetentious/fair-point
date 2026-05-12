@@ -16,9 +16,9 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `npx --yes serve -l ${PORT} --config ../serve.json out`,
+    command: 'npm run preview',
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 60_000,
   },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],

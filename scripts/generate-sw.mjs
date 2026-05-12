@@ -16,12 +16,20 @@ function walk(dir) {
   return files
 }
 
-const emitted = walk(outDir)
+const emittedFiles = walk(outDir).filter((file) => relative(outDir, file) !== 'sw.js')
+const emitted = emittedFiles
   .map((file) => `./${relative(outDir, file).split('\\').join('/')}`)
-  .filter((file) => file !== './sw.js')
   .sort()
 const precache = [...new Set(['./', './index.html', ...emitted])]
-const buildHash = createHash('sha256').update(precache.join('\n')).digest('hex').slice(0, 12)
+const hash = createHash('sha256')
+for (const file of emittedFiles.sort()) {
+  const relativePath = `./${relative(outDir, file).split('\\').join('/')}`
+  hash.update(relativePath)
+  hash.update('\0')
+  hash.update(readFileSync(file))
+  hash.update('\0')
+}
+const buildHash = hash.digest('hex').slice(0, 12)
 const template = readFileSync(join(root, 'scripts', 'sw.template.js'), 'utf8')
 const branding = readFileSync(join(root, 'src', 'app', 'branding.ts'), 'utf8')
 const productSlug = branding.match(/export const PRODUCT_SLUG = ['"]([^'"]+)['"]/u)?.[1]
