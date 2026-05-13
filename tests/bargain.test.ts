@@ -239,9 +239,52 @@ describe('bargaining engine', () => {
       dominating: [4, 1, 3],
     })
   })
+
+  it('does not report an index alias of the current terms as value on the table', () => {
+    const current = point(-1, 5, 5)
+    const alias = point(0, 5, 5)
+    expect(valueOnTable(analyze([alias], disagreement), current)).toEqual({
+      headline: 0,
+      gainF: 0,
+      gainI: 0,
+      dominating: [],
+    })
+  })
+
+  it('recognizes a current-term alias regardless of object property order', () => {
+    const alias = point(0, 5, 5)
+    const current = point(-1, 5, 5)
+    current.pkg.terms = {
+      seniority: 'PARI',
+      participation: 'NONE',
+      prefMultiple: 1,
+      poolTargetPost: 0,
+      investment: 1,
+      preMoney: 1,
+    }
+    expect(valueOnTable(analyze([alias], disagreement), current).headline).toBe(0)
+  })
 })
 
 describe('n-party bargaining (§6.19 defining axioms)', () => {
+  it('collapses exact utility duplicates to the lowest package index', () => {
+    const result = analyzeN(
+      [multiPoint(4, { A: 10, B: 10, C: 10 }), multiPoint(2, { A: 10, B: 10, C: 10 })],
+      multiDisagreement,
+      [...parties],
+    )
+    expect(result.frontier).toEqual([2])
+  })
+
+  it('rejects missing utilities and duplicate party ids instead of pricing them as zero', () => {
+    expect(() =>
+      analyzeN([multiPoint(0, { A: 1, B: 1 })], multiDisagreement, [...parties]),
+    ).toThrow("no finite utility for party 'C'")
+    expect(() =>
+      analyzeN([multiPoint(0, { A: 1, B: 1, C: 1 })], multiDisagreement, ['A', 'A']),
+    ).toThrow('party ids must be unique')
+  })
+
   it('satisfies n-party Nash and KS affine invariance over 300 randomized 3-party clouds', () => {
     fc.assert(
       fc.property(

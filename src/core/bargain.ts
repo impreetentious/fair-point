@@ -1,6 +1,7 @@
 import { crraQuadrature } from './mc'
 import { expectedPayouts } from './outcomes'
 import { constructRound } from './round'
+import { accrueForExit } from './accruals'
 import { presentValue } from './discounting'
 import {
   poolFeasible,
@@ -26,7 +27,7 @@ function linspace([lower, upper]: DealSpace['preMoneyRange'], steps: number): nu
   )
 }
 
-export type DealSkip = { index: number; reason: 'V1' | 'V3' }
+type DealSkip = { index: number; reason: 'V1' | 'V3' }
 export type EnumeratedDeals = { packages: TermPackage[]; skipped: DealSkip[] }
 
 function validPair(
@@ -40,7 +41,7 @@ function validPair(
 }
 
 /**
- * Enumerate the locked row-major grid, retaining raw indices and invalid-cell reasons.
+ * Enumerate the stable row-major grid, retaining raw indices and invalid-cell reasons.
  * V1-invalid preference pairs and V3-infeasible pool cells are omitted before round construction.
  */
 export function enumerateDealsWithReasons(space: DealSpace): EnumeratedDeals {
@@ -80,7 +81,7 @@ export function enumerateDealsWithReasons(space: DealSpace): EnumeratedDeals {
   return { packages, skipped }
 }
 
-/** Enumerate the locked row-major grid, retaining raw indices across invalid holes. */
+/** Enumerate the stable row-major grid, retaining raw indices across invalid holes. */
 export function enumerateDeals(space: DealSpace): TermPackage[] {
   return enumerateDealsWithReasons(space).packages
 }
@@ -95,33 +96,35 @@ export function evaluatePackage(
   risk: { gamma: 0.5 | 1; w0F: number; w0I: number } | null = null,
   notes: ConvertibleNote[] = [],
   discounting: Discounting | null = null,
+  yearsToExit = 0,
 ): DealPoint {
   const round = constructRound(pre, safes, pkg.terms, notes)
+  const post = accrueForExit(round.post, yearsToExit)
   if (risk !== null) {
     return {
       pkg,
       uF: presentValue(
-        crraQuadrature(round.post, 'FOUNDER', founderBeliefs, risk.gamma, risk.w0F).ce,
+        crraQuadrature(post, 'FOUNDER', founderBeliefs, risk.gamma, risk.w0F).ce,
         discounting,
       ),
       uI: presentValue(
-        crraQuadrature(round.post, 'INVESTOR', investorBeliefs, risk.gamma, risk.w0I).ce,
+        crraQuadrature(post, 'INVESTOR', investorBeliefs, risk.gamma, risk.w0I).ce,
         discounting,
       ),
       uF_underI: presentValue(
-        crraQuadrature(round.post, 'FOUNDER', investorBeliefs, risk.gamma, risk.w0F).ce,
+        crraQuadrature(post, 'FOUNDER', investorBeliefs, risk.gamma, risk.w0F).ce,
         discounting,
       ),
       uI_underF: presentValue(
-        crraQuadrature(round.post, 'INVESTOR', founderBeliefs, risk.gamma, risk.w0I).ce,
+        crraQuadrature(post, 'INVESTOR', founderBeliefs, risk.gamma, risk.w0I).ce,
         discounting,
       ),
       metric: 'CE',
       diagnostics: round.diagnostics,
     }
   }
-  const founder = expectedPayouts(round.post, founderBeliefs)
-  const investor = expectedPayouts(round.post, investorBeliefs)
+  const founder = expectedPayouts(post, founderBeliefs)
+  const investor = expectedPayouts(post, investorBeliefs)
   return {
     pkg,
     uF: presentValue(founder.party.founder, discounting),
@@ -177,6 +180,21 @@ function descendingStable(left: number, right: number): number {
   const delta = right - left
   const tolerance = 1e-10 * Math.max(1, Math.abs(left), Math.abs(right))
   return Math.abs(delta) <= tolerance ? 0 : delta
+}
+
+function sameTerms(left: RoundTerms, right: RoundTerms): boolean {
+  const participants = (terms: RoundTerms) =>
+    [...new Set(terms.payToPlayParticipants ?? [])].sort((a, b) => a.localeCompare(b)).join('\0')
+  return (
+    left.preMoney === right.preMoney &&
+    left.pricedPerShare === right.pricedPerShare &&
+    left.investment === right.investment &&
+    left.poolTargetPost === right.poolTargetPost &&
+    left.prefMultiple === right.prefMultiple &&
+    left.participation === right.participation &&
+    left.seniority === right.seniority &&
+    participants(left) === participants(right)
+  )
 }
 
 /** Analyze IR, frontier, and the four deterministic discrete bargaining selections. */
@@ -249,26 +267,32 @@ export function analyze(points: DealPoint[], disagreement: Disagreement): Bargai
   }
 }
 
-/** Compute the locked single-package and per-party value-on-table measures. */
+/** Compute the defined single-package and per-party value-on-table measures. */
 export function valueOnTable(
   result: BargainResult,
   current: DealPoint,
 ): { headline: number; gainF: number; gainI: number; dominating: number[] } {
   const ir = new Set(result.ir)
-  const eligible = result.points.filter(
-    (point) =>
+  const eligible = result.points.filter((point) => {
+    const isCurrentAlias =
+      sameTerms(point.pkg.terms, current.pkg.terms) &&
+      Math.abs(point.uF - current.uF) <= 1e-9 &&
+      Math.abs(point.uI - current.uI) <= 1e-9
+    return (
       ir.has(point.pkg.index) &&
       point.pkg.index !== current.pkg.index &&
+      !isCurrentAlias &&
       point.uF >= current.uF - 1 &&
-      point.uI >= current.uI - 1,
-  )
+      point.uI >= current.uI - 1
+    )
+  })
   if (eligible.length === 0) return { headline: 0, gainF: 0, gainI: 0, dominating: [] }
   const deltas = eligible.map((point) => ({
     point,
     f: point.uF - current.uF,
     i: point.uI - current.uI,
   }))
-  const headline = Math.max(...deltas.map((delta) => delta.f + delta.i))
+  const headline = Math.max(0, ...deltas.map((delta) => delta.f + delta.i))
   const gainF = Math.max(
     0,
     ...deltas.filter((delta) => delta.point.uI >= current.uI).map((delta) => delta.f),

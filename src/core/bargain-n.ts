@@ -13,7 +13,7 @@ function gains(
   parties: string[],
   d0: MultiPartyDisagreement,
 ): number[] {
-  return parties.map((party) => (point.utilities[party] ?? 0) - (d0[party] ?? 0))
+  return parties.map((party) => point.utilities[party] - d0[party])
 }
 
 function product(values: number[]): number {
@@ -38,23 +38,22 @@ function sum(values: number[]): number {
 function frontierN(points: MultiPartyDealPoint[], parties: string[]): number[] {
   const sorted = [...points].sort((left, right) => {
     for (const party of parties) {
-      const delta = (right.utilities[party] ?? 0) - (left.utilities[party] ?? 0)
+      const delta = right.utilities[party] - left.utilities[party]
       if (delta !== 0) return delta
     }
     return left.pkg.index - right.pkg.index
   })
   const kept: MultiPartyDealPoint[] = []
   for (const point of sorted) {
+    const duplicate = kept.some((prior) =>
+      parties.every((party) => prior.utilities[party] === point.utilities[party]),
+    )
     const dominated = kept.some(
       (prior) =>
-        parties.every(
-          (party) => (prior.utilities[party] ?? 0) >= (point.utilities[party] ?? 0) - 1e-12,
-        ) &&
-        parties.some(
-          (party) => (prior.utilities[party] ?? 0) > (point.utilities[party] ?? 0) + 1e-12,
-        ),
+        parties.every((party) => prior.utilities[party] >= point.utilities[party]) &&
+        parties.some((party) => prior.utilities[party] > point.utilities[party]),
     )
-    if (!dominated) kept.push(point)
+    if (!duplicate && !dominated) kept.push(point)
   }
   // Collapse exact duplicates to lowest index (already sorted by index on ties of utilities via sort).
   return kept.map((point) => point.pkg.index)
@@ -78,7 +77,7 @@ function choose(
  * - Egalitarian: argmax min_i (u_i − d_i)
  * - Utilitarian: argmax Σ(u_i − d_i)
  *
- * Tie-breaks generalize D23: primary axiom key → gain-product → lowest package index
+ * Tie-breaks generalize the two-party rules: primary axiom key → gain-product → lowest package index
  * (egalitarian uses sum of gains as secondary). Affine invariance of Nash/KS keys holds
  * under per-axis positive affine transforms exactly as in the two-party case.
  *
@@ -94,12 +93,27 @@ export function analyzeN(
   const parties =
     partyOrder ?? Object.keys(disagreement).sort((left, right) => left.localeCompare(right))
   if (parties.length < 2) throw new RangeError('analyzeN requires at least two parties')
+  if (new Set(parties).size !== parties.length) {
+    throw new RangeError('analyzeN party ids must be unique')
+  }
   for (const party of parties) {
     if (!(party in disagreement)) throw new RangeError(`Missing disagreement for party '${party}'`)
+    if (!Number.isFinite(disagreement[party])) {
+      throw new RangeError(`Disagreement for party '${party}' must be finite`)
+    }
+  }
+  for (const point of ordered) {
+    for (const party of parties) {
+      if (!Number.isFinite(point.utilities[party])) {
+        throw new RangeError(
+          `Package ${point.pkg.index} has no finite utility for party '${party}'`,
+        )
+      }
+    }
   }
 
   const irPoints = ordered.filter((point) =>
-    parties.every((party) => (point.utilities[party] ?? 0) >= (disagreement[party] ?? 0)),
+    parties.every((party) => point.utilities[party] >= disagreement[party]),
   )
   const notes: string[] = []
 
@@ -114,12 +128,9 @@ export function analyzeN(
   let ksPoint: MultiPartyDealPoint | null = null
   if (irPoints.length > 0) {
     const ideals = Object.fromEntries(
-      parties.map((party) => [
-        party,
-        Math.max(...irPoints.map((point) => point.utilities[party] ?? 0)),
-      ]),
+      parties.map((party) => [party, Math.max(...irPoints.map((point) => point.utilities[party]))]),
     )
-    const denominators = parties.map((party) => ideals[party] - (disagreement[party] ?? 0))
+    const denominators = parties.map((party) => ideals[party] - disagreement[party])
     if (denominators.some((value) => value === 0)) {
       ksPoint = nashPoint
       notes.push('KS fell back to Nash because an ideal gain denominator is zero.')

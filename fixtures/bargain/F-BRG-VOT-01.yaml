@@ -1,8 +1,8 @@
 id: F-BRG-VOT-01
 kind: bargain
-description: Locked value-on-table ranking fixture.
+description: Canonical value-on-table ranking fixture.
 derivation: |
-  This is the hand-built six-point cloud from §7.2. Index 3 has the joint $7 maximum,
+  This is the hand-built six-point cloud for §6.9.8. Index 3 has the joint $7 maximum,
   while index 4 ranks first as the balanced win; the dominating set is ordered by balanced
   gain, then joint gain, then index.
 input:

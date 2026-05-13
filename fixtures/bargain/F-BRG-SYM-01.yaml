@@ -1,6 +1,6 @@
 id: F-BRG-SYM-01
 kind: bargain
-description: Locked commuting-symmetry fixture with index-stable endpoint choice.
+description: Commuting-symmetry fixture with index-stable endpoint choice.
 derivation: |
   The two mirror endpoints tie on score keys. In this orientation index 3 is the deterministic
   representative; the property battery verifies that mirroring maps this selection accordingly.

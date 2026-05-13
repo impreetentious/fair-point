@@ -1,6 +1,6 @@
 id: F-BRG-TIE-01
 kind: bargain
-description: D23 affine-invariant Nash tie behavior.
+description: Affine-invariant Nash tie behavior.
 derivation: |
   The points (1,4) and (2,2) tie at product 4, so index 10 wins. Scaling founder utility
   by a positive constant preserves the tie and the index key; the property test repeats it.
