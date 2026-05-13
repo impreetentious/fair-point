@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { CapTableSchema, EPS_DECISION } from '../src/core/schema'
 import { generalRegimesForTest, regimes, simpleTwoClassRegimes } from '../src/core/breakpoints'
 import { payoutsAt } from '../src/core/waterfall'
+import { accrueForExit, preferenceClaim } from '../src/core/accruals'
 import {
   arbitraryCapTable,
   arbitraryCappedCapTable,
@@ -44,6 +45,82 @@ describe('waterfall', () => {
         expect(actual.coeffs[id]!.c).toBeCloseTo(regime.coeffs[id]!.c, 2)
       }
     }
+  })
+
+  it('uses accrued dividends in the two-class preference breakpoint', () => {
+    const accrued = CapTableSchema.parse({
+      classes: [
+        { id: 'common', name: 'Common', kind: 'COMMON', shares: 8_000_000, holder: 'FOUNDER' },
+        {
+          id: 'preferred',
+          name: 'Preferred',
+          kind: 'PREFERRED',
+          shares: 2_000_000,
+          holder: 'INVESTOR',
+          invested: 2_000_000,
+          prefMultiple: 1,
+          participation: 'NONE',
+          accruedDividends: 1_000_000,
+        },
+      ],
+      grants: [],
+      poolAvailable: 0,
+    })
+    const fast = simpleTwoClassRegimes(accrued)!
+    expect(fast[0]!.to).toBe(3_000_000)
+    expect(fast[1]!.from).toBe(3_000_000)
+    expect(fast[2]!.from).toBe(15_000_000)
+    expect(payoutsAt(accrued, 3_000_000).byClass.preferred).toBe(3_000_000)
+  })
+
+  it('rejects accrual and preference claims that overflow finite inputs', () => {
+    const oversized = CapTableSchema.parse({
+      classes: [
+        { id: 'common', name: 'Common', kind: 'COMMON', shares: 1, holder: 'FOUNDER' },
+        {
+          id: 'preferred',
+          name: 'Preferred',
+          kind: 'PREFERRED',
+          shares: 1,
+          holder: 'INVESTOR',
+          invested: Number.MAX_VALUE / 2,
+          prefMultiple: 3,
+          participation: 'NONE',
+          dividendRate: 3,
+          dividendKind: 'CUMULATIVE',
+        },
+      ],
+      grants: [],
+      poolAvailable: 0,
+    })
+    const preferred = oversized.classes.find((cls) => cls.kind === 'PREFERRED')!
+    expect(() => preferenceClaim(preferred)).toThrow('Preference claim exceeds')
+    expect(() => accrueForExit(oversized, 2)).toThrow('Accrual exceeds')
+    expect(() => accrueForExit(capTable, -1)).toThrow('yearsToExit must be finite and nonnegative')
+  })
+
+  it('falls back to the general walk when accrual exceeds a participation cap', () => {
+    const accrued = CapTableSchema.parse({
+      classes: [
+        { id: 'common', name: 'Common', kind: 'COMMON', shares: 8, holder: 'FOUNDER' },
+        {
+          id: 'preferred',
+          name: 'Preferred',
+          kind: 'PREFERRED',
+          shares: 2,
+          holder: 'INVESTOR',
+          invested: 1,
+          prefMultiple: 1,
+          participation: 'CAPPED',
+          participationCapMultiple: 2,
+          redemptionClaim: 3,
+        },
+      ],
+      grants: [],
+      poolAvailable: 0,
+    })
+    expect(simpleTwoClassRegimes(accrued)).toBeNull()
+    expect(regimes(accrued).at(-1)!.to).toBe(Infinity)
   })
 
   it('reproduces the locked capped-participation regime table', () => {

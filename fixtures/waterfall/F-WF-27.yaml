@@ -1,6 +1,6 @@
 id: F-WF-27
 kind: waterfall
-description: Preference amount scales with the locked multiple.
+description: Preference amount scales with the stated multiple.
 derivation: |
   A has a 2x preference on $1M. At E=$1.5M the preference is underfunded and takes all proceeds.
 input:

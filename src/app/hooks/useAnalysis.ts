@@ -15,11 +15,10 @@ export function useRoundAnalysis(deal: DealFile) {
   return useMemo(() => {
     try {
       const round = constructRound(deal.pre, deal.safes, deal.terms, deal.notes)
-      return { round, postRegimes: regimes(round.post), error: null as string | null }
+      return { round, error: null as string | null }
     } catch (error) {
       return {
         round: null,
-        postRegimes: [],
         error: error instanceof Error ? error.message : 'Round construction failed',
       }
     }
@@ -29,13 +28,20 @@ export function useRoundAnalysis(deal: DealFile) {
 export function useWaterfallAnalysis(deal: DealFile, exitValue: number) {
   const round = useRoundAnalysis(deal)
   return useMemo(() => {
-    if (round.round === null) return { ...round, payout: null }
+    if (round.round === null) return { ...round, settledPost: null, postRegimes: [], payout: null }
     try {
       const settled = accrueForExit(round.round.post, deal.yearsToExit)
-      return { ...round, payout: payoutsAt(settled, exitValue) }
+      return {
+        ...round,
+        settledPost: settled,
+        postRegimes: regimes(settled),
+        payout: payoutsAt(settled, exitValue),
+      }
     } catch (error) {
       return {
         ...round,
+        settledPost: null,
+        postRegimes: [],
         payout: null,
         error: error instanceof Error ? error.message : 'Waterfall settlement failed',
       }
@@ -59,6 +65,7 @@ export function useFrontierAnalysis(deal: DealFile) {
           deal.risk,
           deal.notes,
           deal.discounting,
+          deal.yearsToExit,
         ),
       )
       const result = analyze(points, deal.disagreement)
@@ -71,6 +78,7 @@ export function useFrontierAnalysis(deal: DealFile) {
         deal.risk,
         deal.notes,
         deal.discounting,
+        deal.yearsToExit,
       )
       return {
         result,

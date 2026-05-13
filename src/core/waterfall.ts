@@ -44,7 +44,6 @@ function settleDirect(
   const result: DirectSettlement = { ...makeEmptyPayouts(post), exercised }
   const preferred = preferredClasses(post)
   let remaining = distributable
-  const preferenceReceived = new Map<string, number>()
 
   for (const tier of [...new Set(preferred.map((cls) => cls.seniorityTier))]) {
     const claimants = preferred.filter(
@@ -56,7 +55,6 @@ function settleDirect(
     for (const cls of claimants) {
       const amount = (paid * preferenceAmount(cls)) / totalClaim
       result.byClass[cls.id] += amount
-      preferenceReceived.set(cls.id, amount)
     }
     remaining -= paid
   }
@@ -282,7 +280,7 @@ function effectivePassLimit(options: SettlementDevOptions | undefined): number {
   return options.equilibriumPassLimit
 }
 
-/** Exact deterministic exit settlement with prefix-based option exercise and conversion equilibrium. */
+/** Deterministic exit settlement with prefix-based option exercise and conversion equilibrium. */
 
 /** Unit in the last place of a finite IEEE-754 number. */
 function unitInLastPlace(value: number): number {

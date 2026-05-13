@@ -17,6 +17,8 @@ import { ExplainDrawer } from '../components/ExplainDrawer'
 import { dollars, percent } from '../components/format'
 import { deriveDealSpace } from '../deal-space'
 import { constructRound } from '../../core/round'
+import { accrueForExit } from '../../core/accruals'
+import { presentValue } from '../../core/discounting'
 import { crraUtility } from '../../core/mc'
 import { payoutQuantile } from '../../core/outcomes'
 import { useFrontierAnalysis } from '../hooks/useAnalysis'
@@ -236,25 +238,28 @@ export function FrontierScreen() {
   const mcInspector = useMemo(() => {
     if (analysis.current === null || deal.risk === null) return null
     const round = constructRound(deal.pre, deal.safes, analysis.current.pkg.terms, deal.notes)
+    const post = accrueForExit(round.post, deal.yearsToExit)
+    const founder = crraUtility(
+      post,
+      'FOUNDER',
+      deal.founderBeliefs,
+      deal.risk.gamma,
+      deal.risk.w0F,
+      MC_N,
+      MC_SEED,
+    )
+    const investor = crraUtility(
+      post,
+      'INVESTOR',
+      deal.investorBeliefs,
+      deal.risk.gamma,
+      deal.risk.w0I,
+      MC_N,
+      MC_SEED,
+    )
     return {
-      founder: crraUtility(
-        round.post,
-        'FOUNDER',
-        deal.founderBeliefs,
-        deal.risk.gamma,
-        deal.risk.w0F,
-        MC_N,
-        MC_SEED,
-      ),
-      investor: crraUtility(
-        round.post,
-        'INVESTOR',
-        deal.investorBeliefs,
-        deal.risk.gamma,
-        deal.risk.w0I,
-        MC_N,
-        MC_SEED,
-      ),
+      founder: { ...founder, ce: presentValue(founder.ce, deal.discounting) },
+      investor: { ...investor, ce: presentValue(investor.ce, deal.discounting) },
     }
   }, [analysis.current, deal])
   if (
@@ -600,6 +605,7 @@ export function FrontierScreen() {
             ) : (
               comparePoints.map((point) => {
                 const round = constructRound(deal.pre, deal.safes, point.pkg.terms, deal.notes)
+                const post = accrueForExit(round.post, deal.yearsToExit)
                 return (
                   <article key={point.pkg.index}>
                     <strong>Package #{point.pkg.index}</strong>
@@ -609,11 +615,21 @@ export function FrontierScreen() {
                     </span>
                     <span>
                       Founder P50{' '}
-                      {dollars(payoutQuantile(round.post, 'FOUNDER', deal.founderBeliefs, 0.5))}
+                      {dollars(
+                        presentValue(
+                          payoutQuantile(post, 'FOUNDER', deal.founderBeliefs, 0.5),
+                          deal.discounting,
+                        ),
+                      )}
                     </span>
                     <span>
                       Investor P50{' '}
-                      {dollars(payoutQuantile(round.post, 'INVESTOR', deal.investorBeliefs, 0.5))}
+                      {dollars(
+                        presentValue(
+                          payoutQuantile(post, 'INVESTOR', deal.investorBeliefs, 0.5),
+                          deal.discounting,
+                        ),
+                      )}
                     </span>
                     <span>
                       PPS {dollars(point.diagnostics.pps)} · investor{' '}

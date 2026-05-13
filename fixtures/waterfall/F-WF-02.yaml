@@ -1,6 +1,6 @@
 id: F-WF-02
 kind: waterfall
-description: Locked 1x capped-participation worked regime example.
+description: Canonical 1x capped-participation worked regime example.
 derivation: |
   Preference is $2M; Series A then receives 20% of residual until its total reaches
   the 3x cap of $6M at E=$22M. Conversion parity is $30M. At E=$20M, A=$5.6M

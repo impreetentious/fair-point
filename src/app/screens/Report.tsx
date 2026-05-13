@@ -67,23 +67,27 @@ export function ReportScreen() {
   const waterfall = useWaterfallAnalysis(deal, exitValue)
   const frontier = useFrontierAnalysis(deal)
   const round = waterfall.round
+  const settledPost = waterfall.settledPost
   const regimes = waterfall.postRegimes
   const finiteBreaks = regimes
     .map((regime) => regime.from)
     .filter((value) => Number.isFinite(value))
   const chartRows: Array<{ exit: number } & Record<string, number>> =
-    round === null
+    settledPost === null
       ? []
       : [...new Set([0, ...finiteBreaks, exitValue])]
           .sort((a, b) => a - b)
           .map((exit) => {
-            const payouts = payoutsAt(round.post, exit)
+            const payouts = payoutsAt(settledPost, exit)
             return { exit, ...payouts.byClass, ...payouts.byGrant }
           })
   const payoutIds =
-    round === null
+    settledPost === null
       ? []
-      : [...round.post.classes.map((cls) => cls.id), ...round.post.grants.map((grant) => grant.id)]
+      : [
+          ...settledPost.classes.map((cls) => cls.id),
+          ...settledPost.grants.map((grant) => grant.id),
+        ]
   const result = frontier.result
   const current = frontier.current
   const frontierSet = new Set(result?.frontier ?? [])
@@ -121,10 +125,20 @@ export function ReportScreen() {
       <section>
         <h3>1. Deal summary header</h3>
         <p>
-          <strong>{deal.name}</strong> · pre-money {dollars(deal.terms.preMoney ?? 0)} · investment{' '}
-          {dollars(deal.terms.investment)} · pool {percent(deal.terms.poolTargetPost)} ·{' '}
-          {deal.terms.prefMultiple}x · {deal.terms.participation} · {deal.terms.seniority}
+          <strong>{deal.name}</strong> ·{' '}
+          {deal.terms.preMoney === undefined
+            ? `direct PPS ${dollars(deal.terms.pricedPerShare ?? 0)}`
+            : `pre-money ${dollars(deal.terms.preMoney)}`}{' '}
+          · investment {dollars(deal.terms.investment)} · pool {percent(deal.terms.poolTargetPost)}{' '}
+          · {deal.terms.prefMultiple}x · {deal.terms.participation} · {deal.terms.seniority}
         </p>
+        {deal.yearsToExit > 0 && <p>Exit accrual clock: {deal.yearsToExit} years.</p>}
+        {deal.discounting !== null && (
+          <p>
+            Frontier values are present-valued at {percent(deal.discounting.annualRate)} for{' '}
+            {deal.discounting.yearsToExit} years.
+          </p>
+        )}
         {round !== null && (
           <p>
             PPS {dollars(round.diagnostics.pps)} · investor ownership{' '}
@@ -135,7 +149,7 @@ export function ReportScreen() {
       </section>
       <section>
         <h3>2. Waterfall snapshot</h3>
-        {round !== null && (
+        {settledPost !== null && (
           <ChartFrame
             title="Waterfall payout profile"
             chart={
@@ -333,7 +347,7 @@ export function ReportScreen() {
               ].map(([label, point]) => (
                 <tr key={label as string}>
                   <td>{label as string}</td>
-                  <td>{(point as DealPoint | null)?.pkg.index ?? 'exact current'}</td>
+                  <td>{(point as DealPoint | null)?.pkg.index ?? 'current offer'}</td>
                   <td>
                     {point === current || point === null
                       ? '—'

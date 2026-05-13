@@ -49,11 +49,14 @@ export function WaterfallScreen() {
   const deal = useDealStore((state) => state.deal)
   const exitValue = useDealStore((state) => state.exitValue)
   const setExitValue = useDealStore((state) => state.setExitValue)
-  const { round, postRegimes, payout, error } = useWaterfallAnalysis(deal, exitValue)
+  const { round, settledPost, postRegimes, payout, error } = useWaterfallAnalysis(deal, exitValue)
   const ids =
-    round === null
+    settledPost === null
       ? []
-      : [...round.post.classes.map((cls) => cls.id), ...round.post.grants.map((grant) => grant.id)]
+      : [
+          ...settledPost.classes.map((cls) => cls.id),
+          ...settledPost.grants.map((grant) => grant.id),
+        ]
   const finiteBreaks = postRegimes
     .map((regime) => regime.from)
     .filter((value) => Number.isFinite(value) && value > 0)
@@ -73,10 +76,10 @@ export function WaterfallScreen() {
   const chartPoints =
     round === null ? [] : [...new Set([0, eMin, ...finiteBreaks, eMax])].sort((a, b) => a - b)
   const chartRows =
-    round === null
+    settledPost === null
       ? []
       : chartPoints.map((exit) => {
-          const payouts = payoutsAt(round.post, exit)
+          const payouts = payoutsAt(settledPost, exit)
           return { exit, ...payouts.byClass, ...payouts.byGrant }
         })
   const totalPayout =
