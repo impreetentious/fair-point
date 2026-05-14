@@ -11,6 +11,14 @@ test('exposes explainers, percent controls, per-party presets, and report tables
     page.getByRole('heading', { name: 'Preferences, participation, and caps' }),
   ).toBeVisible()
 
+  await page.getByLabel('Load example deck').selectOption('series-b-stacked-down-round')
+  await page.getByLabel('Series A shares').fill('3000000')
+  await page.getByLabel('Series A shares').press('Tab')
+  await expect(page.getByLabel('Series A original issue price')).toHaveValue('1.3333')
+  await page.getByLabel('Series A original issue price').fill('2')
+  await page.getByLabel('Series A original issue price').press('Tab')
+  await expect(page.getByLabel('Series A invested')).toHaveValue('6000000')
+
   await navigation.locator('[data-screen="round"]').click()
   await page.getByLabel('Post-round pool target (%)').fill('20')
   await page.getByLabel('Post-round pool target (%)').press('Tab')

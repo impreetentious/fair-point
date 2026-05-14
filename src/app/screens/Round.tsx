@@ -3,13 +3,30 @@ import { CommitNumber, CommitText } from '../components/CommitField'
 import { ExplainDrawer } from '../components/ExplainDrawer'
 import { useRoundAnalysis } from '../hooks/useAnalysis'
 import { useDealStore } from '../state/store'
-import type { RoundTerms, Safe, ShareClassPreferred } from '../../core/schema'
+import type {
+  CapTable,
+  ConvertibleNote,
+  RoundTerms,
+  Safe,
+  ShareClassPreferred,
+} from '../../core/schema'
 
 const multiples: RoundTerms['prefMultiple'][] = [1, 1.5, 2, 3]
 const participations: RoundTerms['participation'][] = ['NONE', 'CAP2', 'CAP3', 'FULL']
 const antiDilution = ['NONE', 'BWA', 'FULL_RATCHET'] as const
 
-function newSafe(index: number): Safe {
+function newSafe(
+  safes: Safe[],
+  notes: ConvertibleNote[],
+  pre: Pick<CapTable, 'classes' | 'grants'>,
+): Safe {
+  const used = new Set([...safes.map((safe) => safe.id), ...notes.map((note) => note.id)])
+  const postIds = new Set([
+    ...pre.classes.map((cls) => cls.id),
+    ...pre.grants.map((grant) => grant.id),
+  ])
+  let index = 1
+  while (used.has(`safe-${index}`) || postIds.has(`safe-safe-${index}`)) index += 1
   return {
     id: `safe-${index}`,
     name: `SAFE ${index}`,
@@ -270,7 +287,7 @@ export function RoundScreen() {
             onClick={() =>
               patchDeal((current) => ({
                 ...current,
-                safes: [...current.safes, newSafe(current.safes.length + 1)],
+                safes: [...current.safes, newSafe(current.safes, current.notes, current.pre)],
               }))
             }
           >

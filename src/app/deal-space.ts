@@ -1,13 +1,8 @@
 import type { DealFile, DealSpace, RoundTerms } from '../core/schema'
 
-export const DEFAULT_POOLS = [0.1, 0.125, 0.15, 0.175, 0.2]
-export const DEFAULT_MULTIPLES: RoundTerms['prefMultiple'][] = [1, 1.5, 2, 3]
-export const DEFAULT_PARTICIPATIONS: RoundTerms['participation'][] = [
-  'NONE',
-  'CAP2',
-  'CAP3',
-  'FULL',
-]
+const DEFAULT_POOLS = [0.1, 0.125, 0.15, 0.175, 0.2]
+const DEFAULT_MULTIPLES: RoundTerms['prefMultiple'][] = [1, 1.5, 2, 3]
+const DEFAULT_PARTICIPATIONS: RoundTerms['participation'][] = ['NONE', 'CAP2', 'CAP3', 'FULL']
 
 export function deriveDealSpace(
   terms: RoundTerms,
@@ -33,7 +28,7 @@ export function deriveDealSpace(
   }
 }
 
-export function emptyPins(): DealFile['ui']['dealSpacePins'] {
+function emptyPins(): DealFile['ui']['dealSpacePins'] {
   return {
     preMoney: false,
     pools: false,

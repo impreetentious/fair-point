@@ -4,6 +4,7 @@ import seriesAClean from '../examples/series-a-clean.json'
 import seriesBStackedDownRound from '../examples/series-b-stacked-down-round.json'
 import { EXPLAINERS } from '../src/app/components/ExplainDrawer'
 import { DealFileSchema } from '../src/core/schema'
+import { useDealStore } from '../src/app/state/store'
 
 describe('deal-file persistence', () => {
   for (const [label, raw] of [
@@ -24,6 +25,27 @@ describe('deal-file persistence', () => {
     const normalized = DealFileSchema.parse(raw)
     expect(normalized.space.pinnedInvestment).toBe(normalized.terms.investment)
     expect(DealFileSchema.parse(JSON.parse(JSON.stringify(normalized)))).toEqual(normalized)
+  })
+
+  it('clears import-only status when an ordinary edit is invalid', () => {
+    useDealStore.setState({ importStatus: { kind: 'success', message: 'Imported.' } })
+    const changed = useDealStore.getState().patchDeal((deal) => ({ ...deal, name: '' }))
+    expect(changed).toBe(false)
+    expect(useDealStore.getState().importStatus).toBeNull()
+  })
+
+  it('ignores corrupt autosaves without marking the displayed deal invalid', () => {
+    useDealStore.setState({ validation: [], importStatus: null })
+    expect(useDealStore.getState().replaceDeal({ schemaVersion: '1.0.0' }, 'autosave')).toBe(false)
+    expect(useDealStore.getState().validation).toEqual([])
+    expect(useDealStore.getState().importStatus).toBeNull()
+  })
+
+  it('keeps the shared exit value finite and nonnegative', () => {
+    useDealStore.getState().setExitValue(Number.POSITIVE_INFINITY)
+    expect(useDealStore.getState().exitValue).toBe(0)
+    useDealStore.getState().setExitValue(-1)
+    expect(useDealStore.getState().exitValue).toBe(0)
   })
 })
 

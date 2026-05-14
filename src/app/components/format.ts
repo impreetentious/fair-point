@@ -23,11 +23,6 @@ export function percent(value: number): string {
   )
 }
 
-export function compactMillions(value: number): string {
-  if (!Number.isFinite(value)) return '—'
-  return `$${(value / 1_000_000).toFixed(Math.abs(value) >= 10_000_000 ? 1 : 2)}M`
-}
-
 export function shares(value: number): string {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)
 }

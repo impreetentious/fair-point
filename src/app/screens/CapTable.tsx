@@ -6,7 +6,7 @@ import { ExplainDrawer } from '../components/ExplainDrawer'
 import { ValidationPanel } from '../components/ValidationPanel'
 import { analyzeEmployeeOffer } from '../../core/employee-offer'
 import { useDealStore } from '../state/store'
-import type { OptionGrant, ShareClass, ShareClassPreferred } from '../../core/schema'
+import type { CapTable, OptionGrant, ShareClass, ShareClassPreferred } from '../../core/schema'
 
 const holders = ['FOUNDER', 'INVESTOR', 'OTHER'] as const
 const grantHolders = ['FOUNDER', 'OTHER'] as const
@@ -24,7 +24,7 @@ function preferredDefaults(base: ShareClass): ShareClassPreferred {
     kind: 'PREFERRED',
     shares: base.shares,
     holder: base.holder,
-    invested: Math.max(1, base.shares),
+    invested: base.shares,
     originalIssuePrice: 1,
     prefMultiple: 1,
     participation: 'NONE',
@@ -40,19 +40,32 @@ function preferredDefaults(base: ShareClass): ShareClassPreferred {
   }
 }
 
-function newClass(index: number): ShareClass {
+function nextId(prefix: string, ids: Iterable<string>): string {
+  const used = new Set(ids)
+  let index = 1
+  while (used.has(`${prefix}-${index}`)) index += 1
+  return `${prefix}-${index}`
+}
+
+function tableIds(table: Pick<CapTable, 'classes' | 'grants'>): string[] {
+  return [...table.classes.map((cls) => cls.id), ...table.grants.map((grant) => grant.id)]
+}
+
+function newClass(table: Pick<CapTable, 'classes' | 'grants'>): ShareClass {
+  const id = nextId('class', tableIds(table))
   return {
-    id: `class-${index}`,
-    name: `Class ${index}`,
+    id,
+    name: `Class ${id.slice('class-'.length)}`,
     kind: 'COMMON',
     shares: 1_000_000,
     holder: 'FOUNDER',
   }
 }
 
-function newGrant(index: number): OptionGrant {
+function newGrant(table: Pick<CapTable, 'classes' | 'grants'>): OptionGrant {
+  const id = nextId('grant', tableIds(table))
   return {
-    id: `grant-${index}`,
+    id,
     options: 100_000,
     strike: 0.01,
     holder: 'OTHER',
@@ -69,6 +82,7 @@ export function CapTableScreen() {
   const [strike, setStrike] = useState(0.01)
   const [cash, setCash] = useState(150_000)
   const offer = useMemo(() => {
+    const grantId = nextId('offer-preview', tableIds(deal.pre))
     try {
       return {
         result: analyzeEmployeeOffer({
@@ -76,7 +90,7 @@ export function CapTableScreen() {
           safes: deal.safes,
           notes: deal.notes,
           terms: deal.terms,
-          grant: { id: 'offer-preview', options, strike, holder: 'OTHER', instrument: 'OPTION' },
+          grant: { id: grantId, options, strike, holder: 'OTHER', instrument: 'OPTION' },
           beliefs: deal.founderBeliefs,
           cashAlternative: cash,
           yearsToExit: deal.yearsToExit,
@@ -170,7 +184,7 @@ export function CapTableScreen() {
                 ...current,
                 pre: {
                   ...current.pre,
-                  classes: [...current.pre.classes, newClass(current.pre.classes.length + 1)],
+                  classes: [...current.pre.classes, newClass(current.pre)],
                 },
               }))
             }
@@ -253,7 +267,15 @@ export function CapTableScreen() {
                       min={1}
                       onCommit={(value) =>
                         value !== undefined &&
-                        updateClass(cls.id, (candidate) => ({ ...candidate, shares: value }))
+                        updateClass(cls.id, (candidate) =>
+                          candidate.kind === 'PREFERRED'
+                            ? {
+                                ...candidate,
+                                shares: value,
+                                originalIssuePrice: candidate.invested / value,
+                              }
+                            : { ...candidate, shares: value },
+                        )
                       }
                     />
                   </td>
@@ -293,7 +315,11 @@ export function CapTableScreen() {
                           value !== undefined &&
                           updateClass(cls.id, (candidate) =>
                             candidate.kind === 'PREFERRED'
-                              ? { ...candidate, originalIssuePrice: value }
+                              ? {
+                                  ...candidate,
+                                  originalIssuePrice: value,
+                                  invested: value * candidate.shares,
+                                }
                               : candidate,
                           )
                         }
@@ -468,7 +494,7 @@ export function CapTableScreen() {
                 ...current,
                 pre: {
                   ...current.pre,
-                  grants: [...current.pre.grants, newGrant(current.pre.grants.length + 1)],
+                  grants: [...current.pre.grants, newGrant(current.pre)],
                 },
               }))
             }

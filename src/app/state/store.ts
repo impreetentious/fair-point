@@ -60,6 +60,7 @@ function parseAndUpdate(
 ): boolean {
   const parsed = DealFileSchema.safeParse(raw)
   if (!parsed.success) {
+    if (source === 'autosave') return false
     const messages = humanizeZodError(parsed.error)
     set({
       validation: messages,
@@ -71,7 +72,7 @@ function parseAndUpdate(
                 ? 'This deal file was written by a newer version of Fairpoint.'
                 : (messages[0] ?? 'Deal file is invalid.'),
             }
-          : undefined,
+          : null,
     })
     return false
   }
@@ -109,7 +110,8 @@ export const useDealStore = create<Store>((set, get) => ({
       investorBeliefs: party === 'investor' || deal.sharedBeliefs ? beliefs : deal.investorBeliefs,
     })
   },
-  setExitValue: (exitValue) => set({ exitValue: Math.max(0, exitValue) }),
+  setExitValue: (exitValue) =>
+    set({ exitValue: Number.isFinite(exitValue) ? Math.max(0, exitValue) : 0 }),
   toggleCompare: (index) => {
     const current = get().compare
     if (current.includes(index)) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
-import { PRODUCT_NAME, PRODUCT_SLUG } from './branding'
+import { PRODUCT_NAME, PRODUCT_SLUG, PRODUCT_VERSION } from './branding'
 import { CapTableScreen } from './screens/CapTable'
 import { RoundScreen } from './screens/Round'
 import { WaterfallScreen } from './screens/Waterfall'
@@ -41,20 +41,23 @@ export function App() {
   const readiness = useMemo(() => screenReadiness(deal), [deal])
   const importRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
-    const saved = window.localStorage.getItem(`${PRODUCT_SLUG}:v1:autosave`)
-    if (saved !== null) {
-      try {
+    try {
+      const saved = window.localStorage.getItem(`${PRODUCT_SLUG}:v1:autosave`)
+      if (saved !== null) {
         replaceDeal(JSON.parse(saved), 'autosave')
-      } catch {
-        /* Invalid local data remains non-authoritative. */
       }
+    } catch {
+      /* Unavailable or invalid local data remains non-authoritative. */
     }
   }, [replaceDeal])
   useEffect(() => {
-    const timeout = window.setTimeout(
-      () => window.localStorage.setItem(`${PRODUCT_SLUG}:v1:autosave`, JSON.stringify(deal)),
-      500,
-    )
+    const timeout = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(`${PRODUCT_SLUG}:v1:autosave`, JSON.stringify(deal))
+      } catch {
+        /* The in-memory deal remains usable when persistence is unavailable. */
+      }
+    }, 500)
     return () => window.clearTimeout(timeout)
   }, [deal])
   const exportDeal = () => {
@@ -139,8 +142,8 @@ export function App() {
       </nav>
       <ActiveScreen screen={screen} />
       <footer className="disclaimer">
-        {PRODUCT_NAME} is an educational instrument. It is not legal, financial, or investment
-        advice.
+        {PRODUCT_NAME} v{PRODUCT_VERSION} is an educational instrument. It is not legal, financial,
+        or investment advice.
       </footer>
     </main>
   )
