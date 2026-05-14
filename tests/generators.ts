@@ -5,7 +5,7 @@ const positiveShares = fc.integer({ min: 1, max: 20_000 })
 const invested = fc.integer({ min: 1, max: 2_000_000 })
 const conversionRatio = fc.double({ min: 0.5, max: 2, noNaN: true, noDefaultInfinity: true })
 
-/** §7.4 settlement family: common + 1–5 preferred, tiers, caps, and 0–3 grants. */
+/** §6.5 settlement family: common + 1–5 preferred, tiers, caps, and 0–3 grants. */
 export const arbitraryCapTable: fc.Arbitrary<CapTable> = fc
   .record({
     commonShares: positiveShares,
@@ -68,7 +68,7 @@ export const arbitrarySettlementCase = arbitraryCapTable.chain((post) => {
   }))
 })
 
-/** T-03 family: 40–60 grants with repeated strikes and a conventional preferred stack. */
+/** Stress family: 40–60 grants with repeated strikes and a conventional preferred stack. */
 export const arbitraryGrantExerciseCapTable: fc.Arbitrary<CapTable> = fc
   .record({
     commonShares: fc.integer({ min: 100, max: 20_000 }),
@@ -107,7 +107,7 @@ export const arbitraryGrantExerciseCapTable: fc.Arbitrary<CapTable> = fc
     }),
   )
 
-/** T-18 family: 2–4 equal-priority capped preferred classes with interacting caps. */
+/** Stress family: 2–4 equal-priority capped preferred classes with interacting caps. */
 export const arbitraryCappedCapTable: fc.Arbitrary<CapTable> = fc
   .record({
     commonShares: fc.integer({ min: 1, max: 20_000 }),

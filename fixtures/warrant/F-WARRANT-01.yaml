@@ -10,7 +10,7 @@ derivation: |
   Common 90, warrant 10 share residual $100 → common $90/110? Wait residual after pref:
   Remaining $100 over common 90 + warrant 10 = 100 shares ⇒ $1/share.
   Common $90, warrant net ($1−0)×10=$10, preferred $10. Σ=$110.
-  Citation: D11 cash-exercise treasury method; warrants = options for settlement (§6.11).
+  Citation: cash-exercise treasury method; warrants = options for settlement (§6.11).
 input:
   capTable:
     classes:

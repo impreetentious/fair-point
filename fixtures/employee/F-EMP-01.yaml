@@ -9,7 +9,7 @@ derivation: |
   At E=$120 with strike $0: preferred converts (converted path 10/110×120 ≈ $10.909
   beats preference $10), FD exercised = 90+10+10 = 110, pps = $120/110,
   grant net = 10 × $120/110 = $10.9090909091.
-  Citation: same cash-exercise treasury method as D11 / §6.5.3.
+  Citation: same cash-exercise treasury method as §6.5.3.
 input:
   pre:
     classes:

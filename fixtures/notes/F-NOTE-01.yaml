@@ -8,7 +8,7 @@ derivation: |
   priced round PPS = $1.00, no pool, investment $2,000,000.
   Cap price = 10e6 / (8e6 + P) with P=0 ⇒ $1.25; discount absent ⇒ converts at $1.25.
   Shares = 1,160,000 / 1.25 = 928,000.
-  Citation: teaching accrual; distinct from YC Post-Money Safe (D12) which has no interest.
+  Citation: teaching accrual; distinct from a YC Post-Money SAFE, which has no interest.
 input:
   note:
     id: note-1

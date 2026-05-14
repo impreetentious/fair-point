@@ -1,6 +1,6 @@
 id: F-RND-01
 kind: round
-description: Locked pool-shuffle closed-form worked example.
+description: Canonical pool-shuffle closed-form worked example.
 derivation: |
   A=9M, r=1.25, P=.125*9M/.875=1,285,714.2857, PPS=8M/(9M+P)=7/9,
   N=2,571,428.5714, and investor percentage is exactly 20%.

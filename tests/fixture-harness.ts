@@ -4,7 +4,6 @@ import { load } from 'js-yaml'
 import { FixtureSchema, type Fixture } from '../src/core/schema'
 
 export type FixtureHandler = (fixture: Fixture) => void | Promise<void>
-type DisputedFixture = Fixture & { disputed?: boolean }
 
 const handlers = new Map<Fixture['kind'], FixtureHandler>()
 
@@ -45,23 +44,17 @@ export function loadFixtures(root?: string): { path: string; fixture: Fixture }[
   })
 }
 
-export async function dispatchFixture(fixture: Fixture): Promise<void> {
+async function dispatchFixture(fixture: Fixture): Promise<void> {
   const handler = handlers.get(fixture.kind)
   if (handler === undefined)
     throw new Error(`No fixture handler is registered for ${fixture.kind} (${fixture.id}).`)
   await handler(fixture)
 }
 
-export async function runFixtureHarness(
-  root?: string,
-): Promise<{ id: string; status: 'PASS' | 'DISPUTED' }[]> {
+export async function runFixtureHarness(root?: string): Promise<{ id: string; status: 'PASS' }[]> {
   const fixtures = loadFixtures(root)
-  const results: { id: string; status: 'PASS' | 'DISPUTED' }[] = []
+  const results: { id: string; status: 'PASS' }[] = []
   for (const { fixture } of fixtures) {
-    if ((fixture as DisputedFixture).disputed === true) {
-      results.push({ id: fixture.id, status: 'DISPUTED' })
-      continue
-    }
     await dispatchFixture(fixture)
     results.push({ id: fixture.id, status: 'PASS' })
   }
