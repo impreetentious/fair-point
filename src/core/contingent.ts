@@ -67,7 +67,7 @@ export interface DisagreementSplit {
   /** Each side's cross-valuation, kept so the split can be checked rather than trusted. */
   founderUnderInvestorBeliefs: number
   investorUnderFounderBeliefs: number
-  /** True when the two parties' beliefs are the same object — nothing to bet on. */
+  /** True when the two parties' belief values are identical — nothing to bet on. */
   beliefsAgree: boolean
 }
 
@@ -107,6 +107,7 @@ export interface ContingentInput {
   risk?: { gamma: 0.5 | 1; w0F: number; w0I: number } | null
   notes?: ConvertibleNote[]
   discounting?: Discounting | null
+  yearsToExit?: number
 }
 
 function evaluate(input: ContingentInput): DealPoint {
@@ -119,6 +120,7 @@ function evaluate(input: ContingentInput): DealPoint {
     input.risk ?? null,
     input.notes ?? [],
     input.discounting ?? null,
+    input.yearsToExit ?? 0,
   )
 }
 

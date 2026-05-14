@@ -27,10 +27,10 @@ import type {
  * rather than clamping quietly into a number that means something else.
  */
 
-export type BeliefField = 'p0' | 'p10' | 'p50' | 'p90'
-export type BeliefParty = 'founder' | 'investor'
+type BeliefField = 'p0' | 'p10' | 'p50' | 'p90'
+type BeliefParty = 'founder' | 'investor'
 
-export interface TornadoBar {
+interface TornadoBar {
   party: BeliefParty
   field: BeliefField
   /** The belief values probed, low and high. */
@@ -72,6 +72,7 @@ export interface TornadoInput {
   risk?: { gamma: 0.5 | 1; w0F: number; w0I: number } | null
   notes?: ConvertibleNote[]
   discounting?: Discounting | null
+  yearsToExit?: number
   /** Relative move applied to each belief, either side of its stated value. Default ±20%. */
   spread?: number
 }
@@ -121,6 +122,7 @@ function evaluateWorld(
       input.risk ?? null,
       input.notes ?? [],
       input.discounting ?? null,
+      input.yearsToExit ?? 0,
     )
   const points = packages.map(evaluateOne)
   return {
@@ -153,8 +155,14 @@ function headlineValue(evaluated: Evaluated, headline: TornadoHeadline): number 
 
 export function beliefTornado(input: TornadoInput, headline: TornadoHeadline): BeliefTornado {
   const spread = input.spread ?? DEFAULT_SPREAD
+  if (!(spread > 0) || !Number.isFinite(spread)) {
+    throw new RangeError('Belief-tornado spread must be finite and positive')
+  }
   const base = evaluateWorld(input, input.founderBeliefs, input.investorBeliefs)
   const baseValue = headlineValue(base, headline)
+  if (!Number.isFinite(baseValue)) {
+    throw new Error('The selected tornado headline is unavailable for the baseline deal space')
+  }
 
   const bars: TornadoBar[] = []
   const parties: Array<{ party: BeliefParty; beliefs: Beliefs }> = [

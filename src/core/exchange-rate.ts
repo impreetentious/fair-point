@@ -22,7 +22,7 @@ import {
  * ladder, per point of option pool.
  *
  * Nothing new is computed. Each row is the existing package evaluation run on a package that
- * differs in exactly one term, so the prices are as exact as the waterfall is. Where a step
+ * differs in exactly one term, so every price uses the same deterministic waterfall. Where a step
  * would produce a package the schema rejects — a 2× preference with a 2× participation cap,
  * a pool the round cannot fund — the row says that instead of quoting a number.
  *
@@ -32,14 +32,14 @@ import {
  * moving it, and the table says so with the number attached.
  */
 
-export type ExchangeTermId =
+type ExchangeTermId =
   | 'preMoney'
   | 'prefMultiple'
   | 'participation'
   | 'poolTargetPost'
   | 'investment'
 
-export interface ExchangeRateRow {
+interface ExchangeRateRow {
   term: ExchangeTermId
   /** How the step reads in negotiation language, e.g. "1× → 1.5× preference". */
   step: string
@@ -85,6 +85,7 @@ export interface ExchangeRateInput {
   risk?: { gamma: 0.5 | 1; w0F: number; w0I: number } | null
   notes?: ConvertibleNote[]
   discounting?: Discounting | null
+  yearsToExit?: number
   /** Quote pre-money prices per this much valuation. Default $1M. */
   preMoneyUnit?: number
   /** Quote pool prices per this much pool. Default one point. */
@@ -124,6 +125,7 @@ function evaluate(input: ExchangeRateInput, terms: RoundTerms, index: number): D
     input.risk ?? null,
     input.notes ?? [],
     input.discounting ?? null,
+    input.yearsToExit ?? 0,
   )
 }
 
@@ -136,7 +138,7 @@ function evaluate(input: ExchangeRateInput, terms: RoundTerms, index: number): D
 function compensatingPreMoney(
   input: ExchangeRateInput,
   stepped: RoundTerms,
-  targetFounder: number,
+  baseline: DealPoint,
   baselinePre: number,
 ): ExchangeRateRow['trade'] {
   const evaluateAt = (preMoney: number): DealPoint | null => {
@@ -147,7 +149,7 @@ function compensatingPreMoney(
   let lower = baselinePre
   let upper = baselinePre * 4
   const upperPoint = evaluateAt(upper)
-  if (!upperPoint || upperPoint.uF < targetFounder) return null
+  if (!upperPoint || upperPoint.uF < baseline.uF) return null
   for (let step = 0; step < TRADE_BISECTIONS; step += 1) {
     const middle = (lower + upper) / 2
     const point = evaluateAt(middle)
@@ -155,18 +157,17 @@ function compensatingPreMoney(
       lower = middle
       continue
     }
-    if (point.uF >= targetFounder) upper = middle
+    if (point.uF >= baseline.uF) upper = middle
     else lower = middle
   }
   const settled = evaluateAt(upper)
   if (!settled) return null
-  const baseline = evaluateAt(baselinePre)
   return {
     preMoney: upper,
     preMoneyDelta: upper - baselinePre,
-    founderResidual: settled.uF - targetFounder,
-    investorStillAhead: baseline !== null && settled.uI > baseline.uI,
-    deltaInvestorAfterTrade: baseline === null ? 0 : settled.uI - baseline.uI,
+    founderResidual: settled.uF - baseline.uF,
+    investorStillAhead: settled.uI > baseline.uI,
+    deltaInvestorAfterTrade: settled.uI - baseline.uI,
   }
 }
 
@@ -198,7 +199,7 @@ function row(
   const trade =
     term === 'preMoney' || deltaFounder >= 0 || stepped.preMoney === undefined
       ? null
-      : compensatingPreMoney(input, stepped, baseline.uF, stepped.preMoney)
+      : compensatingPreMoney(input, stepped, baseline, stepped.preMoney)
   return {
     term,
     step,

@@ -1,18 +1,20 @@
 import { evaluatePackage } from './bargain'
+import { accrueForExit } from './accruals'
 import { presentValue } from './discounting'
-import { crraQuadrature } from './mc'
+import { crraCertaintyEquivalent, crraQuadrature } from './mc'
 import { expectedPayouts } from './outcomes'
 import { asConvertedShares, constructRound } from './round'
-import type {
-  Beliefs,
-  CapTable,
-  ConvertibleNote,
-  DealPoint,
-  Discounting,
-  RoundTerms,
-  Safe,
-  ShareClassPreferred,
-  TermPackage,
+import {
+  CapTableSchema,
+  type Beliefs,
+  type CapTable,
+  type ConvertibleNote,
+  type DealPoint,
+  type Discounting,
+  type RoundTerms,
+  type Safe,
+  type ShareClassPreferred,
+  type TermPackage,
 } from './schema'
 
 /**
@@ -27,13 +29,12 @@ import type {
  *
  * So: attach a small set of discrete follow-on branches to the round on the table, run each
  * one on top of the round's own post cap table, and take the exit under the existing beliefs
- * in each. Discrete branches are what keep this exact — every branch composes closed-form
- * round mechanics with the piecewise-linear waterfall, so the expectation is a finite weighted
- * sum of quantities the engine already computes exactly. No simulation is introduced.
+ * in each. Every branch composes deterministic round mechanics with the piecewise-linear
+ * waterfall, so the expectation is a finite weighted sum rather than a simulation.
  *
- * The output is deliberately a `DealPoint`, the same shape a single-round evaluation produces,
- * so the frontier, the Nash and Kalai–Smorodinsky selections, and the value-on-table readout
- * all run on branch-weighted numbers without knowing anything changed.
+ * When every branch succeeds, the aggregate is a `DealPoint`, the same shape a single-round
+ * evaluation produces. If any branch fails, the aggregate is withheld and the failed branch
+ * remains visible instead of silently redistributing its probability mass.
  *
  * **Who is who across rounds.** The follow-on money is not the investor on the other side of
  * today's table, so the next round's new class is booked to `OTHER` — except for the slice the
@@ -52,7 +53,7 @@ export interface NextRoundBranch {
   proRata: boolean
 }
 
-export interface BranchOutcome {
+interface BranchOutcome {
   branchId: string
   label: string
   probability: number
@@ -71,8 +72,16 @@ export interface BranchOutcome {
   failed: string | null
 }
 
+type BranchEvaluation = BranchOutcome & {
+  founderUtility: number
+  investorUtility: number
+  founderUnderInvestorUtility: number
+  investorUnderFounderUtility: number
+}
+
 export interface ShadowResult {
-  point: DealPoint
+  /** Aggregate branch-weighted point; null until every branch constructs. */
+  point: DealPoint | null
   branches: BranchOutcome[]
   /** True when the supplied probabilities did not sum to one and were rescaled. */
   normalised: boolean
@@ -90,6 +99,7 @@ export interface ShadowInput {
   risk?: { gamma: 0.5 | 1; w0F: number; w0I: number } | null
   notes?: ConvertibleNote[]
   discounting?: Discounting | null
+  yearsToExit?: number
 }
 
 /**
@@ -97,14 +107,14 @@ export interface ShadowInput {
  * the second from colliding with it, and keeps the seniority stack readable in the output.
  */
 function relabelCurrentRound(post: CapTable, suffix: string): CapTable {
-  return {
+  return CapTableSchema.parse({
     ...post,
     classes: post.classes.map((cls) =>
       cls.id === 'new-round' || cls.id === 'new-round-other'
         ? { ...cls, id: `${cls.id}-${suffix}`, name: `${cls.name} (this round)` }
         : cls,
     ),
-  }
+  })
 }
 
 function investorOwnership(table: CapTable): number {
@@ -155,7 +165,7 @@ function allocateFollowOn(post: CapTable, proRataShare: number): CapTable {
     }
     return result
   })
-  return { ...post, classes }
+  return CapTableSchema.parse({ ...post, classes })
 }
 
 function partyValues(
@@ -164,42 +174,78 @@ function partyValues(
   investorBeliefs: Beliefs,
   risk: ShadowInput['risk'],
   discounting: Discounting | null,
+  yearsToExit: number,
 ): Pick<
-  BranchOutcome,
-  'founderValue' | 'investorValue' | 'founderUnderInvestorBeliefs' | 'investorUnderFounderBeliefs'
+  BranchEvaluation,
+  | 'founderValue'
+  | 'investorValue'
+  | 'founderUnderInvestorBeliefs'
+  | 'investorUnderFounderBeliefs'
+  | 'founderUtility'
+  | 'investorUtility'
+  | 'founderUnderInvestorUtility'
+  | 'investorUnderFounderUtility'
 > {
+  const settled = accrueForExit(post, yearsToExit)
   if (risk) {
+    const founder = crraQuadrature(settled, 'FOUNDER', founderBeliefs, risk.gamma, risk.w0F)
+    const investor = crraQuadrature(settled, 'INVESTOR', investorBeliefs, risk.gamma, risk.w0I)
+    const founderUnderInvestor = crraQuadrature(
+      settled,
+      'FOUNDER',
+      investorBeliefs,
+      risk.gamma,
+      risk.w0F,
+    )
+    const investorUnderFounder = crraQuadrature(
+      settled,
+      'INVESTOR',
+      founderBeliefs,
+      risk.gamma,
+      risk.w0I,
+    )
     return {
-      founderValue: presentValue(
-        crraQuadrature(post, 'FOUNDER', founderBeliefs, risk.gamma, risk.w0F).ce,
-        discounting,
-      ),
-      investorValue: presentValue(
-        crraQuadrature(post, 'INVESTOR', investorBeliefs, risk.gamma, risk.w0I).ce,
-        discounting,
-      ),
-      founderUnderInvestorBeliefs: presentValue(
-        crraQuadrature(post, 'FOUNDER', investorBeliefs, risk.gamma, risk.w0F).ce,
-        discounting,
-      ),
-      investorUnderFounderBeliefs: presentValue(
-        crraQuadrature(post, 'INVESTOR', founderBeliefs, risk.gamma, risk.w0I).ce,
-        discounting,
-      ),
+      founderValue: presentValue(founder.ce, discounting),
+      investorValue: presentValue(investor.ce, discounting),
+      founderUnderInvestorBeliefs: presentValue(founderUnderInvestor.ce, discounting),
+      investorUnderFounderBeliefs: presentValue(investorUnderFounder.ce, discounting),
+      founderUtility: founder.u,
+      investorUtility: investor.u,
+      founderUnderInvestorUtility: founderUnderInvestor.u,
+      investorUnderFounderUtility: investorUnderFounder.u,
     }
   }
-  const founder = expectedPayouts(post, founderBeliefs)
-  const investor = expectedPayouts(post, investorBeliefs)
+  const founder = expectedPayouts(settled, founderBeliefs)
+  const investor = expectedPayouts(settled, investorBeliefs)
+  const founderValue = presentValue(founder.party.founder, discounting)
+  const investorValue = presentValue(investor.party.investor, discounting)
+  const founderUnderInvestorBeliefs = presentValue(investor.party.founder, discounting)
+  const investorUnderFounderBeliefs = presentValue(founder.party.investor, discounting)
   return {
-    founderValue: presentValue(founder.party.founder, discounting),
-    investorValue: presentValue(investor.party.investor, discounting),
-    founderUnderInvestorBeliefs: presentValue(investor.party.founder, discounting),
-    investorUnderFounderBeliefs: presentValue(founder.party.investor, discounting),
+    founderValue,
+    investorValue,
+    founderUnderInvestorBeliefs,
+    investorUnderFounderBeliefs,
+    founderUtility: founderValue,
+    investorUtility: investorValue,
+    founderUnderInvestorUtility: founderUnderInvestorBeliefs,
+    investorUnderFounderUtility: investorUnderFounderBeliefs,
   }
 }
 
 export function evaluateShadow(input: ShadowInput): ShadowResult {
   const discounting = input.discounting ?? null
+  const yearsToExit = input.yearsToExit ?? 0
+  if (input.branches.length === 0)
+    throw new RangeError('At least one next-round branch is required')
+  if (
+    input.branches.some((branch) => !Number.isFinite(branch.probability) || branch.probability < 0)
+  ) {
+    throw new RangeError('Next-round branch probabilities must be finite and nonnegative')
+  }
+  if (new Set(input.branches.map((branch) => branch.id)).size !== input.branches.length) {
+    throw new RangeError('Next-round branch ids must be unique')
+  }
   const singleRound = evaluatePackage(
     input.pre,
     input.safes,
@@ -209,6 +255,7 @@ export function evaluateShadow(input: ShadowInput): ShadowResult {
     input.risk ?? null,
     input.notes ?? [],
     discounting,
+    yearsToExit,
   )
   const current = constructRound(input.pre, input.safes, input.pkg.terms, input.notes ?? [])
   const thisRoundPost = relabelCurrentRound(current.post, 'current')
@@ -219,7 +266,7 @@ export function evaluateShadow(input: ShadowInput): ShadowResult {
   const weightOf = (branch: NextRoundBranch): number =>
     rawTotal <= 0 ? 0 : branch.probability / rawTotal
 
-  const outcomes: BranchOutcome[] = input.branches.map((branch) => {
+  const outcomes: BranchEvaluation[] = input.branches.map((branch) => {
     const weight = weightOf(branch)
     try {
       const follow = constructRound(thisRoundPost, [], branch.terms, [])
@@ -235,6 +282,7 @@ export function evaluateShadow(input: ShadowInput): ShadowResult {
           input.investorBeliefs,
           input.risk ?? null,
           discounting,
+          yearsToExit,
         ),
         investorOwnershipBefore: ownershipBefore,
         investorOwnershipAfter: investorOwnership(post),
@@ -251,6 +299,10 @@ export function evaluateShadow(input: ShadowInput): ShadowResult {
         investorValue: 0,
         founderUnderInvestorBeliefs: 0,
         investorUnderFounderBeliefs: 0,
+        founderUtility: 0,
+        investorUtility: 0,
+        founderUnderInvestorUtility: 0,
+        investorUnderFounderUtility: 0,
         investorOwnershipBefore: ownershipBefore,
         investorOwnershipAfter: ownershipBefore,
         proRataInvestment: 0,
@@ -261,27 +313,47 @@ export function evaluateShadow(input: ShadowInput): ShadowResult {
     }
   })
 
-  const usable = outcomes.filter((outcome) => outcome.failed === null)
-  const usableWeight = usable.reduce((sum, outcome) => sum + outcome.probability, 0)
-  const weighted = (pick: (outcome: BranchOutcome) => number): number =>
-    usableWeight <= 0
-      ? 0
-      : usable.reduce(
-          (sum, outcome) => sum + (outcome.probability / usableWeight) * pick(outcome),
-          0,
-        )
+  const weighted = (pick: (outcome: BranchEvaluation) => number): number =>
+    outcomes.reduce((sum, outcome) => sum + outcome.probability * pick(outcome), 0)
 
-  const point: DealPoint = {
-    pkg: input.pkg,
-    uF: weighted((outcome) => outcome.founderValue),
-    uI: weighted((outcome) => outcome.investorValue),
-    uF_underI: weighted((outcome) => outcome.founderUnderInvestorBeliefs),
-    uI_underF: weighted((outcome) => outcome.investorUnderFounderBeliefs),
-    metric: singleRound.metric,
-    diagnostics: current.diagnostics,
-  }
+  const complete = rawTotal > 0 && outcomes.every((outcome) => outcome.failed === null)
+  const aggregateCe = (pick: (outcome: BranchEvaluation) => number, w0: number): number =>
+    presentValue(crraCertaintyEquivalent(weighted(pick), input.risk!.gamma, w0), discounting)
+  const point: DealPoint | null = complete
+    ? {
+        pkg: input.pkg,
+        uF: input.risk
+          ? aggregateCe((outcome) => outcome.founderUtility, input.risk.w0F)
+          : weighted((outcome) => outcome.founderValue),
+        uI: input.risk
+          ? aggregateCe((outcome) => outcome.investorUtility, input.risk.w0I)
+          : weighted((outcome) => outcome.investorValue),
+        uF_underI: input.risk
+          ? aggregateCe((outcome) => outcome.founderUnderInvestorUtility, input.risk.w0F)
+          : weighted((outcome) => outcome.founderUnderInvestorBeliefs),
+        uI_underF: input.risk
+          ? aggregateCe((outcome) => outcome.investorUnderFounderUtility, input.risk.w0I)
+          : weighted((outcome) => outcome.investorUnderFounderBeliefs),
+        metric: singleRound.metric,
+        diagnostics: current.diagnostics,
+      }
+    : null
 
-  return { point, branches: outcomes, normalised, singleRound }
+  const branches: BranchOutcome[] = outcomes.map((outcome) => ({
+    branchId: outcome.branchId,
+    label: outcome.label,
+    probability: outcome.probability,
+    founderValue: outcome.founderValue,
+    investorValue: outcome.investorValue,
+    founderUnderInvestorBeliefs: outcome.founderUnderInvestorBeliefs,
+    investorUnderFounderBeliefs: outcome.investorUnderFounderBeliefs,
+    investorOwnershipBefore: outcome.investorOwnershipBefore,
+    investorOwnershipAfter: outcome.investorOwnershipAfter,
+    proRataInvestment: outcome.proRataInvestment,
+    warnings: outcome.warnings,
+    failed: outcome.failed,
+  }))
+  return { point, branches, normalised, singleRound }
 }
 
 /** The whole point of the shadow: what a term is worth once a next round exists. */
@@ -311,6 +383,9 @@ export function shadowTermPrice(
   }
   const base = evaluateShadow(input)
   const changed = evaluateShadow(variantInput)
+  if (base.point === null || changed.point === null) {
+    throw new Error('Cannot price the next-round shadow until every branch constructs')
+  }
   return {
     label: variant.label,
     singleRound: {

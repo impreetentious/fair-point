@@ -43,6 +43,7 @@ export function LeverageScreen() {
         risk: deal.risk,
         notes: deal.notes,
         discounting: deal.discounting,
+        yearsToExit: deal.yearsToExit,
       })
     } catch {
       return null
@@ -63,6 +64,7 @@ export function LeverageScreen() {
           risk: deal.risk,
           notes: deal.notes,
           discounting: deal.discounting,
+          yearsToExit: deal.yearsToExit,
         },
         headline,
       )
@@ -81,6 +83,7 @@ export function LeverageScreen() {
       risk: deal.risk,
       notes: deal.notes,
       discounting: deal.discounting,
+      yearsToExit: deal.yearsToExit,
     }
     try {
       const split = decomposeDisagreement(input)
@@ -104,6 +107,7 @@ export function LeverageScreen() {
         risk: deal.risk,
         notes: deal.notes,
         discounting: deal.discounting,
+        yearsToExit: deal.yearsToExit,
       })
     } catch {
       return null
@@ -305,7 +309,7 @@ export function LeverageScreen() {
               </div>
               <div>
                 <dt>Through the next round</dt>
-                <dd>{dollars(shadow.point.uF)}</dd>
+                <dd>{shadow.point === null ? 'Unavailable' : dollars(shadow.point.uF)}</dd>
               </div>
               <div>
                 <dt>Theirs, this round only</dt>
@@ -313,9 +317,14 @@ export function LeverageScreen() {
               </div>
               <div>
                 <dt>Through the next round</dt>
-                <dd>{dollars(shadow.point.uI)}</dd>
+                <dd>{shadow.point === null ? 'Unavailable' : dollars(shadow.point.uI)}</dd>
               </div>
             </dl>
+            {shadow.point === null ? (
+              <p className="panel-lede">
+                Branch-weighted totals are unavailable until every branch constructs.
+              </p>
+            ) : null}
             <div className="table-scroll">
               <table>
                 <thead>

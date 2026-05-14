@@ -1,7 +1,11 @@
 import { fitLognormal } from '../core/distributions'
 import { analyze, enumerateDeals, evaluatePackage } from '../core/bargain'
 import { regimes } from '../core/breakpoints'
+import { accrueForExit } from '../core/accruals'
 import { constructRound } from '../core/round'
+import { exchangeRateTable } from '../core/exchange-rate'
+import { decomposeDisagreement } from '../core/contingent'
+import { defaultBranches, evaluateShadow } from '../core/next-round'
 import { CapTableSchema, RoundTermsSchema, type DealFile } from '../core/schema'
 import type { ScreenId } from './state/store'
 
@@ -38,7 +42,7 @@ export function screenReadiness(deal: DealFile): Record<ScreenId, Readiness> {
   let waterfall = red('Waterfall needs a valid post-round cap table.')
   if (post !== null) {
     try {
-      const allRegimes = regimes(post.post)
+      const allRegimes = regimes(accrueForExit(post.post, deal.yearsToExit))
       const hasWarnings =
         post.warnings.length > 0 ||
         allRegimes.some((regime) => regime.event.includes('unclassified'))
@@ -73,6 +77,7 @@ export function screenReadiness(deal: DealFile): Record<ScreenId, Readiness> {
         deal.risk,
         deal.notes,
         deal.discounting,
+        deal.yearsToExit,
       ),
     )
     analyze(points, deal.disagreement)
@@ -81,10 +86,36 @@ export function screenReadiness(deal: DealFile): Record<ScreenId, Readiness> {
     frontier = red(error instanceof Error ? error.message : 'Frontier analysis failed.')
   }
 
-  const leverage =
-    frontier.state === 'green'
-      ? green('Leverage ready: term prices, belief ranking, and the next-round shadow all run.')
-      : red('Leverage waits for a frontier it can price against.')
+  let leverage = red('Leverage waits for a frontier it can price against.')
+  if (frontier.state === 'green') {
+    const pkg = { index: 0, terms: deal.terms }
+    const common = {
+      pre: deal.pre,
+      safes: deal.safes,
+      founderBeliefs: deal.founderBeliefs,
+      investorBeliefs: deal.investorBeliefs,
+      risk: deal.risk,
+      notes: deal.notes,
+      discounting: deal.discounting,
+      yearsToExit: deal.yearsToExit,
+    }
+    try {
+      exchangeRateTable({ ...common, terms: deal.terms })
+      decomposeDisagreement({ ...common, pkg })
+      const postMoney = (deal.terms.preMoney ?? 0) + deal.terms.investment
+      const shadow = evaluateShadow({
+        ...common,
+        pkg,
+        branches: defaultBranches(deal.terms, postMoney),
+      })
+      leverage =
+        shadow.point === null
+          ? red('Leverage needs every default next-round branch to construct.')
+          : green('Leverage ready: term prices, disagreement split, and next-round shadow run.')
+    } catch (error) {
+      leverage = red(error instanceof Error ? error.message : 'Leverage analysis failed.')
+    }
+  }
 
   const prior = [cap, round, waterfall, beliefs, frontier, leverage]
   const report = prior.every((item) => item.state === 'green')

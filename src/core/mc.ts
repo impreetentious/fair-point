@@ -44,7 +44,8 @@ function utility(value: number, gamma: number, w0: number): number {
   return gamma === 1 ? Math.log(wealth) : (Math.pow(wealth, 1 - gamma) - 1) / (1 - gamma)
 }
 
-function certaintyEquivalent(u: number, gamma: number, w0: number): number {
+/** Convert expected CRRA utility back to dollar certainty-equivalent proceeds. */
+export function crraCertaintyEquivalent(u: number, gamma: number, w0: number): number {
   return gamma === 1 ? Math.exp(u) - w0 : Math.pow(u * (1 - gamma) + 1, 1 / (1 - gamma)) - w0
 }
 
@@ -115,7 +116,11 @@ export function crraUtility(
     mean += delta / sample
     m2 += delta * (value - mean)
   }
-  return { u: mean, se: Math.sqrt(m2 / (n - 1) / n), ce: certaintyEquivalent(mean, gamma, w0) }
+  return {
+    u: mean,
+    se: Math.sqrt(m2 / (n - 1) / n),
+    ce: crraCertaintyEquivalent(mean, gamma, w0),
+  }
 }
 
 function lognormalProbability(value: number, mu: number, sigma: number): number {
@@ -150,5 +155,5 @@ export function crraQuadrature(
     }
   }
   const u = beliefs.p0 * utility(0, gamma, w0) + (1 - beliefs.p0) * conditional
-  return { u, ce: certaintyEquivalent(u, gamma, w0) }
+  return { u, ce: crraCertaintyEquivalent(u, gamma, w0) }
 }

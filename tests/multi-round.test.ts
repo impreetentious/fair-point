@@ -9,10 +9,17 @@ import {
   priceMilestoneRatchet,
 } from '../src/core/contingent'
 import { exchangeRateTable } from '../src/core/exchange-rate'
+import { analyzeEmployeeOffer } from '../src/core/employee-offer'
 import { defaultBranches, evaluateShadow, shadowTermPrice } from '../src/core/next-round'
 import { constructRound } from '../src/core/round'
 import { EXAMPLE_DECKS } from '../src/app/data/examples'
-import type { Beliefs, DealFile, TermPackage } from '../src/core/schema'
+import {
+  CapTableSchema,
+  RoundTermsSchema,
+  type Beliefs,
+  type DealFile,
+  type TermPackage,
+} from '../src/core/schema'
 
 function deck(id: string): DealFile {
   const found = EXAMPLE_DECKS.find((example) => example.id === id)
@@ -22,6 +29,26 @@ function deck(id: string): DealFile {
 
 const deal = deck('series-a-clean')
 const pinned: TermPackage = { index: 0, terms: deal.terms }
+
+describe('employee offer validation', () => {
+  it('rejects a grant id that collides with a post-round class', () => {
+    expect(() =>
+      analyzeEmployeeOffer({
+        pre: deal.pre,
+        safes: deal.safes,
+        terms: deal.terms,
+        beliefs: deal.founderBeliefs,
+        grant: {
+          id: 'new-round',
+          options: 1,
+          strike: 0,
+          holder: 'FOUNDER',
+          instrument: 'OPTION',
+        },
+      }),
+    ).toThrow("duplicate id 'new-round'")
+  })
+})
 
 describe('term exchange-rate table', () => {
   it('prices every term the round actually has', () => {
@@ -91,7 +118,36 @@ describe('term exchange-rate table', () => {
       expect(Math.abs(row.trade!.founderResidual)).toBeLessThan(
         Math.max(1, Math.abs(row.deltaFounder)) * 0.01,
       )
+      expect(row.trade!.investorStillAhead).toBe(row.trade!.deltaInvestorAfterTrade > 0)
     }
+  })
+
+  it('measures the compensated investor delta from the original package', () => {
+    const table = exchangeRateTable({
+      pre: deal.pre,
+      safes: deal.safes,
+      terms: deal.terms,
+      founderBeliefs: deal.founderBeliefs,
+      investorBeliefs: deal.investorBeliefs,
+      risk: deal.risk,
+    })
+    const pool = table.rows.find((row) => row.term === 'poolTargetPost' && row.trade !== null)!
+    const compensated = evaluatePackage(
+      deal.pre,
+      deal.safes,
+      {
+        index: -1,
+        terms: {
+          ...deal.terms,
+          poolTargetPost: deal.terms.poolTargetPost + table.units.pool,
+          preMoney: pool.trade!.preMoney,
+        },
+      },
+      deal.founderBeliefs,
+      deal.investorBeliefs,
+      deal.risk,
+    )
+    expect(pool.trade!.deltaInvestorAfterTrade).toBeCloseTo(compensated.uI - table.baseline.uI, 6)
   })
 
   it('quotes a reason instead of a price where the step is not a legal package', () => {
@@ -106,6 +162,68 @@ describe('term exchange-rate table', () => {
     const blocked = table.rows.filter((row) => row.infeasible !== null)
     expect(blocked.length).toBeGreaterThan(0)
     expect(blocked.every((row) => row.deltaFounder === 0)).toBe(true)
+  })
+})
+
+describe('belief tornado validation', () => {
+  it('rejects nonsensical spreads and unavailable bargaining headlines', () => {
+    const input = {
+      pre: deal.pre,
+      safes: deal.safes,
+      space: deal.space,
+      pinned,
+      founderBeliefs: deal.founderBeliefs,
+      investorBeliefs: deal.investorBeliefs,
+      disagreement: deal.disagreement,
+      risk: deal.risk,
+    }
+    expect(() => beliefTornado({ ...input, spread: 0 }, 'founderEv')).toThrow(
+      'spread must be finite and positive',
+    )
+    expect(() =>
+      beliefTornado(
+        { ...input, disagreement: { dF: Number.MAX_VALUE, dI: Number.MAX_VALUE } },
+        'nashFounderEv',
+      ),
+    ).toThrow('headline is unavailable')
+  })
+})
+
+describe('exit-clock propagation', () => {
+  it('includes dividend accrual in package utilities', () => {
+    const pre = CapTableSchema.parse({
+      classes: [
+        { id: 'common', name: 'Common', kind: 'COMMON', shares: 8, holder: 'FOUNDER' },
+        {
+          id: 'preferred',
+          name: 'Preferred',
+          kind: 'PREFERRED',
+          shares: 2,
+          holder: 'INVESTOR',
+          invested: 2,
+          prefMultiple: 1,
+          participation: 'NONE',
+          dividendRate: 0.25,
+          dividendKind: 'SIMPLE',
+        },
+      ],
+      grants: [],
+      poolAvailable: 0,
+    })
+    const terms = RoundTermsSchema.parse({
+      preMoney: 10,
+      investment: 1,
+      poolTargetPost: 0,
+      prefMultiple: 1,
+      participation: 'NONE',
+      seniority: 'PARI',
+    })
+    const beliefs: Beliefs = { p0: 0.1, p50: 4, p90: 12 }
+    const pkg = { index: 0, terms }
+    const immediate = evaluatePackage(pre, [], pkg, beliefs, beliefs, null, [], null, 0)
+    const accrued = evaluatePackage(pre, [], pkg, beliefs, beliefs, null, [], null, 4)
+    expect(accrued.uI).toBeGreaterThan(immediate.uI)
+    expect(accrued.uF).toBeLessThan(immediate.uF)
   })
 })
 
@@ -283,11 +401,12 @@ describe('next-round shadow', () => {
 
   it('returns a deal point the existing bargaining machinery can consume unchanged', () => {
     const shadow = evaluateShadow(input)
-    expect(shadow.point.pkg).toEqual(pinned)
-    expect(shadow.point.metric).toBe(shadow.singleRound.metric)
-    expect(Number.isFinite(shadow.point.uF)).toBe(true)
-    expect(Number.isFinite(shadow.point.uI)).toBe(true)
-    expect(shadow.point.diagnostics.pps).toBeCloseTo(round.diagnostics.pps, 9)
+    expect(shadow.point).not.toBeNull()
+    expect(shadow.point!.pkg).toEqual(pinned)
+    expect(shadow.point!.metric).toBe(shadow.singleRound.metric)
+    expect(Number.isFinite(shadow.point!.uF)).toBe(true)
+    expect(Number.isFinite(shadow.point!.uI)).toBe(true)
+    expect(shadow.point!.diagnostics.pps).toBeCloseTo(round.diagnostics.pps, 9)
   })
 
   it('runs every branch and weights them to one', () => {
@@ -303,6 +422,25 @@ describe('next-round shadow', () => {
     const shadow = evaluateShadow({ ...input, branches: skewed })
     expect(shadow.normalised).toBe(true)
     expect(shadow.branches.reduce((sum, branch) => sum + branch.probability, 0)).toBeCloseTo(1, 12)
+  })
+
+  it('aggregates CRRA branch uncertainty in utility space before converting back to dollars', () => {
+    const w0 = 1_000_000
+    const shadow = evaluateShadow({
+      ...input,
+      risk: { gamma: 1, w0F: w0, w0I: w0 },
+    })
+    const founderUtility = shadow.branches.reduce(
+      (sum, branch) => sum + branch.probability * Math.log(branch.founderValue + w0),
+      0,
+    )
+    const expected = Math.exp(founderUtility) - w0
+    const arithmetic = shadow.branches.reduce(
+      (sum, branch) => sum + branch.probability * branch.founderValue,
+      0,
+    )
+    expect(shadow.point!.uF).toBeCloseTo(expected, 6)
+    expect(Math.abs(shadow.point!.uF - arithmetic)).toBeGreaterThan(1)
   })
 
   /**
@@ -377,7 +515,25 @@ describe('next-round shadow', () => {
     ]
     const shadow = evaluateShadow({ ...input, branches: impossible })
     const broken = shadow.branches.find((branch) => branch.branchId === 'broken')!
-    expect(broken.failed === null || broken.warnings.length >= 0).toBe(true)
+    expect(broken.failed).not.toBeNull()
+    expect(shadow.point).toBeNull()
     expect(shadow.branches.filter((branch) => branch.failed === null).length).toBeGreaterThan(0)
+  })
+
+  it('rejects invalid branch probability models', () => {
+    expect(() =>
+      evaluateShadow({
+        ...input,
+        branches: branches.map((branch, index) => ({
+          ...branch,
+          probability: index === 0 ? -1 : branch.probability,
+        })),
+      }),
+    ).toThrow(/probabilities/u)
+    const zero = evaluateShadow({
+      ...input,
+      branches: branches.map((branch) => ({ ...branch, probability: 0 })),
+    })
+    expect(zero.point).toBeNull()
   })
 })
