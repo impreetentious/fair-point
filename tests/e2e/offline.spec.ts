@@ -9,6 +9,7 @@ const SCREENS = [
   { id: 'waterfall', heading: 'Waterfall' },
   { id: 'beliefs', heading: 'Beliefs' },
   { id: 'frontier', heading: 'Frontier' },
+  { id: 'leverage', heading: 'Leverage' },
   { id: 'report', heading: 'Report' },
 ] as const
 
@@ -34,8 +35,8 @@ async function assertAllScreens(page: Page): Promise<void> {
   }
 }
 
-test.describe('Phase 9 offline contract', () => {
-  test('service worker keeps all six screens alive with zero post-reload network hits', async ({
+test.describe('offline contract', () => {
+  test('service worker keeps all seven screens alive with zero post-reload network hits', async ({
     page,
     context,
   }) => {
