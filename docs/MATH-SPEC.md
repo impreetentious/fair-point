@@ -56,7 +56,7 @@ which yields
 shares_i             = f_i × (BaseCap + T_other) / (1 − s)
 ```
 
-_(This closed form generalizes the "pure post-money" case where `T_other = 0`: same denominator `1 − s`, base is `BaseCap + T_other` instead of `BaseCap`. Ownership identity holds exactly: `shares_i / (BaseCap + T_other + Σ_{cap-route} shares) = f_i`.)_
+_(This closed form generalizes the "pure post-money" case where `T_other = 0`: same denominator `1 − s`, base is `BaseCap + T_other` instead of `BaseCap`. Ownership identity holds exactly: `shares_i / (BaseCap + T_other + Σ_{cap-route} shares) = `f_i``.)\*
 
 #### 6.2.3 Global solve — routes, total SAFE shares `T`, pool increase `P`, PPS
 
@@ -76,7 +76,7 @@ Solve procedure:
 3. **Re-evaluate route optimality.** For each post-money SAFE, solve each available route while the other route assignments stay fixed, then retain the route yielding the most shares.
 4. Repeat the route pass until no route changes; bound it at `#SAFEs + 1` passes.
 
-_(Why a global solve is required: with BaseCap 10M, V_pre $10M, no pool, and one $1M SAFE at a $20M post-money cap plus 20% discount, successive two-pass estimates continue moving. The fixed point is **1,428,571.43 shares, PPS $0.875, discount route wins\**. F-SAFE-04 covers the corresponding round-and-pool case.)_
+_(Why a global solve is required: with BaseCap 10M, V_pre \$10M, no pool, and one \$1M SAFE at a \$20M post-money cap plus 20% discount, successive two-pass estimates continue moving. The fixed point is **1,428,571.43 shares, PPS \$0.875, discount route wins**. F-SAFE-04 covers the corresponding round-and-pool case.)_
 
 #### 6.2.4 Converted SAFE class — shadow-series rule
 
@@ -99,7 +99,7 @@ _Derivation:_ PPS = V_pre/(A+P); N = I(A+P)/V_pre so FD_post = (A+P)(1 + I/V_pre
 
 **Direct-PPS mode (`pricedPerShare`) addendum.** When `RoundTerms.pricedPerShare` is supplied instead of `preMoney`: skip the pool-shuffle solve entirely — set `P = 0` (or, equivalently, leave the existing pool at `poolAvail` and emit `poolIncrease = 0` in diagnostics). Rationale: the user is modeling a signed deal at a known per-share price, not solving for one. `V3` is skipped (no `V_pre`). Diagnostics: `pps = the supplied price`; `N = I/pps`; `investorPct = N/FD_post` with `FD_post = A + N`; `poolIncrease = 0`. All `V_pre`-derived invariants (§6.1 step 6) are skipped in this mode.
 
-**Worked check (fixture F-RND-01):** A = 9,000,000 (common 8.5M + issued options 0.5M), poolAvail = 0, V_pre = $8,000,000, I = $2,000,000, t = 0.10 ⇒ r = 1.25; P = 1,125,000/0.875 = **1,285,714.2857**; PPS = 8,000,000/10,285,714.2857 = **7/9 ≈ 0.7777778**; N = **2,571,428.5714**; FD_post = **12,857,142.857**; pool% = 10.0000%; investor% = 20.0000% = I/V_post. ✓
+**Worked check (fixture F-RND-01):** A = 9,000,000 (common 8.5M + issued options 0.5M), poolAvail = 0, V_pre = \$8,000,000, I = \$2,000,000, t = 0.10 ⇒ r = 1.25; P = 1,125,000/0.875 = **1,285,714.2857**; PPS = 8,000,000/10,285,714.2857 = **7/9 ≈ 0.7777778**; N = **2,571,428.5714**; FD_post = **12,857,142.857**; pool% = 10.0000%; investor% = 20.0000% = I/V_post. ✓
 
 ### 6.4 Anti-dilution (`antidilution.ts`)
 
@@ -184,7 +184,7 @@ payoutsAt(post, E):
 
 Iteration bound = `#strikeGroups + 1` (each iteration commits at most one group; the last iteration verifies "no more ITM"). Property tests cover 40+ grant tables with duplicate strikes and assert the consistency conditions, nonnegative net payouts, and conservation.
 
-**Counterexample (fixture F-WF):** 1 common share; E = $100; grant g1 = 1 option @ $90 (holder OTHER); grant g2 = 100 options @ $0 (holder FOUNDER). Exercising both simultaneously would give `Edist = 190 / 102 shares = $1.8627/sh`, and g1's net payout `(1.8627 − 90) × 1 < 0`— a violation. The algorithm exercises **only g2** (cheapest strike, $0 < the resulting`pps`); adding g1 next would require `$90 < pps`, which fails, so g1 stays unexercised. Result: `pps = 100/101 = $0.9900990`, `common = $0.9900990`, `g2 net = $99.0099`, `g1 net = 0`.
+**Counterexample (fixture F-WF):** 1 common share; E = \$100; grant g1 = 1 option @ \$90 (holder OTHER); grant g2 = 100 options @ \$0 (holder FOUNDER). Exercising both simultaneously would give `Edist = 190 / 102 shares = $1.8627/sh`, and g1's net payout `(1.8627 − 90) × 1 < 0` — a violation. The algorithm exercises **only g2** (cheapest strike, \$0 < the resulting `pps`); adding g1 next would require `$90 < pps`, which fails, so g1 stays unexercised. Result: `pps = 100/101 = $0.9900990`, `common = $0.9900990`, `g2 net = $99.0099`, `g1 net = 0`.
 
 #### 6.5.2 Conversion equilibrium
 
@@ -269,7 +269,7 @@ A converted class forfeits preference and participates as common with `shares ×
 
 #### 6.5.5 Known regimes worked example (fixture F-WF-02)
 
-Common 8,000,000 sh (FOUNDER); Series A 2,000,000 sh, invested $2,000,000, OIP $1.00, 1×, PARTICIPATING CAPPED 3× (cap = $6,000,000 total), tier 1 (INVESTOR). No options, no pool.
+Common 8,000,000 sh (FOUNDER); Series A 2,000,000 sh, invested \$2,000,000, OIP \$1.00, 1×, PARTICIPATING CAPPED 3× (cap = \$6,000,000 total), tier 1 (INVESTOR). No options, no pool.
 
 | E range    | Series A       | Common    | Event at right edge                             |
 | ---------- | -------------- | --------- | ----------------------------------------------- |

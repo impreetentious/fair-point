@@ -86,6 +86,15 @@ npm run preview    # serves out/ at http://127.0.0.1:4173
 
 Whatever host you use should send the response headers documented in [docs/STATIC-HOST-HEADERS.md](docs/STATIC-HOST-HEADERS.md). `vercel.json` applies them on Vercel and `serve.json` applies the same policy to `npm run preview` and to the Playwright web server, so the offline contract is tested under the real policy. `npm run check:csp` fails if the two host configs and the document ever disagree.
 
+## Status and contributing
+
+Pre-1.0, and versioned as such: screens, internals, and the set of analyses on offer can still change between releases. What is stable is the deal file — `schemaVersion` is `1.0.0`, every bundled example parses under it, and the app refuses a file written by a newer schema rather than guessing at it. The package is not published to a registry; the deliverable is the static export in `out/`.
+
+Bugs and questions go to [GitHub issues](https://github.com/ItsMonarch04/fair-point/issues). The Verify workflow runs on every pull request, so a change is expected to leave `npm run verify`, `npm run build`, and `npm run gates` green on Node `22.22.x`. Two conventions matter beyond that:
+
+- **An engine change is a spec change.** [docs/MATH-SPEC.md](docs/MATH-SPEC.md) is normative, source comments cite it by section, and `npm run check:citations` fails on a citation that no longer resolves. Change the section and the code together.
+- **New behaviour arrives with a fixture.** The battery under `fixtures/` is hand-derived rather than captured from the engine's own output, which is what makes it an oracle instead of a snapshot.
+
 ## License
 
 MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
@@ -94,4 +103,4 @@ MIT © Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.17.9
+**Version:** v0.18.0

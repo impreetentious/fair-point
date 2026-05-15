@@ -29,5 +29,7 @@ npm run build
 npm run budget:bundle
 ```
 
-Every exported route must remain at or below 360 KiB of gzip-compressed JavaScript and CSS. The
-budget script reports the largest route and fails when any route exceeds the limit.
+Every exported route must remain at or below 360 KiB of gzip-compressed JavaScript — the sum over
+every `.js` file that route's HTML references. The budget script reports the largest route and fails
+when any route exceeds the limit. Override the ceiling for a one-off measurement with
+`BUNDLE_BUDGET_KIB`.
