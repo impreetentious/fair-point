@@ -25,7 +25,7 @@ function sum(values: number[]): number {
 }
 
 /**
- * Pareto frontier in R^n for a discrete cloud (§6.19.4).
+ * Pareto frontier in R^n for a discrete cloud (§6.19).
  * Sort by descending utilities in party order then index; keep a point iff it is not
  * weakly dominated by any already-kept point under the running orthant filter:
  * a point is kept when it strictly improves at least one coordinate relative to the

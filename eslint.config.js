@@ -3,6 +3,8 @@ import tsPlugin from '@typescript-eslint/eslint-plugin'
 import tsParser from '@typescript-eslint/parser'
 import globals from 'globals'
 
+// Flat config. Generated and build output are ignored here rather than in .eslintignore,
+// which flat config no longer reads.
 export default [
   {
     ignores: ['dist', 'node_modules', '.next', 'out', 'test-results', 'next-env.d.ts'],

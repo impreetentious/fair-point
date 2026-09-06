@@ -6,12 +6,45 @@ type DirectSettlement = Payouts & { exercised: Set<string> }
 /** Test-only control for deterministically exercising the equilibrium enumeration fallback. */
 export type SettlementDevOptions = { equilibriumPassLimit?: number }
 
-function preferredClasses(post: CapTable): ShareClassPreferred[] {
-  return post.classes
+/**
+ * Everything a settlement needs that depends only on the cap table: the seniority-ordered
+ * preferred list, the tiers to pay in order, and the payout skeleton's keys. A single regime
+ * walk settles the same immutable table thousands of times, so deriving these once per table
+ * rather than once per settlement is pure bookkeeping — no computed value depends on it.
+ * Keyed weakly by table identity, exactly as the regime cache is.
+ */
+type SettlementPlan = {
+  preferred: ShareClassPreferred[]
+  tiers: number[]
+  classIds: string[]
+  commonIds: Set<string>
+  /** Position of each preferred id in `preferred`, so a conversion set has an exact integer key. */
+  preferredIndex: Map<string, number>
+}
+
+const planCache = new WeakMap<CapTable, SettlementPlan>()
+
+function settlementPlan(post: CapTable): SettlementPlan {
+  const cached = planCache.get(post)
+  if (cached !== undefined) return cached
+  const preferred = post.classes
     .filter((cls): cls is ShareClassPreferred => cls.kind === 'PREFERRED')
     .sort(
       (left, right) => left.seniorityTier - right.seniorityTier || left.id.localeCompare(right.id),
     )
+  const plan: SettlementPlan = {
+    preferred,
+    tiers: [...new Set(preferred.map((cls) => cls.seniorityTier))],
+    classIds: post.classes.map((cls) => cls.id),
+    commonIds: new Set(post.classes.filter((cls) => cls.kind === 'COMMON').map((cls) => cls.id)),
+    preferredIndex: new Map(preferred.map((cls, index) => [cls.id, index])),
+  }
+  planCache.set(post, plan)
+  return plan
+}
+
+function preferredClasses(post: CapTable): ShareClassPreferred[] {
+  return settlementPlan(post).preferred
 }
 
 function preferenceAmount(cls: ShareClassPreferred): number {
@@ -22,15 +55,84 @@ function capAmount(cls: ShareClassPreferred): number {
   return (cls.participationCapMultiple ?? Infinity) * cls.invested
 }
 
+/** Unit in the last place of a finite IEEE-754 number. */
+function unitInLastPlace(value: number): number {
+  if (!Number.isFinite(value) || value === 0) return Number.EPSILON
+  return 2 ** (Math.floor(Math.log2(Math.abs(value))) - 52)
+}
+
+/**
+ * The recorded conservation failure is a 1-ULP residue of summing payouts at
+ * the exit magnitude (2^-24 for ~1.77e8). Conversion, preference, cap and
+ * refusal already ran; folding that residue into the largest class that still
+ * has cap/common headroom keeps those identities and makes Σpayouts === exitValue
+ * for the 7-decimal gate. Residues larger than a few ULPs are left untouched so
+ * a real leak still fails. A capped class already at its participation cap is
+ * never the sink (D18 / N06).
+ */
+function classResidualHeadroom(post: CapTable, result: Payouts, id: string): number {
+  const paid = result.byClass[id]
+  if (paid === undefined) return 0
+  const cls = post.classes.find((entry) => entry.id === id)
+  if (cls === undefined) return 0
+  if (cls.kind === 'COMMON' || result.pathTaken[id] === 'CONVERTED') {
+    return Number.POSITIVE_INFINITY
+  }
+  if (cls.kind === 'PREFERRED' && cls.participation === 'CAPPED') {
+    const cap = capAmount(cls)
+    if (Number.isFinite(cap)) return Math.max(0, cap - paid)
+  }
+  return Number.POSITIVE_INFINITY
+}
+
+function absorbRoundingResidual(
+  result: Payouts,
+  exitValue: number,
+  total: number,
+  post: CapTable,
+): void {
+  const residual = exitValue - total
+  if (residual === 0) return
+  const bound = 8 * Math.max(unitInLastPlace(exitValue), unitInLastPlace(total), Number.EPSILON)
+  if (Math.abs(residual) > bound) return
+  const classIds = Object.keys(result.byClass)
+  const eligible = classIds.filter((id) => {
+    if (residual <= 0) return true
+    return classResidualHeadroom(post, result, id) >= residual
+  })
+  if (eligible.length > 0) {
+    let target = eligible[0]!
+    for (const id of eligible) {
+      if (Math.abs(result.byClass[id]!) > Math.abs(result.byClass[target]!)) target = id
+    }
+    result.byClass[target]! += residual
+    return
+  }
+  const grantIds = Object.keys(result.byGrant)
+  if (grantIds.length === 0) return
+  let target = grantIds[0]!
+  for (const id of grantIds) {
+    if (Math.abs(result.byGrant[id]!) > Math.abs(result.byGrant[target]!)) target = id
+  }
+  result.byGrant[target]! += residual
+}
+
 function makeEmptyPayouts(post: CapTable): Payouts {
+  const plan = settlementPlan(post)
+  const byClass: Record<string, number> = {}
+  const pathTaken: Payouts['pathTaken'] = {}
+  for (const id of plan.classIds) {
+    byClass[id] = 0
+    pathTaken[id] = plan.commonIds.has(id) ? 'COMMON' : 'PREFERENCE'
+  }
+  const byGrant: Record<string, number> = {}
+  for (const grant of post.grants) byGrant[grant.id] = 0
   return {
-    byClass: Object.fromEntries(post.classes.map((cls) => [cls.id, 0])),
-    byGrant: Object.fromEntries(post.grants.map((grant) => [grant.id, 0])),
+    byClass,
+    byGrant,
     perCommonShareProceeds: 0,
     strikeCashPaid: 0,
-    pathTaken: Object.fromEntries(
-      post.classes.map((cls) => [cls.id, cls.kind === 'COMMON' ? 'COMMON' : 'PREFERENCE']),
-    ) as Payouts['pathTaken'],
+    pathTaken,
     warnings: [],
   }
 }
@@ -42,10 +144,11 @@ function settleDirect(
   converted: Set<string>,
 ): DirectSettlement {
   const result: DirectSettlement = { ...makeEmptyPayouts(post), exercised }
-  const preferred = preferredClasses(post)
+  const plan = settlementPlan(post)
+  const preferred = plan.preferred
   let remaining = distributable
 
-  for (const tier of [...new Set(preferred.map((cls) => cls.seniorityTier))]) {
+  for (const tier of plan.tiers) {
     const claimants = preferred.filter(
       (cls) => cls.seniorityTier === tier && !converted.has(cls.id),
     )
@@ -142,19 +245,51 @@ function settleDirect(
   return result
 }
 
-function compareAction(
-  post: CapTable,
-  distributable: number,
-  exercised: Set<string>,
-  converted: Set<string>,
-  cls: ShareClassPreferred,
-): boolean {
+/**
+ * `settleDirect` is a pure function of the conversion set once `post`, `distributable`, and
+ * `exercised` are fixed — which they are for the whole of one `directWithEquilibrium` call. The
+ * Gauss–Seidel passes and the enumeration fallback revisit the same sets many times over, so a
+ * per-call memo removes repeated work without changing a single computed value. Only settlements
+ * that stay inside the solver are served from it; every result that escapes is built fresh,
+ * because callers push warnings onto the object they receive.
+ */
+type Settle = (converted: Set<string>) => DirectSettlement
+
+/** Beyond this many preferred classes a bitmask key stops being an exact integer. */
+const MAX_MEMOIZED_CLASSES = 30
+
+function memoizedSettle(post: CapTable, distributable: number, exercised: Set<string>): Settle {
+  const { preferredIndex } = settlementPlan(post)
+  const cache = new Map<number, DirectSettlement>()
+  const memoizable = preferredIndex.size <= MAX_MEMOIZED_CLASSES
+  return (converted) => {
+    // A conversion set is always a subset of the preferred classes, so its members map onto
+    // fixed bit positions: an exact key with no string delimiter an id could itself contain,
+    // and no serialization cost in the hottest loop the engine has. Anything that would make
+    // the key inexact — too many classes, or an id outside the plan — skips the cache and
+    // settles directly, so a wrong key can never return a wrong settlement.
+    if (!memoizable) return settleDirect(post, distributable, exercised, converted)
+    let key = 0
+    for (const id of converted) {
+      const bit = preferredIndex.get(id)
+      if (bit === undefined) return settleDirect(post, distributable, exercised, converted)
+      key += 2 ** bit
+    }
+    const cached = cache.get(key)
+    if (cached !== undefined) return cached
+    const settled = settleDirect(post, distributable, exercised, converted)
+    cache.set(key, settled)
+    return settled
+  }
+}
+
+function compareAction(settle: Settle, converted: Set<string>, cls: ShareClassPreferred): boolean {
   const without = new Set(converted)
   without.delete(cls.id)
   const withConversion = new Set(converted)
   withConversion.add(cls.id)
-  const preferencePath = settleDirect(post, distributable, exercised, without).byClass[cls.id]
-  const convertedPath = settleDirect(post, distributable, exercised, withConversion).byClass[cls.id]
+  const preferencePath = settle(without).byClass[cls.id]
+  const convertedPath = settle(withConversion).byClass[cls.id]
   return convertedPath > preferencePath + EPS_DECISION
 }
 
@@ -164,6 +299,7 @@ function directWithEquilibrium(
   exercised: Set<string>,
   passLimit: number,
 ): DirectSettlement {
+  const settle = memoizedSettle(post, distributable, exercised)
   const preferred = preferredClasses(post)
   const converted = new Set<string>()
   const changedSnapshots: Set<string>[] = []
@@ -171,7 +307,7 @@ function directWithEquilibrium(
     let changed = false
     const changedThisPass = new Set<string>()
     for (const cls of preferred) {
-      const wantConversion = compareAction(post, distributable, exercised, converted, cls)
+      const wantConversion = compareAction(settle, converted, cls)
       if (wantConversion !== converted.has(cls.id)) {
         if (wantConversion) converted.add(cls.id)
         else converted.delete(cls.id)
@@ -199,7 +335,7 @@ function directWithEquilibrium(
     const chosen = assignment(candidate)
     return ids.every((id) => {
       const cls = preferred.find((entry) => entry.id === id)!
-      return compareAction(post, distributable, exercised, chosen, cls) === chosen.has(id)
+      return compareAction(settle, chosen, cls) === chosen.has(id)
     })
   }
   const lexicographic = (candidate: Set<string>) => [...candidate].sort().join('|')
@@ -220,17 +356,14 @@ function directWithEquilibrium(
     const chosen = assignment(candidate)
     return ids.reduce((sum, id) => {
       const cls = preferred.find((entry) => entry.id === id)!
-      const prefersConversion = compareAction(post, distributable, exercised, chosen, cls)
+      const prefersConversion = compareAction(settle, chosen, cls)
       const assignedConversion = chosen.has(id)
       if (prefersConversion === assignedConversion) return sum
-      const current = settleDirect(post, distributable, exercised, chosen).byClass[id]
+      const current = settle(chosen).byClass[id]
       const alternative = new Set(chosen)
       if (assignedConversion) alternative.delete(id)
       else alternative.add(id)
-      return (
-        sum +
-        Math.max(0, settleDirect(post, distributable, exercised, alternative).byClass[id] - current)
-      )
+      return sum + Math.max(0, settle(alternative).byClass[id] - current)
     }, 0)
   }
   const selected = candidates.sort(
@@ -281,92 +414,6 @@ function effectivePassLimit(options: SettlementDevOptions | undefined): number {
 }
 
 /** Deterministic exit settlement with prefix-based option exercise and conversion equilibrium. */
-
-/** Unit in the last place of a finite IEEE-754 number. */
-function unitInLastPlace(value: number): number {
-  if (!Number.isFinite(value) || value === 0) return Number.EPSILON
-  return 2 ** (Math.floor(Math.log2(Math.abs(value))) - 52)
-}
-
-/**
- * Fold a few-ULP conservation residue into the largest class after settlement.
- * Conversion, preference, cap and refusal already ran.
- */
-function classResidualHeadroom(
-  post: {
-    classes: Array<{
-      id: string
-      kind: string
-      participation?: string
-      invested?: number
-      participationCapMultiple?: number
-    }>
-  },
-  result: { byClass: Record<string, number>; pathTaken?: Record<string, string> },
-  id: string,
-): number {
-  const paid = result.byClass[id]
-  if (paid === undefined) return 0
-  const cls = post.classes.find((entry) => entry.id === id)
-  if (cls === undefined) return 0
-  if (cls.kind === 'COMMON' || result.pathTaken?.[id] === 'CONVERTED') {
-    return Number.POSITIVE_INFINITY
-  }
-  if (
-    cls.kind === 'PREFERRED' &&
-    cls.participation === 'CAPPED' &&
-    typeof cls.participationCapMultiple === 'number' &&
-    typeof cls.invested === 'number'
-  ) {
-    const cap = cls.participationCapMultiple * cls.invested
-    if (Number.isFinite(cap)) return Math.max(0, cap - paid)
-  }
-  return Number.POSITIVE_INFINITY
-}
-
-function absorbRoundingResidual(
-  result: {
-    byClass: Record<string, number>
-    byGrant: Record<string, number>
-    pathTaken?: Record<string, string>
-  },
-  exitValue: number,
-  total: number,
-  post: {
-    classes: Array<{
-      id: string
-      kind: string
-      participation?: string
-      invested?: number
-      participationCapMultiple?: number
-    }>
-  },
-): void {
-  const residual = exitValue - total
-  if (residual === 0) return
-  const bound = 8 * Math.max(unitInLastPlace(exitValue), unitInLastPlace(total), Number.EPSILON)
-  if (Math.abs(residual) > bound) return
-  const classIds = Object.keys(result.byClass)
-  const eligible = classIds.filter(
-    (id) => residual <= 0 || classResidualHeadroom(post, result, id) >= residual,
-  )
-  if (eligible.length > 0) {
-    let target = eligible[0]!
-    for (const id of eligible) {
-      if (Math.abs(result.byClass[id]!) > Math.abs(result.byClass[target]!)) target = id
-    }
-    result.byClass[target]! += residual
-    return
-  }
-  const grantIds = Object.keys(result.byGrant)
-  if (grantIds.length === 0) return
-  let target = grantIds[0]!
-  for (const id of grantIds) {
-    if (Math.abs(result.byGrant[id]!) > Math.abs(result.byGrant[target]!)) target = id
-  }
-  result.byGrant[target]! += residual
-}
-
 export function payoutsAt(
   post: CapTable,
   exitValue: number,
@@ -383,13 +430,19 @@ export function payoutsAt(
   }
   const orderedGroups = [...groups.entries()]
   let exercised = new Set<string>()
+  // `distribute` is deterministic in its arguments, so the settlement for the last accepted
+  // prefix is the settlement the final commit would recompute. Carry it forward instead: on a
+  // table whose grants are in the money this halves the equilibrium solves per settlement.
+  let accepted: DirectSettlement | null = null
   for (const [strike, ids] of orderedGroups) {
     const trial = new Set([...exercised, ...ids])
     const trialResult = distribute(post, exitValue, trial, passLimit)
-    if (strike < trialResult.perCommonShareProceeds - EPS_DECISION) exercised = trial
-    else break
+    if (strike < trialResult.perCommonShareProceeds - EPS_DECISION) {
+      exercised = trial
+      accepted = trialResult
+    } else break
   }
-  let result = distribute(post, exitValue, exercised, passLimit)
+  let result = accepted ?? distribute(post, exitValue, exercised, passLimit)
   if (!isConsistentOptionPrefix(post, result, exercised)) {
     for (let count = orderedGroups.length; count >= 0; count -= 1) {
       const candidate = new Set(orderedGroups.slice(0, count).flatMap(([, ids]) => ids))

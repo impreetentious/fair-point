@@ -46,11 +46,7 @@ interface TornadoBar {
 }
 
 export type TornadoHeadline =
-  | 'founderEv'
-  | 'investorEv'
-  | 'valueOnTable'
-  | 'nashFounderEv'
-  | 'nashInvestorEv'
+  'founderEv' | 'investorEv' | 'valueOnTable' | 'nashFounderEv' | 'nashInvestorEv'
 
 export interface BeliefTornado {
   headline: TornadoHeadline

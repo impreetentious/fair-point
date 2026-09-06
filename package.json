@@ -1,7 +1,7 @@
 {
   "name": "fairpoint",
   "private": true,
-  "version": "0.18.0",
+  "version": "0.18.1",
   "type": "module",
   "engines": {
     "node": "22.22.x"
@@ -28,46 +28,52 @@
     "check:csp": "node scripts/check-csp.mjs"
   },
   "dependencies": {
-    "next": "16.2.4",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
-    "recharts": "3.8.1",
+    "next": "16.3.3",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "recharts": "3.10.1",
     "zod": "3.24.2",
     "zustand": "5.0.3"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@playwright/test": "1.59.1",
+    "@playwright/test": "1.61.1",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "22.19.17",
-    "@types/react": "19.2.14",
+    "@types/node": "22.20.1",
+    "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "@typescript-eslint/eslint-plugin": "8.59.0",
-    "@typescript-eslint/parser": "8.59.0",
+    "@typescript-eslint/eslint-plugin": "8.65.0",
+    "@typescript-eslint/parser": "8.65.0",
     "chrome-launcher": "1.2.1",
-    "eslint": "10.2.1",
+    "eslint": "10.8.0",
     "fast-check": "4.0.0",
-    "globals": "17.5.0",
-    "js-yaml": "4.1.1",
-    "lighthouse": "13.1.0",
-    "prettier": "3.8.3",
+    "globals": "17.8.0",
+    "js-yaml": "4.3.2",
+    "lighthouse": "13.4.1",
+    "prettier": "3.9.5",
     "serve": "14.2.6",
     "typescript": "5.7.3",
-    "vitest": "3.2.4"
+    "vitest": "3.2.7"
   },
   "overrides": {
-    "postcss": "8.5.10",
-    "sharp": "0.34.5"
+    "postcss": "8.5.23",
+    "sharp": "0.35.4",
+    "next": {
+      "sharp": "0.35.4"
+    },
+    "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
+    "fast-uri@>=3.0.0 <3.1.6": "3.1.6",
+    "nanoid@<3.3.18": "3.3.18"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Sidakpreet Singh",
   "description": "Client-side term-sheet bargaining studio with deterministic waterfall and Pareto frontiers.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ItsMonarch04/fair-point.git"
+    "url": "git+https://github.com/impreetentious/fair-point.git"
   },
   "bugs": {
-    "url": "https://github.com/ItsMonarch04/fair-point/issues"
+    "url": "https://github.com/impreetentious/fair-point/issues"
   },
-  "homepage": "https://github.com/ItsMonarch04/fair-point"
+  "homepage": "https://github.com/impreetentious/fair-point"
 }

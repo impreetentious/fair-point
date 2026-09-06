@@ -3,9 +3,6 @@ import { analyze, enumerateDeals, evaluatePackage } from '../core/bargain'
 import { regimes } from '../core/breakpoints'
 import { accrueForExit } from '../core/accruals'
 import { constructRound } from '../core/round'
-import { exchangeRateTable } from '../core/exchange-rate'
-import { decomposeDisagreement } from '../core/contingent'
-import { defaultBranches, evaluateShadow } from '../core/next-round'
 import { CapTableSchema, RoundTermsSchema, type DealFile } from '../core/schema'
 import type { ScreenId } from './state/store'
 
@@ -65,57 +62,39 @@ export function screenReadiness(deal: DealFile): Record<ScreenId, Readiness> {
     beliefs = red(error instanceof Error ? error.message : 'Belief profiles failed to fit.')
   }
 
+  // The frontier dot proves the bargaining pipeline runs on this deal, not that all 585 grid
+  // cells do. Evaluating the whole grid here cost seconds on every edit and threw the answer
+  // away, while the Frontier screen recomputed it anyway and reports its own failures. So this
+  // enumerates the space (cheap — no settlement) and evaluates the offer actually on the table,
+  // which exercises the same construct -> accrue -> regimes -> expectation -> analyze path.
   let frontier: Readiness
   try {
-    const points = enumerateDeals(deal.space).map((pkg) =>
-      evaluatePackage(
-        deal.pre,
-        deal.safes,
-        pkg,
-        deal.founderBeliefs,
-        deal.investorBeliefs,
-        deal.risk,
-        deal.notes,
-        deal.discounting,
-        deal.yearsToExit,
-      ),
+    const packages = enumerateDeals(deal.space)
+    if (packages.length === 0) throw new Error('The deal space contains no valid package.')
+    const current = evaluatePackage(
+      deal.pre,
+      deal.safes,
+      { index: -1, terms: deal.terms },
+      deal.founderBeliefs,
+      deal.investorBeliefs,
+      deal.risk,
+      deal.notes,
+      deal.discounting,
+      deal.yearsToExit,
     )
-    analyze(points, deal.disagreement)
-    frontier = green('Frontier ready: ZOPA state is known.')
+    analyze([current], deal.disagreement)
+    frontier = green(`Frontier ready: ${packages.length} packages enumerated and the offer prices.`)
   } catch (error) {
     frontier = red(error instanceof Error ? error.message : 'Frontier analysis failed.')
   }
 
-  let leverage = red('Leverage waits for a frontier it can price against.')
-  if (frontier.state === 'green') {
-    const pkg = { index: 0, terms: deal.terms }
-    const common = {
-      pre: deal.pre,
-      safes: deal.safes,
-      founderBeliefs: deal.founderBeliefs,
-      investorBeliefs: deal.investorBeliefs,
-      risk: deal.risk,
-      notes: deal.notes,
-      discounting: deal.discounting,
-      yearsToExit: deal.yearsToExit,
-    }
-    try {
-      exchangeRateTable({ ...common, terms: deal.terms })
-      decomposeDisagreement({ ...common, pkg })
-      const postMoney = (deal.terms.preMoney ?? 0) + deal.terms.investment
-      const shadow = evaluateShadow({
-        ...common,
-        pkg,
-        branches: defaultBranches(deal.terms, postMoney),
-      })
-      leverage =
-        shadow.point === null
-          ? red('Leverage needs every default next-round branch to construct.')
-          : green('Leverage ready: term prices, disagreement split, and next-round shadow run.')
-    } catch (error) {
-      leverage = red(error instanceof Error ? error.message : 'Leverage analysis failed.')
-    }
-  }
+  // Same reasoning for Leverage: its four engines are the most expensive in the product, and
+  // each panel already catches its own failure and says so on screen. The dot reports whether
+  // the inputs those engines need are sound, which is what it can establish cheaply.
+  const leverage =
+    frontier.state === 'green'
+      ? green('Leverage ready: the round prices, so its term analyses have inputs to run on.')
+      : red('Leverage waits for a frontier it can price against.')
 
   const prior = [cap, round, waterfall, beliefs, frontier, leverage]
   const report = prior.every((item) => item.state === 'green')

@@ -1,3 +1,4 @@
+// Property-based: the bargaining invariants must hold for every generated deal, not a chosen few.
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import {

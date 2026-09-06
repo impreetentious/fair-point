@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
 
+// Unit scope: engine and state only. Browser behaviour belongs to the Playwright suite.
 export default defineConfig({
   esbuild: { jsx: 'automatic' },
   test: {

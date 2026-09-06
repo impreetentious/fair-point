@@ -1,7 +1,7 @@
 # Performance budgets
 
 Fairpoint keeps performance assertions executable instead of publishing machine-specific snapshots
-as permanent results.
+as permanent results. A number without its machine and workload is not a result.
 
 ## Runtime benchmarks
 

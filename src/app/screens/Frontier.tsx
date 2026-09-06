@@ -237,30 +237,19 @@ export function FrontierScreen() {
   const analysis = useFrontierAnalysis(deal)
   const mcInspector = useMemo(() => {
     if (analysis.current === null || deal.risk === null) return null
+    const { gamma, w0F, w0I } = deal.risk
     const round = constructRound(deal.pre, deal.safes, analysis.current.pkg.terms, deal.notes)
     const post = accrueForExit(round.post, deal.yearsToExit)
-    const founder = crraUtility(
-      post,
-      'FOUNDER',
-      deal.founderBeliefs,
-      deal.risk.gamma,
-      deal.risk.w0F,
-      MC_N,
-      MC_SEED,
-    )
-    const investor = crraUtility(
-      post,
-      'INVESTOR',
-      deal.investorBeliefs,
-      deal.risk.gamma,
-      deal.risk.w0I,
-      MC_N,
-      MC_SEED,
-    )
-    return {
-      founder: { ...founder, ce: presentValue(founder.ce, deal.discounting) },
-      investor: { ...investor, ce: presentValue(investor.ce, deal.discounting) },
-    }
+    const founder = crraUtility(post, 'FOUNDER', deal.founderBeliefs, gamma, w0F, MC_N, MC_SEED)
+    const investor = crraUtility(post, 'INVESTOR', deal.investorBeliefs, gamma, w0I, MC_N, MC_SEED)
+    // The simulation's standard error is in utility units. §6.8 propagates it onto the
+    // certainty equivalent with se_CE = se_U × (CE + w0)^γ before it is shown, so the
+    // badge quotes an error in the same dollars as the number it qualifies.
+    const propagate = (sample: { se: number; ce: number }, w0: number) => ({
+      ce: presentValue(sample.ce, deal.discounting),
+      seCe: presentValue(sample.se * Math.pow(sample.ce + w0, gamma), deal.discounting),
+    })
+    return { founder: propagate(founder, w0F), investor: propagate(investor, w0I) }
   }, [analysis.current, deal])
   if (
     analysis.error !== null ||
@@ -397,10 +386,10 @@ export function FrontierScreen() {
       </p>
       {deal.risk !== null && mcInspector !== null && (
         <p className="callout">
-          Monte Carlo ± SE · n {MC_N.toLocaleString()} · seed 0x{MC_SEED.toString(16)} · current
-          founder CE {dollars(mcInspector.founder.ce)} (SE {mcInspector.founder.se.toExponential(2)}
-          ) · investor CE {dollars(mcInspector.investor.ce)} (SE{' '}
-          {mcInspector.investor.se.toExponential(2)})
+          Monte Carlo inspector · n {MC_N.toLocaleString()} · seed 0x{MC_SEED.toString(16)} ·
+          current founder CE {dollars(mcInspector.founder.ce)} (±{' '}
+          {dollars(mcInspector.founder.seCe)} MC error) · investor CE{' '}
+          {dollars(mcInspector.investor.ce)} (± {dollars(mcInspector.investor.seCe)} MC error)
         </p>
       )}
       {!result.zopa ? (
@@ -523,12 +512,8 @@ export function FrontierScreen() {
                       </th>
                       {showCrossBeliefs && (
                         <>
-                          <th>
-                            <a href="#explainer-7">Founder under investor beliefs</a>
-                          </th>
-                          <th>
-                            <a href="#explainer-7">Investor under founder beliefs</a>
-                          </th>
+                          <th>Founder under investor beliefs</th>
+                          <th>Investor under founder beliefs</th>
                         </>
                       )}
                       <th>Frontier</th>

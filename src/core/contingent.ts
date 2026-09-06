@@ -33,8 +33,11 @@ import type {
  * construction: it pays in the region one side thinks is likely and the other does not, so it
  * costs the sceptic less than it is worth to the optimist. This module prices the canonical
  * one — a milestone ratchet that hands the founder back equity if the exit clears a stated
- * threshold — under each party's own beliefs, and reports whether it is a Pareto improvement
- * on the package it modifies.
+ * threshold — under each party's own beliefs, and reports whether it creates joint value:
+ * whether the founder's gain exceeds the investor's cost. On its own the ratchet is a
+ * transfer, so a positive figure means a Pareto improvement is *available* once the rest of
+ * the package pays the investor back somewhere between their cost and the founder's gain —
+ * it does not mean the bare ratchet leaves both sides better off.
  *
  * Bazerman & Gillespie, "Betting on the Future: The Virtues of Contingent Contracts" (HBR
  * 1999) is the argument; this is the arithmetic under it.
@@ -92,7 +95,11 @@ export interface ContingentQuote {
   investorCost: number
   /** Founder's gain minus investor's cost — positive means the bet creates value. */
   jointValue: number
-  /** True when both parties end up better off than under the flat package. */
+  /**
+   * True when `jointValue > 0`: the ratchet is worth more to the founder than it costs the
+   * investor, so a Pareto improvement exists once the investor is paid back out of that gap.
+   * The bare ratchet is still a transfer — it leaves the investor down `investorCost`.
+   */
   paretoImprovement: boolean
   /** Why it works, or why it does not. */
   verdict: string

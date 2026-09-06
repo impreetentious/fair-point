@@ -29,6 +29,16 @@ export function LeverageScreen() {
   const deal = useDealStore((state) => state.deal)
   const [headline, setHeadline] = useState<TornadoHeadline>('founderEv')
   const [ratchetPoints, setRatchetPoints] = useState(0.03)
+  // The tornado re-prices the whole deal space once per belief probe — seventeen passes over
+  // the grid, by a distance the most expensive thing the product can do. So it runs when it is
+  // asked for rather than on arrival, and the request is bound to the exact deal and read-out it
+  // was made for. Editing the deal or switching the read-out retires it and asks again, which is
+  // what keeps a dropdown from quietly starting the whole run a second time.
+  const [tornadoRequest, setTornadoRequest] = useState<{
+    deal: typeof deal
+    headline: TornadoHeadline
+  } | null>(null)
+  const tornadoRequested = tornadoRequest?.deal === deal && tornadoRequest?.headline === headline
 
   const pinned: TermPackage = useMemo(() => ({ index: 0, terms: deal.terms }), [deal.terms])
 
@@ -51,6 +61,7 @@ export function LeverageScreen() {
   }, [deal])
 
   const tornado = useMemo(() => {
+    if (!tornadoRequested) return null
     try {
       return beliefTornado(
         {
@@ -71,7 +82,7 @@ export function LeverageScreen() {
     } catch {
       return null
     }
-  }, [deal, headline, pinned])
+  }, [deal, headline, pinned, tornadoRequested])
 
   const contingent = useMemo(() => {
     const input = {
@@ -191,7 +202,22 @@ export function LeverageScreen() {
             ))}
           </select>
         </label>
-        {tornado === null ? (
+        {!tornadoRequested ? (
+          <>
+            <p className="panel-lede">
+              Ranking the beliefs re-prices the deal space once for each end of each belief, so it
+              is the slowest read-out here and it runs on request. The answer is the diligence
+              question worth asking first.
+            </p>
+            <button
+              type="button"
+              className="quiet-button"
+              onClick={() => setTornadoRequest({ deal, headline })}
+            >
+              Rank the beliefs
+            </button>
+          </>
+        ) : tornado === null ? (
           <p className="empty">The deal space does not analyse; fix it on Frontier first.</p>
         ) : (
           <>

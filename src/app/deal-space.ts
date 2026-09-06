@@ -19,7 +19,14 @@ export function deriveDealSpace(
       : (current?.preMoneyRange ?? [preMoney * 0.5, preMoney * 2]),
     preMoneySteps: pins.preMoney ? 1 : (current?.preMoneySteps ?? 9),
     pinnedInvestment,
-    pools: pins.pools ? [terms.poolTargetPost] : (current?.pools ?? DEFAULT_POOLS),
+    // A 0% pool target is a legal round term but not a legal deal-space pool, which
+    // must be a positive fraction. Fall back to the ladder rather than derive a space
+    // the deal schema rejects — the store would otherwise hold, and export, a deal
+    // that cannot be imported again.
+    pools:
+      pins.pools && terms.poolTargetPost > 0
+        ? [terms.poolTargetPost]
+        : (current?.pools ?? DEFAULT_POOLS),
     multiples: pins.multiples ? [terms.prefMultiple] : (current?.multiples ?? DEFAULT_MULTIPLES),
     participations: pins.participations
       ? [terms.participation]
