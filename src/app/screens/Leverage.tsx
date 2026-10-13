@@ -5,6 +5,7 @@ import { beliefTornado, tornadoSummary, type TornadoHeadline } from '../../core/
 import { bestContingentTerm, decomposeDisagreement, defaultThresholds } from '../../core/contingent'
 import { exchangeRateTable } from '../../core/exchange-rate'
 import { defaultBranches, evaluateShadow } from '../../core/next-round'
+import { asConvertedShares, constructRound } from '../../core/round'
 import { useDealStore } from '../state/store'
 import type { TermPackage } from '../../core/schema'
 
@@ -107,7 +108,13 @@ export function LeverageScreen() {
 
   const shadow = useMemo(() => {
     try {
-      const postMoney = (deal.terms.preMoney ?? 0) + deal.terms.investment
+      let postMoney: number
+      if (deal.terms.preMoney !== undefined) {
+        postMoney = deal.terms.preMoney + deal.terms.investment
+      } else {
+        const round = constructRound(deal.pre, deal.safes, deal.terms, deal.notes)
+        postMoney = round.diagnostics.pps * asConvertedShares(round.post)
+      }
       return evaluateShadow({
         pre: deal.pre,
         safes: deal.safes,

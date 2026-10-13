@@ -10,10 +10,10 @@ const pkg = JSON.parse(read('package.json'))
 const version = pkg.version
 const errors = []
 const EXPECTED = {
-  nvmrc: '22.22.2',
-  engines: '22.22.x',
+  nvmrc: '22.23.3',
+  engines: '22.23.x',
   workflow: '.github/workflows/verify.yml',
-  ciNode: '22.22.x',
+  ciNode: '22.23.x',
 }
 
 function markerVersion(file) {

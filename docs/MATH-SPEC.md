@@ -56,7 +56,7 @@ which yields
 shares_i             = f_i × (BaseCap + T_other) / (1 − s)
 ```
 
-_(This closed form generalizes the "pure post-money" case where `T_other = 0`: same denominator `1 − s`, base is `BaseCap + T_other` instead of `BaseCap`. Ownership identity holds exactly: `shares_i / (BaseCap + T_other + Σ_{cap-route} shares) = `f_i``.)\*
+_(This closed form generalizes the "pure post-money" case where `T_other = 0`: same denominator `1 − s`, base is `BaseCap + T_other` instead of `BaseCap`. Ownership identity holds exactly: `shares_i / (BaseCap + T_other + Σ_{cap-route} shares) = f_i`.)_
 
 #### 6.2.3 Global solve — routes, total SAFE shares `T`, pool increase `P`, PPS
 

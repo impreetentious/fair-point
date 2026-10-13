@@ -57,7 +57,7 @@ Next.js (App Router, static export) · TypeScript strict · React · Zustand · 
 
 ## Run locally
 
-Requires Node `22.22.x` (see `.nvmrc`; `engine-strict` makes `npm ci` fail on a different version).
+Requires Node `22.23.x` (see `.nvmrc`; `engine-strict` makes `npm ci` fail on a different version).
 
 ```bash
 npm ci
@@ -98,4 +98,4 @@ Apache-2.0 © 2024-2026 Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.18.1
+**Version:** v0.18.2
