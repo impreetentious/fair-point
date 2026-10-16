@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import { branchesForDeal, shadowForDeal } from '../../core/next-round'
 import {
   Area,
   AreaChart,
@@ -66,6 +68,17 @@ export function ReportScreen() {
   const exitValue = useDealStore((state) => state.exitValue)
   const waterfall = useWaterfallAnalysis(deal, exitValue)
   const frontier = useFrontierAnalysis(deal)
+  const shadow = useMemo(() => {
+    try {
+      return { branches: branchesForDeal(deal), result: shadowForDeal(deal), error: null }
+    } catch (error) {
+      return {
+        branches: deal.nextRoundBranches ?? [],
+        result: null,
+        error: error instanceof Error ? error.message : 'Follow-on calculation unavailable.',
+      }
+    }
+  }, [deal])
   const round = waterfall.round
   const settledPost = waterfall.settledPost
   const regimes = waterfall.postRegimes
@@ -122,6 +135,86 @@ export function ReportScreen() {
           </button>
         </div>
       </div>
+      <section>
+        <h3>Follow-On Assumptions</h3>
+        <p>
+          {deal.nextRoundBranches ? 'Saved assumptions' : 'Illustrative branches'}. The ordinary
+          frontier evaluates one round; this separate shadow weights follow-on outcomes. CRRA
+          combines weighted utilities before certainty equivalents.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>ID / Label</th>
+              <th>Probability / Pro-Rata</th>
+              <th>Exact Round Terms</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shadow.branches.map((branch) => (
+              <tr key={branch.id}>
+                <td>
+                  {branch.id} / {branch.label}
+                </td>
+                <td>
+                  {branch.probability} / {branch.proRata ? 'yes' : 'no'}
+                </td>
+                <td>{JSON.stringify(branch.terms)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {shadow.result ? (
+          <>
+            <p>
+              One round: founder {dollars(shadow.result.singleRound.uF)}, investor{' '}
+              {dollars(shadow.result.singleRound.uI)}. Branch weighted:{' '}
+              {shadow.result.point
+                ? `founder ${dollars(shadow.result.point.uF)}, investor ${dollars(shadow.result.point.uI)}`
+                : 'Unavailable until every named branch constructs.'}
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Branch / ID</th>
+                  <th>Accepted Weight</th>
+                  <th>Founder</th>
+                  <th>Investor</th>
+                  <th>Ownership Before / After</th>
+                  <th>Pro-Rata Investment</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shadow.result.branches.map((branch) => (
+                  <tr key={branch.branchId}>
+                    <th>
+                      {branch.label} / {branch.branchId}
+                    </th>
+                    <td>
+                      {shadow.branches.find((item) => item.id === branch.branchId)?.probability}
+                    </td>
+                    {branch.failed ? (
+                      <td colSpan={4}>Invalid: {branch.failed}</td>
+                    ) : (
+                      <>
+                        <td>{dollars(branch.founderValue)}</td>
+                        <td>{dollars(branch.investorValue)}</td>
+                        <td>
+                          {percent(branch.investorOwnershipBefore)} /{' '}
+                          {percent(branch.investorOwnershipAfter)}
+                        </td>
+                        <td>{dollars(branch.proRataInvestment)}</td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        ) : (
+          <p role="status">{shadow.error}</p>
+        )}
+      </section>
       <section>
         <h3>1. Deal summary header</h3>
         <p>

@@ -378,6 +378,37 @@ const RiskSchema = z
   })
   .strict()
 
+export const NextRoundBranchesSchema = z
+  .array(
+    z
+      .object({
+        id: z.string().refine((value) => value.trim().length > 0, 'Must not be empty'),
+        label: z.string().refine((value) => value.trim().length > 0, 'Must not be empty'),
+        probability: nonNegative,
+        terms: RoundTermsSchema,
+        proRata: z.boolean(),
+      })
+      .strict(),
+  )
+  .min(2)
+  .max(3)
+  .superRefine((branches, ctx) => {
+    if (new Set(branches.map((branch) => branch.id)).size !== branches.length)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Branch IDs must be unique.' })
+    if (Math.abs(branches.reduce((sum, branch) => sum + branch.probability, 0) - 1) > 1e-10)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Branch probabilities must sum to one.',
+      })
+    branches.forEach((branch, index) => {
+      if (!poolFeasible(branch.terms))
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index, 'terms'],
+          message: 'Branch pool target is infeasible.',
+        })
+    })
+  })
 const DealUiSchema = z
   .object({
     dealSpaceManual: z.boolean().default(false),
@@ -404,6 +435,7 @@ export type Discounting = z.output<typeof DiscountingSchema>
 
 const DealFileBaseSchema = z
   .object({
+    nextRoundBranches: NextRoundBranchesSchema.optional(),
     schemaVersion: z.literal('1.0.0'),
     name: z.string().min(1),
     pre: CapTableSchema,

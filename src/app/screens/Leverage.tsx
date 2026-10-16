@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { dollars, percent } from '../components/format'
 import { ExplainDrawer } from '../components/ExplainDrawer'
 import { beliefTornado, tornadoSummary, type TornadoHeadline } from '../../core/belief-tornado'
 import { bestContingentTerm, decomposeDisagreement, defaultThresholds } from '../../core/contingent'
 import { exchangeRateTable } from '../../core/exchange-rate'
-import { defaultBranches, evaluateShadow } from '../../core/next-round'
-import { asConvertedShares, constructRound } from '../../core/round'
+import { shadowForDeal } from '../../core/next-round'
+import { frontierIdentity } from '../workers/frontier-analysis'
+import { NextRoundBranches } from '../components/NextRoundBranches'
 import { useDealStore } from '../state/store'
 import type { TermPackage } from '../../core/schema'
 
@@ -28,6 +29,9 @@ function signed(value: number): string {
  */
 export function LeverageScreen() {
   const deal = useDealStore((state) => state.deal)
+  const [branchDirty, setBranchDirty] = useState(false)
+  const branchIdentity = frontierIdentity(deal) + JSON.stringify(deal.nextRoundBranches)
+  useEffect(() => setBranchDirty(false), [branchIdentity])
   const [headline, setHeadline] = useState<TornadoHeadline>('founderEv')
   const [ratchetPoints, setRatchetPoints] = useState(0.03)
   // The tornado re-prices the whole deal space once per belief probe — seventeen passes over
@@ -107,30 +111,13 @@ export function LeverageScreen() {
   }, [deal, pinned, ratchetPoints])
 
   const shadow = useMemo(() => {
+    if (branchDirty) return null
     try {
-      let postMoney: number
-      if (deal.terms.preMoney !== undefined) {
-        postMoney = deal.terms.preMoney + deal.terms.investment
-      } else {
-        const round = constructRound(deal.pre, deal.safes, deal.terms, deal.notes)
-        postMoney = round.diagnostics.pps * asConvertedShares(round.post)
-      }
-      return evaluateShadow({
-        pre: deal.pre,
-        safes: deal.safes,
-        pkg: pinned,
-        branches: defaultBranches(deal.terms, postMoney),
-        founderBeliefs: deal.founderBeliefs,
-        investorBeliefs: deal.investorBeliefs,
-        risk: deal.risk,
-        notes: deal.notes,
-        discounting: deal.discounting,
-        yearsToExit: deal.yearsToExit,
-      })
+      return shadowForDeal(deal)
     } catch {
       return null
     }
-  }, [deal, pinned])
+  }, [deal, branchDirty])
 
   return (
     <section className="screen" aria-labelledby="leverage-title">
@@ -328,11 +315,16 @@ export function LeverageScreen() {
         <p className="panel-lede">
           Several of the terms on this sheet are worth nothing in a one-round model — anti-dilution
           cannot bite unless a later round prices lower, and seniority has nothing to sit above.
-          These three branches put a next round behind today&rsquo;s, and the expected dollars below
-          are weighted across them.
+          These follow-on branches put a next round behind today&rsquo;s, and the expected dollars
+          below are weighted across them.
         </p>
+        <NextRoundBranches key={branchIdentity} deal={deal} onDirty={setBranchDirty} />
         {shadow === null ? (
-          <p className="empty">This round does not construct.</p>
+          <p className="empty">
+            {branchDirty
+              ? 'Follow-on assumptions changed. Save valid branches to recompute.'
+              : 'This round does not construct.'}
+          </p>
         ) : (
           <>
             <dl className="stat-grid">
@@ -374,7 +366,12 @@ export function LeverageScreen() {
                   {shadow.branches.map((branch) => (
                     <tr key={branch.branchId}>
                       <th scope="row">{branch.label}</th>
-                      <td>{percent(branch.probability)}</td>
+                      <td>
+                        {percent(
+                          deal.nextRoundBranches?.find((item) => item.id === branch.branchId)
+                            ?.probability ?? branch.probability,
+                        )}
+                      </td>
                       {branch.failed === null ? (
                         <>
                           <td>{dollars(branch.founderValue)}</td>

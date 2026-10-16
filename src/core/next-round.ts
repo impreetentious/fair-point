@@ -10,6 +10,7 @@ import {
   type CapTable,
   type ConvertibleNote,
   type DealPoint,
+  type DealFile,
   type Discounting,
   type RoundTerms,
   type Safe,
@@ -431,4 +432,31 @@ export function defaultBranches(terms: RoundTerms, postMoney: number): NextRound
     branch('flat', 'Flat round', 0.35, 1, true),
     branch('down', 'Down round at 0.6×', 0.2, 0.6, false),
   ]
+}
+
+/** The absent configuration retains the established illustrative financing assumptions. */
+export function branchesForDeal(deal: DealFile): NextRoundBranch[] {
+  if (deal.nextRoundBranches) return deal.nextRoundBranches
+  const round =
+    deal.terms.preMoney === undefined
+      ? constructRound(deal.pre, deal.safes, deal.terms, deal.notes)
+      : null
+  const postMoney = round
+    ? round.diagnostics.pps * asConvertedShares(round.post)
+    : deal.terms.preMoney! + deal.terms.investment
+  return defaultBranches(deal.terms, postMoney)
+}
+export function shadowForDeal(deal: DealFile): ShadowResult {
+  return evaluateShadow({
+    pre: deal.pre,
+    safes: deal.safes,
+    pkg: { index: 0, terms: deal.terms },
+    branches: branchesForDeal(deal),
+    founderBeliefs: deal.founderBeliefs,
+    investorBeliefs: deal.investorBeliefs,
+    risk: deal.risk,
+    notes: deal.notes,
+    discounting: deal.discounting,
+    yearsToExit: deal.yearsToExit,
+  })
 }

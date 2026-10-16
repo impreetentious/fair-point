@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { analyze, enumerateDeals, evaluatePackage, valueOnTable } from '../src/core/bargain'
 import { beliefTornado, tornadoSummary } from '../src/core/belief-tornado'
 import {
@@ -535,5 +535,102 @@ describe('next-round shadow', () => {
       branches: branches.map((branch) => ({ ...branch, probability: 0 })),
     })
     expect(zero.point).toBeNull()
+  })
+})
+
+import * as outcomes from '../src/core/outcomes'
+import * as mc from '../src/core/mc'
+
+describe('hand-derived branch aggregation boundaries', () => {
+  const terms = {
+    ...deal.terms,
+    poolTargetPost: 0,
+    participation: 'NONE' as const,
+    prefMultiple: 1 as const,
+  }
+  const branches = [
+    {
+      id: 'low',
+      label: 'Low',
+      probability: 0.25,
+      proRata: false,
+      terms: { ...terms, investment: 100 },
+    },
+    {
+      id: 'high',
+      label: 'High',
+      probability: 0.75,
+      proRata: false,
+      terms: { ...terms, investment: 300 },
+    },
+  ]
+  const input = {
+    pre: deal.pre,
+    safes: deal.safes,
+    pkg: pinned,
+    branches,
+    founderBeliefs: deal.founderBeliefs,
+    investorBeliefs: deal.investorBeliefs,
+  }
+  it('weights independently specified branch values 100 and 300 to 250', () => {
+    // Isolate weighting from waterfall evaluation with stipulated, hand-chosen outcomes.
+    const spy = vi.spyOn(outcomes, 'expectedPayouts').mockImplementation((post) => {
+      const value = post.classes.find(
+        (cls) => cls.id === 'next-round' && cls.kind === 'PREFERRED' && cls.invested === 100,
+      )
+        ? 100
+        : 300
+      return { ev: {}, party: { founder: value, investor: value, other: 0 } }
+    })
+    try {
+      const result = evaluateShadow(input)
+      expect(result.branches.map((branch) => branch.founderValue)).toEqual([100, 300])
+      expect(result.point?.uF).toBe(250)
+      const same = evaluateShadow({
+        ...input,
+        branches: branches.map((branch) => ({ ...branch, terms: branches[0]!.terms })),
+      })
+      expect(same.point?.uF).toBe(100)
+      const zero = evaluateShadow({
+        ...input,
+        branches: [...branches, { ...branches[0]!, id: 'zero', probability: 0 }],
+      })
+      expect(zero.branches).toHaveLength(3)
+      expect(zero.point?.uF).toBe(250)
+      const failed = evaluateShadow({
+        ...input,
+        branches: [
+          ...branches,
+          {
+            ...branches[0]!,
+            id: 'invalid-zero',
+            probability: 0,
+            terms: { ...terms, preMoney: 1, poolTargetPost: 0.4 },
+          },
+        ],
+      })
+      expect(failed.point).toBeNull()
+      expect(failed.branches[2]?.failed).not.toBeNull()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+  it('converts the weighted utility golden rather than averaging certainty equivalents', () => {
+    // gamma=1,w0=100: exp(.25 ln(200)+.75 ln(400))-100 = 400/2^.25-100.
+    const spy = vi.spyOn(mc, 'crraQuadrature').mockImplementation((post) => {
+      const ce = post.classes.find(
+        (cls) => cls.id === 'next-round' && cls.kind === 'PREFERRED' && cls.invested === 100,
+      )
+        ? 100
+        : 300
+      return { u: Math.log(ce + 100), ce }
+    })
+    try {
+      const result = evaluateShadow({ ...input, risk: { gamma: 1, w0F: 100, w0I: 100 } })
+      expect(result.point?.uF).toBeCloseTo(400 / Math.pow(2, 0.25) - 100, 10)
+      expect(result.point?.uF).not.toBe(250)
+    } finally {
+      spy.mockRestore()
+    }
   })
 })
