@@ -1,10 +1,4 @@
-import { useMemo } from 'react'
-import {
-  analyze,
-  enumerateDealsWithReasons,
-  evaluatePackage,
-  valueOnTable,
-} from '../../core/bargain'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { regimes } from '../../core/breakpoints'
 import { accrueForExit } from '../../core/accruals'
 import { payoutsAt } from '../../core/waterfall'
@@ -50,53 +44,75 @@ export function useWaterfallAnalysis(deal: DealFile, exitValue: number) {
 }
 
 export function useFrontierAnalysis(deal: DealFile) {
-  return useMemo(() => {
-    const start = performance.now()
-    try {
-      const enumeration = enumerateDealsWithReasons(deal.space)
-      const packages = enumeration.packages
-      const points = packages.map((pkg) =>
-        evaluatePackage(
-          deal.pre,
-          deal.safes,
-          pkg,
-          deal.founderBeliefs,
-          deal.investorBeliefs,
-          deal.risk,
-          deal.notes,
-          deal.discounting,
-          deal.yearsToExit,
-        ),
-      )
-      const result = analyze(points, deal.disagreement)
-      const current = evaluatePackage(
-        deal.pre,
-        deal.safes,
-        { index: -1, terms: deal.terms },
-        deal.founderBeliefs,
-        deal.investorBeliefs,
-        deal.risk,
-        deal.notes,
-        deal.discounting,
-        deal.yearsToExit,
-      )
-      return {
-        result,
-        current,
-        value: valueOnTable(result, current),
-        skipped: enumeration.skipped,
-        elapsed: performance.now() - start,
-        error: null as string | null,
-      }
-    } catch (error) {
-      return {
-        result: null,
-        current: null,
-        value: null,
-        skipped: [],
-        elapsed: performance.now() - start,
-        error: error instanceof Error ? error.message : 'Frontier analysis failed',
-      }
-    }
+  const identity = frontierIdentity(deal)
+  const generation = useRef(0)
+  const owner = useRef<(() => void) | null>(null)
+  const snapshot = useRef(deal)
+  useEffect(() => {
+    snapshot.current = deal
   }, [deal])
+  const [attempt, setAttempt] = useState(0)
+  const [state, setState] = useState<{
+    identity: string
+    status: 'computing' | 'cancelled' | 'error' | 'ready'
+    data: FrontierComputation | null
+    error: string | null
+  }>({ identity: '', status: 'computing', data: null, error: null })
+  useEffect(() => {
+    const token = ++generation.current
+    setState({ identity, status: 'computing', data: null, error: null })
+    const close = startFrontierRequest(
+      snapshot.current,
+      identity,
+      token,
+      (data) => {
+        if (generation.current !== token) return
+        owner.current = null
+        setState({ identity, status: data.error ? 'error' : 'ready', data, error: data.error })
+      },
+      (error) => {
+        if (generation.current !== token) return
+        owner.current = null
+        setState({ identity, status: 'error', data: null, error })
+      },
+      () => {
+        if (typeof Worker === 'undefined')
+          throw new Error(
+            'Frontier computation unavailable: this browser does not support Workers.',
+          )
+        return new Worker(new URL('../workers/frontier.worker.ts', import.meta.url), {
+          type: 'module',
+        })
+      },
+    )
+    owner.current = close
+    return () => {
+      generation.current++
+      close()
+      if (owner.current === close) owner.current = null
+    }
+  }, [identity, attempt])
+  const current = state.identity === identity ? state : null
+  return {
+    result: current?.data?.result ?? null,
+    current: current?.data?.current ?? null,
+    value: current?.data?.value ?? null,
+    skipped: current?.data?.skipped ?? [],
+    elapsed: current?.data?.elapsed ?? 0,
+    mcInspector: current?.data?.mcInspector ?? null,
+    error: current?.error ?? null,
+    status: current?.status ?? 'computing',
+    identity,
+    cancel: () => {
+      generation.current++
+      owner.current?.()
+      owner.current = null
+      setState({ identity, status: 'cancelled', data: null, error: null })
+    },
+    retry: () => setAttempt((value) => value + 1),
+  }
 }
+
+import { frontierIdentity, type FrontierComputation } from '../workers/frontier-analysis'
+
+import { startFrontierRequest } from '../workers/frontier-client'

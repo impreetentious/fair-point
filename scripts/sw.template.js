@@ -25,16 +25,28 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+// Cached response URLs omit fragments. A fresh response preserves the requested
+// worker URL, whose fragment carries the bundled worker's bootstrap parameters.
+function workerResponse(request, response) {
+  return request.destination === 'worker'
+    ? new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      })
+    : response
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin)
     return
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      if (cached !== undefined) return cached
+      if (cached !== undefined) return workerResponse(event.request, cached)
       return fetch(event.request).then((response) => {
         if (response.ok)
           void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()))
-        return response
+        return workerResponse(event.request, response)
       })
     }),
   )

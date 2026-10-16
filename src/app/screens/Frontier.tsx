@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   CartesianGrid,
   ComposedChart,
@@ -19,7 +19,6 @@ import { deriveDealSpace } from '../deal-space'
 import { constructRound } from '../../core/round'
 import { accrueForExit } from '../../core/accruals'
 import { presentValue } from '../../core/discounting'
-import { crraUtility } from '../../core/mc'
 import { payoutQuantile } from '../../core/outcomes'
 import { useFrontierAnalysis } from '../hooks/useAnalysis'
 import { useDealStore } from '../state/store'
@@ -34,8 +33,6 @@ const solutionSpecs = [
   ['egalitarian', 'Egalitarian ▲', '#009E73'] as const,
   ['utilitarian', 'Utilitarian ■', '#CC79A7'] as const,
 ]
-const MC_N = 100_000
-const MC_SEED = 0xc0ffee
 
 function termLine(point: DealPoint): string {
   return `${dollars(point.pkg.terms.preMoney ?? 0)} pre · ${percent(point.pkg.terms.poolTargetPost)} pool · ${point.pkg.terms.prefMultiple}x · ${point.pkg.terms.participation}`
@@ -235,22 +232,7 @@ export function FrontierScreen() {
   const compare = useDealStore((state) => state.compare)
   const [sort, setSort] = useState<'index' | 'uF' | 'uI' | 'pps'>('index')
   const analysis = useFrontierAnalysis(deal)
-  const mcInspector = useMemo(() => {
-    if (analysis.current === null || deal.risk === null) return null
-    const { gamma, w0F, w0I } = deal.risk
-    const round = constructRound(deal.pre, deal.safes, analysis.current.pkg.terms, deal.notes)
-    const post = accrueForExit(round.post, deal.yearsToExit)
-    const founder = crraUtility(post, 'FOUNDER', deal.founderBeliefs, gamma, w0F, MC_N, MC_SEED)
-    const investor = crraUtility(post, 'INVESTOR', deal.investorBeliefs, gamma, w0I, MC_N, MC_SEED)
-    // The simulation's standard error is in utility units. §6.8 propagates it onto the
-    // certainty equivalent with se_CE = se_U × (CE + w0)^γ before it is shown, so the
-    // badge quotes an error in the same dollars as the number it qualifies.
-    const propagate = (sample: { se: number; ce: number }, w0: number) => ({
-      ce: presentValue(sample.ce, deal.discounting),
-      seCe: presentValue(sample.se * Math.pow(sample.ce + w0, gamma), deal.discounting),
-    })
-    return { founder: propagate(founder, w0F), investor: propagate(investor, w0I) }
-  }, [analysis.current, deal])
+  const mcInspector = analysis.mcInspector
   if (
     analysis.error !== null ||
     analysis.result === null ||
@@ -260,7 +242,22 @@ export function FrontierScreen() {
     return (
       <section className="main-panel">
         <h2>Frontier</h2>
-        <p className="validation invalid">{analysis.error}</p>
+        <SpaceEditor space={deal.space} />
+        <p role="status">
+          {analysis.error ??
+            (analysis.status === 'cancelled'
+              ? 'Frontier computation cancelled.'
+              : 'Computing frontier. You can continue editing the deal space.')}
+        </p>
+        {analysis.status === 'computing' ? (
+          <button type="button" onClick={analysis.cancel}>
+            Cancel computation
+          </button>
+        ) : (
+          <button type="button" onClick={analysis.retry}>
+            Retry computation
+          </button>
+        )}
       </section>
     )
   }
@@ -630,3 +627,5 @@ export function FrontierScreen() {
     </section>
   )
 }
+
+import { MC_N, MC_SEED } from '../workers/frontier-analysis'

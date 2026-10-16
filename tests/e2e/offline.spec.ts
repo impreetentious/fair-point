@@ -32,6 +32,8 @@ async function assertAllScreens(page: Page): Promise<void> {
       .locator(`[data-screen="${screen.id}"]`)
       .click()
     await expect(page.getByRole('heading', { level: 2, name: screen.heading })).toBeVisible()
+    if (screen.id === 'frontier')
+      await expect(page.getByRole('button', { name: 'View as table' })).toBeVisible()
   }
 }
 

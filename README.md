@@ -2,17 +2,17 @@
 
 **The term-sheet bargaining studio.** Deterministic liquidation-waterfall physics with real Pareto frontiers. Your cap table never leaves your browser.
 
-## What it is
+## What it Is
 
 Model any priced venture round with a deterministic cap-table and liquidation-waterfall engine, then negotiate it as a formal two-party bargain: ZOPA, Pareto frontier, Nash and Kalai–Smorodinsky fair points and dollar-denominated "value left on the table" — computed entirely client-side from each party's own beliefs about exit outcomes.
 
-## The problem
+## The Problem
 
 Founders negotiate term sheets by anchoring on headline valuation, while the economic terms that actually move outcome distributions — preference multiple, participation, pool shuffle, seniority, anti-dilution — are traded by folklore. Investors run this playbook weekly; founders run it twice per decade. The result is systematically inefficient deals: packages exist that both parties would prefer and nobody can see them, because nobody computes utilities. The cost is real dollars transferred by ignorance and deals that die over terms a frontier plot would show are cheap to concede.
 
 This product closes the gap with one structural insight: **a term package plus each party's exit-value beliefs yields per-stakeholder dollar distributions through deterministic settlement and analytic integration.** Utilities are computed, not elicited with sliders — which makes the Pareto frontier real rather than decorative.
 
-## What it does
+## What it DOES
 
 1. **See the physics.** Load a deal, drag the exit slider and watch the waterfall chart kink at deterministic, labeled breakpoints: "Series A converts above $21.3M."
 2. **See the frontier.** Enter both parties' beliefs (P10/P50/P90 plus a failure probability) and hundreds of candidate term packages appear as a cloud in (founder EV, investor EV) space — the Pareto frontier lit up, Nash and Kalai–Smorodinsky (discrete) fair points flagged.
@@ -20,7 +20,7 @@ This product closes the gap with one structural insight: **a term package plus e
 4. **See what to say about it.** The frontier answers _which package_; the Leverage screen answers what you say in the room. Every term is priced one step at a time in expected dollars for both sides, with the pre-money that would undo each concession solved for and checked. A tornado ranks the four exit beliefs by how far each one alone moves the answer, so you know which diligence question is worth asking first. And where the two sides disagree about the exit, the disagreement is priced as tradeable material: a milestone ratchet pays in the states one side believes in and the other does not, so it can be worth more to you than it costs them.
 5. **See past this round.** Several of the terms on a sheet are worth exactly nothing in a one-round model — anti-dilution cannot bite unless a later round prices lower, seniority has nothing to sit above. Attach two or three discrete follow-on branches and those terms acquire a price, with today's investor's dilution and pro-rata election shown branch by branch. The frontier and fair-point machinery run unchanged on the branch-weighted numbers.
 
-## Who it's for
+## Who it's FOR
 
 1. **Founders** with a live or imminent term sheet (seed → Series B). The primary user.
 2. **Angels and VC associates** pressure-testing packages and explaining terms to founders.
@@ -34,7 +34,7 @@ This product closes the gap with one structural insight: **a term package plus e
 - **Local-first, private by construction.** A static site with no application server, no accounts, no telemetry and no off-origin requests in the product code. A cap table is among the most sensitive documents a founder has; it never leaves the browser.
 - **Educational, not advisory.** The app names packages both parties' _stated beliefs_ prefer. It never says "you should accept." It is an educational instrument — not legal, financial, or investment advice.
 
-## What's included
+## What's Included
 
 - A deterministic engine: round construction (pool shuffle, SAFE conversion, anti-dilution), liquidation waterfall with conversion equilibria, numerically recovered breakpoints, analytic expected payouts and the bargaining layer (ZOPA, frontier, Nash, Kalai–Smorodinsky, egalitarian, utilitarian, value-on-table).
 - Core and deal-file extensions beyond the two-party screen flow: multi-party syndicate bargaining, employee-offer analysis, dividends and accruals, convertible notes, secondaries, 409A fair value, IRR/time-discounting, MFN clauses and warrants.
@@ -55,7 +55,7 @@ This product closes the gap with one structural insight: **a term package plus e
 
 Next.js (App Router, static export) · TypeScript strict · React · Zustand · Recharts · Zod · Vitest · fast-check.
 
-## Run locally
+## Run Locally
 
 Requires Node `22.23.x` (see `.nvmrc`; `engine-strict` makes `npm ci` fail on a different version).
 
@@ -75,7 +75,7 @@ npm run build  # static export and service worker
 npm run gates  # bundle/CSP budgets, Playwright, offline contract, Lighthouse accessibility
 ```
 
-## Build and deploy
+## Build and Deploy
 
 ```bash
 npm run build      # static export to out/, plus the service worker
@@ -98,4 +98,4 @@ Apache-2.0 © 2024-2026 Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.18.2
+**Version:** v0.18.3
