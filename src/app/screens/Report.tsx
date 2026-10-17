@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { branchesForDeal, shadowForDeal } from '../../core/next-round'
+import { flushSync } from 'react-dom'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -18,6 +18,8 @@ import { PRODUCT_NAME, PRODUCT_SLUG } from '../branding'
 import { ChartFrame } from '../components/ChartFrame'
 import { dollars, percent, shares } from '../components/format'
 import { AllExplainers, ExplainDrawer } from '../components/ExplainDrawer'
+import { branchesForDeal, shadowForDeal } from '../../core/next-round'
+import { roundTermsIdentity } from '../../core/schema'
 import { payoutsAt } from '../../core/waterfall'
 import { useFrontierAnalysis, useWaterfallAnalysis } from '../hooks/useAnalysis'
 import { useDealStore } from '../state/store'
@@ -64,10 +66,31 @@ function exportDeal(deal: ReturnType<typeof useDealStore.getState>['deal']) {
 }
 
 export function ReportScreen() {
-  const deal = useDealStore((state) => state.deal)
-  const exitValue = useDealStore((state) => state.exitValue)
+  const liveDeal = useDealStore((state) => state.deal)
+  const liveExit = useDealStore((state) => state.exitValue)
+  const [printSnapshot, setPrintSnapshot] = useState<
+    ReturnType<typeof useDealStore.getState>['deal'] | null
+  >(null)
+  const deal = printSnapshot ?? liveDeal
+  const exitValue = printSnapshot?.ui.reportView?.exitValue ?? liveExit
+  useEffect(() => {
+    const capture = () =>
+      flushSync(() => setPrintSnapshot(useDealStore.getState().exportSnapshot()))
+    const release = () => setPrintSnapshot(null)
+    window.addEventListener('beforeprint', capture)
+    window.addEventListener('afterprint', release)
+    return () => {
+      window.removeEventListener('beforeprint', capture)
+      window.removeEventListener('afterprint', release)
+    }
+  }, [])
   const waterfall = useWaterfallAnalysis(deal, exitValue)
   const frontier = useFrontierAnalysis(deal)
+  const capturedView = { exitValue, comparisons: deal.ui.reportView?.comparisons ?? [] }
+  useEffect(() => {
+    if (frontier.result)
+      useDealStore.getState().resolveComparisons(frontier.result.points, frontier.identity)
+  }, [frontier.result, frontier.identity])
   const shadow = useMemo(() => {
     try {
       return { branches: branchesForDeal(deal), result: shadowForDeal(deal), error: null }
@@ -127,14 +150,54 @@ export function ReportScreen() {
         </div>
         <div className="header-actions">
           <ExplainDrawer screen="report" />
-          <button type="button" className="quiet-button" onClick={() => window.print()}>
+          <button
+            type="button"
+            className="quiet-button"
+            onClick={() => {
+              flushSync(() => setPrintSnapshot(useDealStore.getState().exportSnapshot()))
+              window.print()
+            }}
+          >
             Print
           </button>
-          <button type="button" className="quiet-button" onClick={() => exportDeal(deal)}>
+          <button
+            type="button"
+            className="quiet-button"
+            onClick={() => exportDeal(printSnapshot ?? useDealStore.getState().exportSnapshot())}
+          >
             Export deal JSON
           </button>
         </div>
       </div>
+      <section>
+        <h3>Selected Evidence View</h3>
+        <p>
+          Exit value: {dollars(capturedView.exitValue)}. The waterfall below uses this captured
+          exit.
+        </p>
+        {frontier.result === null ? (
+          <p role="status">
+            {frontier.error ??
+              'Frontier evidence is computing. Saved comparisons remain unavailable until it completes.'}
+          </p>
+        ) : (
+          capturedView.comparisons.map((terms) => {
+            const point = frontier.result!.points.find(
+              (item) => roundTermsIdentity(item.pkg.terms) === roundTermsIdentity(terms),
+            )
+            return (
+              <div key={roundTermsIdentity(terms)}>
+                <p>{JSON.stringify(terms)}</p>
+                <p>
+                  {point
+                    ? `Package #${point.pkg.index}: founder ${dollars(point.uF)}, investor ${dollars(point.uI)}`
+                    : 'Unavailable in the recomputed deal space; no replacement selected.'}
+                </p>
+              </div>
+            )
+          })
+        )}
+      </section>
       <section>
         <h3>Follow-On Assumptions</h3>
         <p>

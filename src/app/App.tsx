@@ -61,7 +61,9 @@ export function App() {
     return () => window.clearTimeout(timeout)
   }, [deal])
   const exportDeal = () => {
-    const blob = new Blob([JSON.stringify(deal, null, 2)], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify(useDealStore.getState().exportSnapshot(), null, 2)], {
+      type: 'application/json',
+    })
     const href = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = href

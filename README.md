@@ -98,4 +98,4 @@ Apache-2.0 © 2024-2026 Sidakpreet Singh — see [LICENSE](LICENSE).
 
 _Fairpoint is an educational instrument. It is not legal, financial, or investment advice._
 
-**Version:** v0.18.4
+**Version:** v0.18.5

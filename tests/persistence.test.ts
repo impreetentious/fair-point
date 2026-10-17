@@ -63,3 +63,105 @@ describe('explainers', () => {
     ).toBe(true)
   })
 })
+
+import { enumerateDealsWithReasons } from '../src/core/bargain'
+import { frontierIdentity } from '../src/app/workers/frontier-analysis'
+import { NextRoundBranchesSchema } from '../src/core/schema'
+import { branchesForDeal } from '../src/core/next-round'
+import { constructRound } from '../src/core/round'
+import { payoutsAt } from '../src/core/waterfall'
+
+describe('saved report evidence and branches', () => {
+  it('restores zero/nondefault exit and exact comparison terms after export/import', () => {
+    useDealStore.getState().replaceDeal(seriesAClean, 'import')
+    const deal = useDealStore.getState().deal
+    const packages = enumerateDealsWithReasons(deal.space).packages
+    useDealStore.getState().setExitValue(3_000_000)
+    useDealStore
+      .getState()
+      .toggleCompare(packages[0]!.index, packages[0]!.terms, frontierIdentity(deal))
+    useDealStore
+      .getState()
+      .toggleCompare(packages[1]!.index, packages[1]!.terms, frontierIdentity(deal))
+    const exported = useDealStore.getState().exportSnapshot()
+    useDealStore.getState().replaceDeal(seedWithSafes, 'example')
+    expect(
+      useDealStore.getState().replaceDeal(JSON.parse(JSON.stringify(exported)), 'import'),
+    ).toBe(true)
+    expect(useDealStore.getState().exitValue).toBe(3_000_000)
+    expect(useDealStore.getState().deal.ui.reportView?.comparisons).toEqual([
+      packages[0]!.terms,
+      packages[1]!.terms,
+    ])
+    // At $3m the new investor's $5m preference exhausts the exit; common receives zero.
+    expect(
+      payoutsAt(constructRound(exported.pre, exported.safes, exported.terms).post, 3_000_000)
+        .byClass,
+    ).toMatchObject({ common: 0, 'new-round': 3_000_000 })
+    useDealStore.getState().setExitValue(0)
+    expect(
+      DealFileSchema.parse(useDealStore.getState().exportSnapshot()).ui.reportView?.exitValue,
+    ).toBe(0)
+  })
+  it('rejects malformed views atomically and retains the legacy exit', () => {
+    const baseline = useDealStore.getState().exportSnapshot()
+    for (const view of [
+      { exitValue: NaN, comparisons: [] },
+      { exitValue: Infinity, comparisons: [] },
+      { exitValue: -1, comparisons: [] },
+      { exitValue: 0, comparisons: Array(4).fill(baseline.terms) },
+      { exitValue: 0, comparisons: [baseline.terms, baseline.terms] },
+    ]) {
+      expect(
+        useDealStore
+          .getState()
+          .replaceDeal({ ...baseline, ui: { ...baseline.ui, reportView: view } }, 'import'),
+      ).toBe(false)
+      expect(useDealStore.getState().deal).toEqual(baseline)
+    }
+    useDealStore.getState().setExitValue(123)
+    expect(useDealStore.getState().replaceDeal(seriesAClean, 'import')).toBe(true)
+    expect(useDealStore.getState().exitValue).toBe(123)
+    expect(useDealStore.getState().compare).toEqual([])
+  })
+  it('discloses absent terms without selecting a nearby point and clears terms on mathematical edits', () => {
+    const state = useDealStore.getState()
+    state.toggleCompare(0, { ...state.deal.terms, preMoney: 12345 }, frontierIdentity(state.deal))
+    useDealStore.getState().resolveComparisons([], frontierIdentity(useDealStore.getState().deal))
+    expect(useDealStore.getState().compare).toEqual([])
+    expect(useDealStore.getState().unavailableComparisons).toBe(1)
+    useDealStore.getState().setTerms({ ...state.deal.terms, preMoney: 21_000_000 })
+    expect(useDealStore.getState().deal.ui.reportView?.comparisons).toEqual([])
+  })
+  it('roundtrips nondefault branches with stable IDs and rejects malformed drafts', () => {
+    const deal = DealFileSchema.parse(seriesAClean)
+    const branches = branchesForDeal(deal)
+      .slice(0, 2)
+      .map((branch, index) => ({
+        ...branch,
+        probability: index === 0 ? 0.25 : 0.75,
+        label: index === 0 ? 'Actual down round' : 'Actual up round',
+        proRata: index === 0,
+      }))
+    const saved = DealFileSchema.parse({ ...deal, nextRoundBranches: branches })
+    expect(DealFileSchema.parse(JSON.parse(JSON.stringify(saved))).nextRoundBranches).toEqual(
+      branches,
+    )
+    expect(branchesForDeal(deal)).toHaveLength(3)
+    for (const bad of [
+      branches.slice(0, 1),
+      [...branches, branches[0], branches[1]],
+      branches.map((branch) => ({ ...branch, probability: 0.2 })),
+      branches.map((branch) => ({ ...branch, id: 'same' })),
+      branches.map((branch) => ({ ...branch, probability: NaN })),
+      branches.map((branch) => ({ ...branch, probability: -1 })),
+    ])
+      expect(NextRoundBranchesSchema.safeParse(bad).success).toBe(false)
+    expect(
+      NextRoundBranchesSchema.safeParse([
+        ...branches,
+        { ...branches[0]!, id: 'zero', probability: 0 },
+      ]).success,
+    ).toBe(true)
+  })
+})

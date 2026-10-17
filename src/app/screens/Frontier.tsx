@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   CartesianGrid,
   ComposedChart,
@@ -232,6 +232,10 @@ export function FrontierScreen() {
   const compare = useDealStore((state) => state.compare)
   const [sort, setSort] = useState<'index' | 'uF' | 'uI' | 'pps'>('index')
   const analysis = useFrontierAnalysis(deal)
+  useEffect(() => {
+    if (analysis.result)
+      useDealStore.getState().resolveComparisons(analysis.result.points, analysis.identity)
+  }, [analysis.result, analysis.identity])
   const mcInspector = analysis.mcInspector
   if (
     analysis.error !== null ||
@@ -465,7 +469,8 @@ export function FrontierScreen() {
                       fill="#56B4E9"
                       onClick={(data: unknown) => {
                         const point = (data as { payload?: DealPoint }).payload
-                        if (point !== undefined) toggleCompare(point.pkg.index)
+                        if (point !== undefined)
+                          toggleCompare(point.pkg.index, point.pkg.terms, analysis.identity)
                       }}
                     />
                     {solutionPoints.map(({ key, label, color, point }) =>
@@ -535,7 +540,9 @@ export function FrontierScreen() {
                           <button
                             type="button"
                             className="quiet-button"
-                            onClick={() => toggleCompare(point.pkg.index)}
+                            onClick={() =>
+                              toggleCompare(point.pkg.index, point.pkg.terms, analysis.identity)
+                            }
                           >
                             {selected.has(point.pkg.index) ? 'Unpin' : 'Pin'}
                           </button>
@@ -579,6 +586,12 @@ export function FrontierScreen() {
             )}
           </div>
           <h3>Compare tray</h3>
+          {useDealStore.getState().unavailableComparisons > 0 && (
+            <p role="status">
+              {useDealStore.getState().unavailableComparisons} saved comparisons are unavailable in
+              this deal space.
+            </p>
+          )}
           <div className="compare-tray">
             {comparePoints.length === 0 ? (
               <span className="muted">

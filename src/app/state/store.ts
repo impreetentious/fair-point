@@ -2,11 +2,14 @@ import { create } from 'zustand'
 import { EXAMPLE_DECKS } from '../data/examples'
 import {
   DealFileSchema,
+  roundTermsIdentity,
+  type DealPoint,
   humanizeZodError,
   type Beliefs,
   type DealFile,
   type RoundTerms,
 } from '../../core/schema'
+import { frontierIdentity } from '../workers/frontier-analysis'
 import { deriveDealSpace, refreshDerivedSpace } from '../deal-space'
 
 export const SCREEN_IDS = [
@@ -33,7 +36,10 @@ type Store = {
   setTerms: (terms: RoundTerms) => boolean
   setBeliefs: (party: 'founder' | 'investor', beliefs: Beliefs) => boolean
   setExitValue: (value: number) => void
-  toggleCompare: (index: number) => void
+  toggleCompare: (index: number, terms?: RoundTerms, identity?: string) => void
+  resolveComparisons: (points: DealPoint[], identity: string) => void
+  unavailableComparisons: number
+  exportSnapshot: () => DealFile
   loadExample: (id: string) => void
   setDealSpace: (
     space: DealFile['space'],
@@ -86,6 +92,8 @@ function parseAndUpdate(
     deal,
     validation: [],
     compare: [],
+    unavailableComparisons: 0,
+    ...(deal.ui.reportView ? { exitValue: deal.ui.reportView.exitValue } : {}),
     importStatus: source === 'import' ? { kind: 'success', message: 'Deal file imported.' } : null,
   })
   return true
@@ -98,27 +106,102 @@ export const useDealStore = create<Store>((set, get) => ({
   importStatus: null,
   exitValue: 21_250_000,
   compare: [],
+  unavailableComparisons: 0,
+  exportSnapshot: () => {
+    const state = get()
+    return structuredClone({
+      ...state.deal,
+      ui: {
+        ...state.deal.ui,
+        reportView: {
+          exitValue: state.exitValue,
+          comparisons: state.deal.ui.reportView?.comparisons ?? [],
+        },
+      },
+    })
+  },
+  resolveComparisons: (points, identity) => {
+    if (frontierIdentity(get().deal) !== identity) return
+    const terms = get().deal.ui.reportView?.comparisons ?? []
+    const matched = terms.map(
+      (term) =>
+        points.find((point) => roundTermsIdentity(point.pkg.terms) === roundTermsIdentity(term))
+          ?.pkg.index,
+    )
+    set({
+      compare: matched.filter((index): index is number => index !== undefined),
+      unavailableComparisons: matched.filter((index) => index === undefined).length,
+    })
+  },
   setScreen: (activeScreen) => set({ activeScreen }),
   replaceDeal: (raw, source) => parseAndUpdate(set, raw, source),
-  patchDeal: (patch) => parseAndUpdate(set, patch(get().deal)),
-  setTerms: (terms) => parseAndUpdate(set, refreshDerivedSpace(get().deal, terms)),
+  patchDeal: (patch) => {
+    const before = get().deal
+    const candidate = patch(before)
+    if (frontierIdentity(before) !== frontierIdentity(candidate) && candidate.ui.reportView)
+      candidate.ui = {
+        ...candidate.ui,
+        reportView: { ...candidate.ui.reportView, comparisons: [] },
+      }
+    const previous = get()
+    const changed = parseAndUpdate(set, candidate)
+    if (changed && frontierIdentity(before) === frontierIdentity(get().deal))
+      set({ compare: previous.compare, unavailableComparisons: previous.unavailableComparisons })
+    return changed
+  },
+  setTerms: (terms) => get().patchDeal((deal) => refreshDerivedSpace(deal, terms)),
   setBeliefs: (party, beliefs) => {
     const deal = get().deal
-    return parseAndUpdate(set, {
+    return get().patchDeal(() => ({
       ...deal,
       founderBeliefs: party === 'founder' || deal.sharedBeliefs ? beliefs : deal.founderBeliefs,
       investorBeliefs: party === 'investor' || deal.sharedBeliefs ? beliefs : deal.investorBeliefs,
+    }))
+  },
+  setExitValue: (exitValue) => {
+    const value = Number.isFinite(exitValue) ? Math.max(0, exitValue) : 0
+    const deal = get().deal
+    set({
+      exitValue: value,
+      deal: {
+        ...deal,
+        ui: {
+          ...deal.ui,
+          reportView: { exitValue: value, comparisons: deal.ui.reportView?.comparisons ?? [] },
+        },
+      },
     })
   },
-  setExitValue: (exitValue) =>
-    set({ exitValue: Number.isFinite(exitValue) ? Math.max(0, exitValue) : 0 }),
-  toggleCompare: (index) => {
-    const current = get().compare
-    if (current.includes(index)) {
-      set({ compare: current.filter((candidate) => candidate !== index) })
-      return
-    }
-    set({ compare: [...current, index].slice(-3) })
+  toggleCompare: (index, terms, identity) => {
+    const state = get()
+    if (identity && frontierIdentity(state.deal) !== identity) return
+    const current = state.compare
+    const next = current.includes(index)
+      ? current.filter((candidate) => candidate !== index)
+      : [...current, index].slice(-3)
+    const existing = state.deal.ui.reportView?.comparisons ?? []
+    const selectedTerms = terms
+      ? current.includes(index)
+        ? existing.filter(
+            (candidate) => roundTermsIdentity(candidate) !== roundTermsIdentity(terms),
+          )
+        : [
+            ...existing.filter(
+              (candidate) => roundTermsIdentity(candidate) !== roundTermsIdentity(terms),
+            ),
+            structuredClone(terms),
+          ].slice(-3)
+      : existing
+    set({
+      compare: next,
+      deal: {
+        ...state.deal,
+        ui: {
+          ...state.deal.ui,
+          reportView: { exitValue: state.exitValue, comparisons: selectedTerms },
+        },
+      },
+    })
   },
   loadExample: (id) => {
     const example = EXAMPLE_DECKS.find((candidate) => candidate.id === id)
@@ -126,7 +209,7 @@ export const useDealStore = create<Store>((set, get) => ({
   },
   setDealSpace: (space, pins = {}) => {
     const deal = get().deal
-    return parseAndUpdate(set, {
+    return get().patchDeal(() => ({
       ...deal,
       space,
       ui: {
@@ -134,6 +217,6 @@ export const useDealStore = create<Store>((set, get) => ({
         dealSpaceManual: true,
         dealSpacePins: { ...deal.ui.dealSpacePins, ...pins },
       },
-    })
+    }))
   },
 }))

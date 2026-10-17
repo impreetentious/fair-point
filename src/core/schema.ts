@@ -378,6 +378,19 @@ const RiskSchema = z
   })
   .strict()
 
+export function roundTermsIdentity(terms: RoundTerms): string {
+  return JSON.stringify(
+    Object.fromEntries(
+      Object.entries(terms)
+        .filter(([, value]) => value !== undefined)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => [
+          key,
+          key === 'payToPlayParticipants' && Array.isArray(value) ? [...value].sort() : value,
+        ]),
+    ),
+  )
+}
 export const NextRoundBranchesSchema = z
   .array(
     z
@@ -409,8 +422,16 @@ export const NextRoundBranchesSchema = z
         })
     })
   })
+const ReportViewSchema = z
+  .object({ exitValue: nonNegative, comparisons: z.array(RoundTermsSchema).max(3) })
+  .strict()
+  .superRefine((view, ctx) => {
+    if (new Set(view.comparisons.map(roundTermsIdentity)).size !== view.comparisons.length)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Comparison terms must be unique.' })
+  })
 const DealUiSchema = z
   .object({
+    reportView: ReportViewSchema.optional(),
     dealSpaceManual: z.boolean().default(false),
     dealSpacePins: z
       .object({
@@ -506,6 +527,7 @@ export const DealFileSchema = DealFileBaseSchema.transform((deal) => ({
   risk: deal.risk ?? null,
   discounting: deal.discounting ?? null,
   ui: {
+    ...(deal.ui.reportView ? { reportView: deal.ui.reportView } : {}),
     dealSpaceManual: deal.ui.dealSpaceManual,
     dealSpacePins: {
       preMoney: deal.ui.dealSpacePins.preMoney ?? false,
